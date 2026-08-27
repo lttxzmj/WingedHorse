@@ -1,0 +1,11 @@
+{
+  "name": "WingedHorse · 牛马飞升",
+  "short_name": "牛马飞升",
+  "description": "娱乐问卷、飞马养成与 AI 陪伴。",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF8DE",
+  "theme_color": "#FFD057",
+  "icons": [{ "src": "/wingedhorse-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

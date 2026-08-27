@@ -42,6 +42,8 @@
 
 - OpenRouter 通过服务端 Provider Adapter 接入。
 - Model Policy 根据任务选择模型：日常对话、结构化摘要、视觉理解、高风险分类分开配置。
+  - 服务端环境变量：`OPENROUTER_CHAT_MODEL`（对话，`deepseek/deepseek-chat`）、`OPENROUTER_SUMMARY_MODEL`（摘要，回退 chat）、`OPENROUTER_VISION_MODEL`（视觉，`qwen/qwen3-vl-30b-a3b-thinking`）。
+  - 高风险分类不走模型，由本地规则化流程（SafetyService）处理，fail-safe、零成本零延迟。
 - 模型 ID、超时、预算、隐私路由和降级策略只存在服务端配置。
 - 所有模型输出先经过结构校验、安全后处理和产品文案边界。
 
@@ -137,7 +139,7 @@
 - 每个版本生成可达最小值/最大值，测试结果必须与审计文档一致。
 - 百分制公式：
 
-    normalized = (raw - reachableMin) / (reachableMax - reachableMin) * 100
+  normalized = (raw - reachableMin) / (reachableMax - reachableMin) * 100
 
 - 输出限制在 0–100，并保留足够精度；UI 再负责取整。
 - 初期使用 50 分阈值分型，收集足够样本后才可通过版本化迁移改为常模阈值。
@@ -227,3 +229,44 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 - PostgreSQL 是否首阶段托管或与 API 同机。
 - Agent 上线阶段与模型预算。
 - Rive 资产生产能力是否具备；不具备时先采用 SVG/CSS 动效。
+
+## 14. 设备联动与硬件（心情灯）
+
+### 组件
+
+- ESP32（枢纽）：WiFi + MQTT，读传感器、控灯。
+- WS2812B LED 灯带（主心情灯）、RGB 三色 LED（状态点）。
+- 输入：MAX30102 心率、FSR 压力、DHT22 温湿度。
+
+### 通信
+
+```
+浏览器/服务端 → MQTT broker(Mosquitto, 与 API 同 VPS) → ESP32
+  下行 topic: devices/{deviceId}/effect
+  上行 topic: devices/{deviceId}/telemetry
+```
+
+- broker 鉴权 + ACL 按用户隔离：服务端用户可 `write devices/#`；设备用户只 `read devices/{id}/effect`、`write devices/{id}/telemetry`（防越权）。
+- 服务端 `MqttProvider` 适配器，未配置 `MQTT_URL` 时优雅降级为 no-op。
+
+### 心情 → 灯效（领域纯函数，packages/domain/src/signals/lighting.ts）
+
+| 心情 | 颜色 | 亮度 | 动画 |
+|---|---|---|---|
+| good | `#FFD057` | 90 | breathe |
+| flat | `#FFF3D6` | 45 | steady |
+| tired | `#FFB25A` | 55 | breathe |
+| anxious | `#4D8FCB` | 55 | flow |
+| sad | `#FF9E7A` | 50 | breathe |
+| 休养 | `#FFF6E8` | 20 | breathe |
+
+### 端侧表情线索（MediaPipe）
+
+- `@mediapipe/tasks-vision` Face Landmarker，WASM + 模型自托管于 `apps/web/public/`，懒加载。
+- 关键点 → 几何规则打标签（微笑/皱眉/惊讶/疲惫/平静），纯函数 `classifyExpression`。
+- 构建期开关 `VITE_FEATURE_CAMERA_SIGNALS`，默认关闭。
+
+### 固件与资产
+
+- `hardware/esp32/wingedhorse_lamp/`：Arduino 固件（PubSubClient + FastLED + ArduinoJson + DHT + MAX3010x）。
+- 心率只上传派生标签（calm/active/elevated），不上传原始数值。

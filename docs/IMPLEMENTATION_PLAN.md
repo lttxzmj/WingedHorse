@@ -3,6 +3,19 @@
 状态：执行基线 v0.1  
 计划原则：先建立可信闭环，再逐步增加游戏、Agent 和感知能力
 
+## 当前进度快照（2026-08-27）
+
+| Phase | 内容 | 状态 |
+|---|---|---|
+| 0 文档基线 | 全部文档 | ✅ 完成 |
+| 1 工程脚手架 | Monorepo + CI + Docker | ✅ 完成 |
+| 2 问卷闭环 | 17 题库 + 计分 + 结果页 | ✅ 完成（计分引擎 `scoring.ts` 补全） |
+| 3 养成/小游戏 | PetState + Phaser 掉落 + 背包 + 休养 | ✅ 完成 |
+| 4 Agent | OpenRouter 适配 + 文字对话 + 记忆 + 安全流程 | ✅ 完成（Model Policy 已配 chat/summary/vision） |
+| 5 感知 | 手动心情 + 端侧表情线索(MediaPipe) + rPPG | 🟡 部分（表情/开关已做；rPPG 实验） |
+| 6 部署 | Docker 生产 + GitHub Actions | 🟡 部分（已上线 HTTP 过渡态，域名/HTTPS 待办） |
+| + 硬件联动 | 心情灯 ESP32 + MQTT | ✅ 完成（固件/服务端/domain 规则） |
+
 ## Phase 0：文档与仓库基线
 
 交付：

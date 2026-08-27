@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1
+
+FROM node:24-alpine AS build
+RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @wingedhorse/domain build \
+ && pnpm --filter @wingedhorse/contracts build \
+ && pnpm --filter @wingedhorse/api build \
+ && pnpm --filter @wingedhorse/api deploy --prod --legacy /prod/api \
+ && rm -rf /prod/api/node_modules/@wingedhorse/domain /prod/api/node_modules/@wingedhorse/contracts \
+ && cp -R /app/packages/domain /prod/api/node_modules/@wingedhorse/domain \
+ && cp -R /app/packages/contracts /prod/api/node_modules/@wingedhorse/contracts
+
+FROM node:24-alpine AS runtime
+RUN addgroup -S wingedhorse && adduser -S wingedhorse -G wingedhorse
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build --chown=wingedhorse:wingedhorse /prod/api ./
+COPY --from=build --chown=wingedhorse:wingedhorse /app/apps/api/dist ./dist
+USER wingedhorse
+EXPOSE 3100
+CMD ["node", "dist/main.js"]

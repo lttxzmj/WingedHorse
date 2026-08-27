@@ -9,11 +9,13 @@ coverage/
 .vite/
 playwright-report/
 test-results/
+*.tsbuildinfo
 
 # Environment and secrets
 .env
 .env.*
 !.env.example
+!**/.env.production.example
 *.pem
 *.key
 
