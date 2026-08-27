@@ -107,6 +107,14 @@
 - Memory Service 只保存用户可解释、可管理的记忆。
 - Crisis Flow 与普通对话流分离。
 
+### digital-life
+
+- Digital Life Engine 是独立于 OpenRouter 的领域层，维护角色计划、世界上下文、关系状态和生活事件。
+- Planning 根据角色动机、时间、世界输入、物品和历史事件产生结构化计划；Simulation 负责状态转换；Rendering 才调用模型生成文案或媒体方案。
+- LifeEvent 是事实源，LifePost 是对事实的呈现；模型不得直接写 PetState、Inventory 或 RelationshipState。
+- 所有自动事件使用稳定幂等键、时区和可追溯触发来源，避免刷新、重试或多实例重复生成。
+- MVP 可由 API 定时任务惰性推进：用户访问时补算应发生事件；规模扩大后再迁移至 BullMQ worker。
+
 ## 5. API 边界
 
 首批接口：
@@ -125,6 +133,10 @@
 - DELETE /memories/:id
 - POST /consents
 - DELETE /account/data
+- GET /life/current
+- GET /life/events?cursor=
+- POST /life/events/:id/interactions
+- POST /life/notes
 
 所有写接口：
 
@@ -132,6 +144,12 @@
 - 使用幂等键处理重复提交。
 - 返回稳定错误码，不向客户端暴露内部栈。
 - 记录必要审计信息，但不记录敏感正文和媒体。
+
+生活流接口额外要求：
+
+- 游标分页使用稳定事件时间与 ID，不使用客户端本地数组作为最终事实。
+- 互动写入必须检查事件归属、状态和幂等键。
+- 面向用户的动态文本可重新渲染，但底层 LifeEvent 事实不可被模型响应覆盖。
 
 ## 6. 问卷实现决策
 
