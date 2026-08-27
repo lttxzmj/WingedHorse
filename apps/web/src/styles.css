@@ -113,10 +113,8 @@ h1 {
 .result-page,
 .home-page {
   min-height: 100vh;
-  padding:
-    max(var(--space-5), env(safe-area-inset-top))
-    max(var(--space-5), env(safe-area-inset-right))
-    max(var(--space-6), env(safe-area-inset-bottom))
+  padding: max(var(--space-5), env(safe-area-inset-top))
+    max(var(--space-5), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom))
     max(var(--space-5), env(safe-area-inset-left));
   background: var(--color-surface-50);
 }
@@ -527,8 +525,7 @@ h1 {
   place-items: end center;
   border: 2px solid var(--color-ink-900);
   border-radius: var(--radius-lg);
-  background:
-    linear-gradient(180deg, #dff3ff 0 58%, #b8df95 58% 100%);
+  background: linear-gradient(180deg, #dff3ff 0 58%, #b8df95 58% 100%);
   box-shadow: 0 7px 0 var(--color-ink-900);
 }
 

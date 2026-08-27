@@ -10,13 +10,13 @@
 
 ## 接线速查
 
-| 组件 | 引脚 | ESP32 | 备注 |
-|---|---|---|---|
-| WS2812B DIN | 数据 | GPIO18 | 灯带 5V/GND 单独供电，共地 |
-| RGB LED | R / G / B | GPIO25 / 26 / 27 | 各串 220Ω，共阴 |
-| FSR | 一端 | GPIO34 (ADC) | 另一端接 3V3；并 10kΩ 下拉到 GND |
-| DHT22 | DATA | GPIO4 | 并 10kΩ 上拉到 3V3 |
-| MAX30102 | SDA / SCL | GPIO21 / GPIO22 | 3V3 / GND |
+| 组件        | 引脚      | ESP32            | 备注                             |
+| ----------- | --------- | ---------------- | -------------------------------- |
+| WS2812B DIN | 数据      | GPIO18           | 灯带 5V/GND 单独供电，共地       |
+| RGB LED     | R / G / B | GPIO25 / 26 / 27 | 各串 220Ω，共阴                  |
+| FSR         | 一端      | GPIO34 (ADC)     | 另一端接 3V3；并 10kΩ 下拉到 GND |
+| DHT22       | DATA      | GPIO4            | 并 10kΩ 上拉到 3V3               |
+| MAX30102    | SDA / SCL | GPIO21 / GPIO22  | 3V3 / GND                        |
 
 ## 烧录前配置
 
@@ -46,7 +46,12 @@
 ## 服务器端消息（下行）
 
 ```json
-{ "seq": 123, "mood": "tired", "effect": { "color": "#FFB25A", "brightness": 55, "animation": "breathe" }, "ts": "..." }
+{
+  "seq": 123,
+  "mood": "tired",
+  "effect": { "color": "#FFB25A", "brightness": 55, "animation": "breathe" },
+  "ts": "..."
+}
 ```
 
 `animation`：`off | steady | breathe | pulse | flow | rainbow`。`pulse` 由固件映射为一次短脉冲后回到稳态。

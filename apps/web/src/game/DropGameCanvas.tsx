@@ -54,12 +54,35 @@ export function DropGameCanvas({ durationSeconds = 30, onFinish }: DropGameCanva
           this.cameras.main.setBackgroundColor("#fff8de");
           this.add.circle(width - 52, 48, 26, 0xffd057, 0.85);
           this.add.rectangle(width / 2, height - 27, width, 54, 0xbce38c);
-          this.scoreLabel = this.add.text(16, 14, "得分 0", { color: "#3b2e24", fontFamily: "system-ui", fontSize: "18px", fontStyle: "bold" });
-          this.timeLabel = this.add.text(width - 78, 14, `${durationSeconds}s`, { color: "#3b2e24", fontFamily: "system-ui", fontSize: "18px", fontStyle: "bold" });
-          this.basket = this.add.rectangle(width / 2, height - 55, 86, 22, 0xd4a21c).setStrokeStyle(5, 0x3b2e24);
-          this.add.text(width / 2, height - 58, "接住", { color: "#3b2e24", fontFamily: "system-ui", fontSize: "14px", fontStyle: "bold" }).setOrigin(0.5);
-          this.input.on("pointermove", (pointer: PhaserType.Input.Pointer) => this.moveBasket(pointer.x));
-          this.input.on("pointerdown", (pointer: PhaserType.Input.Pointer) => this.moveBasket(pointer.x));
+          this.scoreLabel = this.add.text(16, 14, "得分 0", {
+            color: "#3b2e24",
+            fontFamily: "system-ui",
+            fontSize: "18px",
+            fontStyle: "bold"
+          });
+          this.timeLabel = this.add.text(width - 78, 14, `${durationSeconds}s`, {
+            color: "#3b2e24",
+            fontFamily: "system-ui",
+            fontSize: "18px",
+            fontStyle: "bold"
+          });
+          this.basket = this.add
+            .rectangle(width / 2, height - 55, 86, 22, 0xd4a21c)
+            .setStrokeStyle(5, 0x3b2e24);
+          this.add
+            .text(width / 2, height - 58, "接住", {
+              color: "#3b2e24",
+              fontFamily: "system-ui",
+              fontSize: "14px",
+              fontStyle: "bold"
+            })
+            .setOrigin(0.5);
+          this.input.on("pointermove", (pointer: PhaserType.Input.Pointer) =>
+            this.moveBasket(pointer.x)
+          );
+          this.input.on("pointerdown", (pointer: PhaserType.Input.Pointer) =>
+            this.moveBasket(pointer.x)
+          );
           this.startedAt = this.time.now;
           this.nextDropAt = this.startedAt + 350;
         }
@@ -71,7 +94,9 @@ export function DropGameCanvas({ durationSeconds = 30, onFinish }: DropGameCanva
         private spawnDrop() {
           const drop = selectDrop(this.random);
           const x = 30 + this.random() * (this.scale.width - 60);
-          const label = this.add.text(x, -28, ITEM_CATALOG[drop.itemId].emoji, { fontSize: "34px" }).setOrigin(0.5);
+          const label = this.add
+            .text(x, -28, ITEM_CATALOG[drop.itemId].emoji, { fontSize: "34px" })
+            .setOrigin(0.5);
           this.drops.push({ itemId: drop.itemId, label, points: drop.points, speed: drop.speed });
         }
 
@@ -87,7 +112,10 @@ export function DropGameCanvas({ durationSeconds = 30, onFinish }: DropGameCanva
           const basketTop = this.basket.y - 18;
           this.drops = this.drops.filter((drop) => {
             drop.label.y += delta * 0.13 * drop.speed;
-            const caught = drop.label.y >= basketTop && drop.label.y <= basketTop + 30 && Math.abs(drop.label.x - this.basket.x) < 52;
+            const caught =
+              drop.label.y >= basketTop &&
+              drop.label.y <= basketTop + 30 &&
+              Math.abs(drop.label.x - this.basket.x) < 52;
             if (caught) {
               this.score += drop.points;
               this.caught[drop.itemId] = (this.caught[drop.itemId] ?? 0) + 1;

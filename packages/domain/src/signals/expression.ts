@@ -69,7 +69,9 @@ export function classifyExpression(points: readonly FaceLandmark[]): ExpressionT
   const iod = interocularDistance(points);
   if (iod < 1e-6) return "neutral";
 
-  const mar = distance(points[IDX.lipTop]!, points[IDX.lipBottom]!) / distance(points[IDX.mouthLeft]!, points[IDX.mouthRight]!);
+  const mar =
+    distance(points[IDX.lipTop]!, points[IDX.lipBottom]!) /
+    distance(points[IDX.mouthLeft]!, points[IDX.mouthRight]!);
   const ear = (eyeAspectRatio(points, IDX.leftEye) + eyeAspectRatio(points, IDX.rightEye)) / 2;
 
   const lipCenterY = (points[IDX.lipTop]!.y + points[IDX.lipBottom]!.y) / 2;

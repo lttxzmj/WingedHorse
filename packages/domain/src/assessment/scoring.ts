@@ -139,7 +139,10 @@ function collectEasterEggs(questionSet: QuestionSet, answers: AssessmentAnswers)
   return eggs;
 }
 
-function validate(questionSet: QuestionSet, answers: AssessmentAnswers): AssessmentValidationError | null {
+function validate(
+  questionSet: QuestionSet,
+  answers: AssessmentAnswers
+): AssessmentValidationError | null {
   const knownIds = new Set(questionSet.questions.map((question) => question.id));
   const unknown = Object.keys(answers).filter((id) => !knownIds.has(id));
   if (unknown.length > 0) {
@@ -157,7 +160,10 @@ function validate(questionSet: QuestionSet, answers: AssessmentAnswers): Assessm
     const optionId = answers[question.id];
     if (optionId == null) continue;
     if (!question.options.some((option) => option.id === optionId)) {
-      return new AssessmentValidationError("INVALID_OPTION", `题目 ${question.id} 的选项 ${optionId} 不存在`);
+      return new AssessmentValidationError(
+        "INVALID_OPTION",
+        `题目 ${question.id} 的选项 ${optionId} 不存在`
+      );
     }
   }
 
@@ -168,7 +174,10 @@ function validate(questionSet: QuestionSet, answers: AssessmentAnswers): Assessm
  * 纯函数：输入题库与答案，输出完整计分结果。
  * 不读取时间、网络或数据库；非法答案抛 AssessmentValidationError。
  */
-export function scoreAssessment(questionSet: QuestionSet, answers: AssessmentAnswers): AssessmentResult {
+export function scoreAssessment(
+  questionSet: QuestionSet,
+  answers: AssessmentAnswers
+): AssessmentResult {
   const error = validate(questionSet, answers);
   if (error) throw error;
 

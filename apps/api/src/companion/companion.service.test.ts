@@ -2,7 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { CompanionService } from "./companion.service.js";
 import { SafetyService } from "./safety.service.js";
 
-const request = { sessionId: "session-12345678", message: "今天有点累", history: [], memories: [], memoryEnabled: false };
+const request = {
+  sessionId: "session-12345678",
+  message: "今天有点累",
+  history: [],
+  memories: [],
+  memoryEnabled: false
+};
 
 describe("CompanionService", () => {
   it("uses a transparent local fallback without configuration", async () => {

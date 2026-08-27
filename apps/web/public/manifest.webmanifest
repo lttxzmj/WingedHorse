@@ -7,5 +7,12 @@
   "display": "standalone",
   "background_color": "#FFF8DE",
   "theme_color": "#FFD057",
-  "icons": [{ "src": "/wingedhorse-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "icons": [
+    {
+      "src": "/wingedhorse-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

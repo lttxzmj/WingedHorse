@@ -1,7 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 
-interface ProviderMessage { role: "system" | "user" | "assistant"; content: string; }
+interface ProviderMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
 
 /**
  * 模型任务类型，对应 docs/TECHNICAL_ARCHITECTURE.md §3 的 Model Policy。
@@ -39,7 +42,11 @@ export class OpenRouterProvider {
     return resolveModel(task);
   }
 
-  async complete(task: ModelTask, messages: ProviderMessage[], signal?: AbortSignal): Promise<string> {
+  async complete(
+    task: ModelTask,
+    messages: ProviderMessage[],
+    signal?: AbortSignal
+  ): Promise<string> {
     const key = process.env.OPENROUTER_API_KEY;
     const model = resolveModel(task);
     if (!key || !model) throw new Error("OPENROUTER_NOT_CONFIGURED");

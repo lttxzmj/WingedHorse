@@ -23,8 +23,19 @@ export interface QuestionSet {
   questions: readonly AssessmentQuestion[];
 }
 export type AssessmentAnswers = Readonly<Record<string, string>>;
-export type HorseTypeId = "chosen" | "perpetual" | "veteran" | "explosive" | "saving" | "overthinker" | "tired" | "mad-literature";
-export interface ReachableRange { min: number; max: number; }
+export type HorseTypeId =
+  | "chosen"
+  | "perpetual"
+  | "veteran"
+  | "explosive"
+  | "saving"
+  | "overthinker"
+  | "tired"
+  | "mad-literature";
+export interface ReachableRange {
+  min: number;
+  max: number;
+}
 export type ReachableRanges = Record<Dimension, ReachableRange>;
 export interface AssessmentResult {
   questionSetId: string;

@@ -1,0 +1,8 @@
+# 第三方/生成产物，不做 Prettier 格式化
+apps/web/public/wasm/
+apps/web/public/models/
+pnpm-lock.yaml
+dist/
+coverage/
+playwright-report/
+test-results/

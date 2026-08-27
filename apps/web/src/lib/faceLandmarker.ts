@@ -27,7 +27,10 @@ async function getLandmarker(): Promise<FaceLandmarker> {
  * 在浏览器端（本机）检测单张人脸关键点。仅在进入实验室时按需加载 WASM 与模型，
  * 不上传任何帧；失败或未授权时返回 null，调用方应回退到手动模式。
  */
-export async function detectFaceLandmarks(video: HTMLVideoElement, timestampMs: number): Promise<FaceLandmark[] | null> {
+export async function detectFaceLandmarks(
+  video: HTMLVideoElement,
+  timestampMs: number
+): Promise<FaceLandmark[] | null> {
   try {
     const landmarker = await getLandmarker();
     const result = landmarker.detectForVideo(video, timestampMs);

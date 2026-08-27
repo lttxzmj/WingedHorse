@@ -251,14 +251,14 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 
 ### 心情 → 灯效（领域纯函数，packages/domain/src/signals/lighting.ts）
 
-| 心情 | 颜色 | 亮度 | 动画 |
-|---|---|---|---|
-| good | `#FFD057` | 90 | breathe |
-| flat | `#FFF3D6` | 45 | steady |
-| tired | `#FFB25A` | 55 | breathe |
-| anxious | `#4D8FCB` | 55 | flow |
-| sad | `#FF9E7A` | 50 | breathe |
-| 休养 | `#FFF6E8` | 20 | breathe |
+| 心情    | 颜色      | 亮度 | 动画    |
+| ------- | --------- | ---- | ------- |
+| good    | `#FFD057` | 90   | breathe |
+| flat    | `#FFF3D6` | 45   | steady  |
+| tired   | `#FFB25A` | 55   | breathe |
+| anxious | `#4D8FCB` | 55   | flow    |
+| sad     | `#FF9E7A` | 50   | breathe |
+| 休养    | `#FFF6E8` | 20   | breathe |
 
 ### 端侧表情线索（MediaPipe）
 

@@ -26,7 +26,10 @@ export function createSeededRandom(seed: number): () => number {
   };
 }
 
-export function selectDrop(random: () => number, table: readonly DropDefinition[] = DROP_TABLE): DropDefinition {
+export function selectDrop(
+  random: () => number,
+  table: readonly DropDefinition[] = DROP_TABLE
+): DropDefinition {
   const total = table.reduce((sum, item) => sum + item.weight, 0);
   if (total <= 0) throw new Error("INVALID_DROP_TABLE");
   let cursor = random() * total;

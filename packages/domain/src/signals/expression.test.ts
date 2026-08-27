@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { classifyExpression, EXPRESSION_LABEL, EXPRESSION_TAGS, type FaceLandmark } from "./expression.js";
+import {
+  classifyExpression,
+  EXPRESSION_LABEL,
+  EXPRESSION_TAGS,
+  type FaceLandmark
+} from "./expression.js";
 
 const EYE = {
   left: { outer: 33, inner: 133, top: 159, bottom: 145 },
@@ -10,15 +15,15 @@ const BROWS = { leftInner: 46, rightInner: 276 } as const;
 
 function neutralFace(): FaceLandmark[] {
   const p: FaceLandmark[] = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5 }));
-  p[EYE.left.outer] = { x: 0.40, y: 0.45 };
+  p[EYE.left.outer] = { x: 0.4, y: 0.45 };
   p[EYE.left.inner] = { x: 0.45, y: 0.45 };
   p[EYE.left.top] = { x: 0.425, y: 0.435 };
   p[EYE.left.bottom] = { x: 0.425, y: 0.465 };
-  p[EYE.right.outer] = { x: 0.60, y: 0.45 };
+  p[EYE.right.outer] = { x: 0.6, y: 0.45 };
   p[EYE.right.inner] = { x: 0.55, y: 0.45 };
   p[EYE.right.top] = { x: 0.575, y: 0.435 };
   p[EYE.right.bottom] = { x: 0.575, y: 0.465 };
-  p[MOUTH.lipTop] = { x: 0.5, y: 0.60 };
+  p[MOUTH.lipTop] = { x: 0.5, y: 0.6 };
   p[MOUTH.lipBottom] = { x: 0.5, y: 0.62 };
   p[MOUTH.left] = { x: 0.45, y: 0.61 };
   p[MOUTH.right] = { x: 0.55, y: 0.61 };

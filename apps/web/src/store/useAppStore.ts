@@ -59,7 +59,8 @@ export const useAppStore = create<AppState>()(
         set((state) => ({ answers: { ...state.answers, [questionId]: optionId } })),
       setAssessmentIndex: (assessmentIndex) => set({ assessmentIndex }),
       setResult: (result) => set({ result }),
-      resetAssessment: () => set({ answers: {}, assessmentIndex: 0, result: null, resultFeedback: null }),
+      resetAssessment: () =>
+        set({ answers: {}, assessmentIndex: 0, result: null, resultFeedback: null }),
       collectItem: (itemId, quantity = 1) =>
         set((state) => ({ inventory: addItem(state.inventory, itemId, quantity) })),
       useItem: (itemId) => {
@@ -76,20 +77,44 @@ export const useAppStore = create<AppState>()(
       setManualMood: (manualMood) => set({ manualMood }),
       setHardwareLink: (hardwareLink) => set({ hardwareLink }),
       setDeviceId: (deviceId) => set({ deviceId: deviceId.trim().slice(0, 64) }),
-      resetAll: () => set({
-        answers: {}, assessmentIndex: 0, result: null, inventory: {},
-        petVitals: INITIAL_PET_VITALS, gamesPlayed: 0, manualMood: null, memories: [], resultFeedback: null,
-        hardwareLink: false, deviceId: ""
-      }),
-      addMemory: (content) => set((state) => {
-        const normalized = content.trim().slice(0, 240);
-        if (!normalized || state.memories.length >= 20 || state.memories.some((memory) => memory.content === normalized)) return {};
-        return { memories: [...state.memories, { id: crypto.randomUUID(), content: normalized, createdAt: new Date().toISOString() }] };
-      }),
-      updateMemory: (id, content) => set((state) => ({
-        memories: state.memories.map((memory) => memory.id === id ? { ...memory, content: content.trim().slice(0, 240) } : memory)
-      })),
-      deleteMemory: (id) => set((state) => ({ memories: state.memories.filter((memory) => memory.id !== id) })),
+      resetAll: () =>
+        set({
+          answers: {},
+          assessmentIndex: 0,
+          result: null,
+          inventory: {},
+          petVitals: INITIAL_PET_VITALS,
+          gamesPlayed: 0,
+          manualMood: null,
+          memories: [],
+          resultFeedback: null,
+          hardwareLink: false,
+          deviceId: ""
+        }),
+      addMemory: (content) =>
+        set((state) => {
+          const normalized = content.trim().slice(0, 240);
+          if (
+            !normalized ||
+            state.memories.length >= 20 ||
+            state.memories.some((memory) => memory.content === normalized)
+          )
+            return {};
+          return {
+            memories: [
+              ...state.memories,
+              { id: crypto.randomUUID(), content: normalized, createdAt: new Date().toISOString() }
+            ]
+          };
+        }),
+      updateMemory: (id, content) =>
+        set((state) => ({
+          memories: state.memories.map((memory) =>
+            memory.id === id ? { ...memory, content: content.trim().slice(0, 240) } : memory
+          )
+        })),
+      deleteMemory: (id) =>
+        set((state) => ({ memories: state.memories.filter((memory) => memory.id !== id) })),
       setResultFeedback: (resultFeedback) => set({ resultFeedback }),
       getAnswers: () => get().answers
     }),

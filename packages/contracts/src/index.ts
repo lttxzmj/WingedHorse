@@ -28,8 +28,14 @@ export const assessmentResultSchema = z.object({
   rawScores: dimensionScoresSchema,
   normalizedScores: dimensionScoresSchema,
   typeId: z.enum([
-    "chosen", "perpetual", "veteran", "explosive",
-    "saving", "overthinker", "tired", "mad-literature"
+    "chosen",
+    "perpetual",
+    "veteran",
+    "explosive",
+    "saving",
+    "overthinker",
+    "tired",
+    "mad-literature"
   ]),
   edgeDimensions: z.array(z.enum(["energy", "engine", "chaos", "direction"])),
   easterEggs: z.array(z.string())
@@ -41,10 +47,15 @@ export type AssessmentResultResponse = z.infer<typeof assessmentResultSchema>;
 export const companionMessageSchema = z.object({
   sessionId: z.string().min(8).max(128),
   message: z.string().trim().min(1).max(1200),
-  history: z.array(z.object({
-    role: z.enum(["user", "assistant"]),
-    content: z.string().trim().min(1).max(1200)
-  })).max(12).default([]),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().trim().min(1).max(1200)
+      })
+    )
+    .max(12)
+    .default([]),
   memories: z.array(z.string().trim().min(1).max(240)).max(20).default([]),
   memoryEnabled: z.boolean().default(false),
   moodHint: z.enum(["good", "flat", "tired", "anxious", "sad"]).optional()
@@ -85,10 +96,12 @@ export const deviceEffectSchema = z.object({
 export const deviceTelemetrySchema = z.object({
   deviceId: z.string().trim().min(1).max(64),
   online: z.boolean(),
-  env: z.object({
-    temperatureC: z.number().optional(),
-    humidityPct: z.number().optional()
-  }).optional(),
+  env: z
+    .object({
+      temperatureC: z.number().optional(),
+      humidityPct: z.number().optional()
+    })
+    .optional(),
   heartTrend: z.enum(["calm", "active", "elevated"]).optional()
 });
 

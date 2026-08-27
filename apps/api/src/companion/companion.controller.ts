@@ -9,7 +9,11 @@ export class CompanionController {
   @Post("messages")
   async message(@Body() body: unknown) {
     const parsed = companionMessageSchema.safeParse(body);
-    if (!parsed.success) throw new BadRequestException({ code: "INVALID_COMPANION_MESSAGE", message: "消息格式不正确" });
+    if (!parsed.success)
+      throw new BadRequestException({
+        code: "INVALID_COMPANION_MESSAGE",
+        message: "消息格式不正确"
+      });
     return this.companion.reply(parsed.data);
   }
 }

@@ -8,9 +8,15 @@ export class DevicesController {
 
   @Post(":deviceId/effects")
   applyEffect(@Param("deviceId") deviceId: string, @Body() body: unknown) {
-    const parsed = deviceEffectRequestSchema.safeParse({ deviceId, ...(body as Record<string, unknown>) });
+    const parsed = deviceEffectRequestSchema.safeParse({
+      deviceId,
+      ...(body as Record<string, unknown>)
+    });
     if (!parsed.success) {
-      throw new BadRequestException({ code: "INVALID_DEVICE_EFFECT", message: "设备灯效请求格式不正确" });
+      throw new BadRequestException({
+        code: "INVALID_DEVICE_EFFECT",
+        message: "设备灯效请求格式不正确"
+      });
     }
     return this.devices.applyMood(parsed.data.deviceId, parsed.data.mood);
   }

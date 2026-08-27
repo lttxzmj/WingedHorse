@@ -56,11 +56,16 @@ export function rewardFlash(): LightEffect {
 /** 端侧表情 → 1 秒内的小反馈（不持续抢戏） */
 export function expressionToFlash(expression: ExpressionTag): LightEffect {
   switch (expression) {
-    case "smile": return { color: LIGHT_COLORS.brand, brightness: 80, animation: "pulse" };
-    case "tired": return { color: LIGHT_COLORS.warm, brightness: 35, animation: "steady" };
-    case "surprise": return { color: "#FFFFFF", brightness: 70, animation: "pulse" };
-    case "frown": return { color: LIGHT_COLORS.cool, brightness: 40, animation: "steady" };
-    case "neutral": return { color: LIGHT_COLORS.idle, brightness: 40, animation: "steady" };
+    case "smile":
+      return { color: LIGHT_COLORS.brand, brightness: 80, animation: "pulse" };
+    case "tired":
+      return { color: LIGHT_COLORS.warm, brightness: 35, animation: "steady" };
+    case "surprise":
+      return { color: "#FFFFFF", brightness: 70, animation: "pulse" };
+    case "frown":
+      return { color: LIGHT_COLORS.cool, brightness: 40, animation: "steady" };
+    case "neutral":
+      return { color: LIGHT_COLORS.idle, brightness: 40, animation: "steady" };
   }
 }
 

@@ -4,16 +4,16 @@
 
 ## 0. 当前实际部署（2026-08-27）
 
-| 项 | 值 |
-|---|---|
-| 服务器 | 腾讯云 CVM `43.140.245.191`（2C2G TencentOS，Docker 26 + Compose v2） |
-| 访问地址（过渡） | `http://43.140.245.191:8080/` |
-| 目标域名 | `wingedhorse.leisuremaking.cn`（待 DNS + 证书 + 备案确认） |
-| 端口 | web/nginx 绑定宿主 `8080`(HTTP) / `8443`(HTTPS)；`api:3100`、`postgres:5432` 仅内网；`mosquitto:1883` 对公网（设备直连，鉴权 + ACL） |
-| 目录 | `/opt/wingedhorse/live/`（线上代码）、`/opt/wingedhorse/manual/`（golden copy：`.env.production`）、`/opt/wingedhorse/backups/postgres/` |
-| 容器 | `wingedhorse-web-1`（nginx+静态）、`wingedhorse-api-1`（NestJS）、`wingedhorse-postgres-1`、`wingedhorse-mosquitto-1`（MQTT broker） |
-| 备份 | 每日 03:00 crontab → `backup-postgres.sh`，保留 7 天 |
-| OpenRouter | 未配置，Agent 走 `local-fallback` |
+| 项               | 值                                                                                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 服务器           | 腾讯云 CVM `43.140.245.191`（2C2G TencentOS，Docker 26 + Compose v2）                                                                    |
+| 访问地址（过渡） | `http://43.140.245.191:8080/`                                                                                                            |
+| 目标域名         | `wingedhorse.leisuremaking.cn`（待 DNS + 证书 + 备案确认）                                                                               |
+| 端口             | web/nginx 绑定宿主 `8080`(HTTP) / `8443`(HTTPS)；`api:3100`、`postgres:5432` 仅内网；`mosquitto:1883` 对公网（设备直连，鉴权 + ACL）     |
+| 目录             | `/opt/wingedhorse/live/`（线上代码）、`/opt/wingedhorse/manual/`（golden copy：`.env.production`）、`/opt/wingedhorse/backups/postgres/` |
+| 容器             | `wingedhorse-web-1`（nginx+静态）、`wingedhorse-api-1`（NestJS）、`wingedhorse-postgres-1`、`wingedhorse-mosquitto-1`（MQTT broker）     |
+| 备份             | 每日 03:00 crontab → `backup-postgres.sh`，保留 7 天                                                                                     |
+| OpenRouter       | 未配置，Agent 走 `local-fallback`                                                                                                        |
 
 共存说明：宿主 `80/443` 已被 VibeShot 的 `vibeshot-nginx` 占用，因此 WingedHorse 的 nginx 改为 `8080/8443`。上域名后按「域名与 TLS」章节接入 443（经 VibeShot nginx 分流或独立监听）。
 
@@ -75,12 +75,12 @@
 
 模型 ID 不是秘密，直接在服务器 `.env.production`（golden copy）按 Model Policy 配置：
 
-| 任务 | 变量 | 值 |
-|---|---|---|
-| 日常对话 | `OPENROUTER_CHAT_MODEL` | `deepseek/deepseek-chat` |
-| 结构化摘要 | `OPENROUTER_SUMMARY_MODEL` | `deepseek/deepseek-chat` |
-| 视觉理解 | `OPENROUTER_VISION_MODEL` | `qwen/qwen3-vl-30b-a3b-thinking` |
-| 高风险分类 | —（本地规则 `SafetyService`，不调模型） | — |
+| 任务       | 变量                                    | 值                               |
+| ---------- | --------------------------------------- | -------------------------------- |
+| 日常对话   | `OPENROUTER_CHAT_MODEL`                 | `deepseek/deepseek-chat`         |
+| 结构化摘要 | `OPENROUTER_SUMMARY_MODEL`              | `deepseek/deepseek-chat`         |
+| 视觉理解   | `OPENROUTER_VISION_MODEL`               | `qwen/qwen3-vl-30b-a3b-thinking` |
+| 高风险分类 | —（本地规则 `SafetyService`，不调模型） | —                                |
 
 `.github/workflows/deploy.yml` 只有 `workflow_dispatch`，不会因推送代码自动改动生产。OpenRouter 密钥只写入服务器 600 权限的 `.env.production` 与 golden copy，不落日志、不进镜像。首次人工部署、备份恢复演练和域名确认完成后，再单独评审是否开放自动部署。
 

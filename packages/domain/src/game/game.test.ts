@@ -13,7 +13,9 @@ describe("inventory transactions", () => {
   it("rejects invalid item operations", () => {
     expect(() => addItem({}, "sun-berry", 0)).toThrow("INVALID_ITEM_QUANTITY");
     expect(() => consumeItem({}, INITIAL_PET_VITALS, "sun-berry")).toThrow("ITEM_NOT_OWNED");
-    expect(() => consumeItem({ "star-thread": 1 }, INITIAL_PET_VITALS, "star-thread")).toThrow("ITEM_NOT_CONSUMABLE");
+    expect(() => consumeItem({ "star-thread": 1 }, INITIAL_PET_VITALS, "star-thread")).toThrow(
+      "ITEM_NOT_CONSUMABLE"
+    );
   });
 });
 

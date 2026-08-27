@@ -1,5 +1,13 @@
-export interface ColorSample { timestampMs: number; green: number; motion: number; }
-export interface PulseEstimate { bpm: number | null; confidence: "low" | "medium"; reason?: string; }
+export interface ColorSample {
+  timestampMs: number;
+  green: number;
+  motion: number;
+}
+export interface PulseEstimate {
+  bpm: number | null;
+  confidence: "low" | "medium";
+  reason?: string;
+}
 
 export function estimatePulse(samples: readonly ColorSample[]): PulseEstimate {
   if (samples.length < 60) return { bpm: null, confidence: "low", reason: "采样时间太短" };
@@ -25,12 +33,21 @@ export function estimatePulse(samples: readonly ColorSample[]): PulseEstimate {
   const median = powers[Math.floor(powers.length / 2)]!.power || 1;
   const averageMotion = samples.reduce((sum, sample) => sum + sample.motion, 0) / samples.length;
   if (best.power / median < 2.2 || averageMotion > 12) {
-    return { bpm: null, confidence: "low", reason: averageMotion > 12 ? "画面移动较多" : "信号不够清晰" };
+    return {
+      bpm: null,
+      confidence: "low",
+      reason: averageMotion > 12 ? "画面移动较多" : "信号不够清晰"
+    };
   }
-  return { bpm: best.bpm, confidence: best.power / median > 4 && averageMotion < 5 ? "medium" : "low" };
+  return {
+    bpm: best.bpm,
+    confidence: best.power / median > 4 && averageMotion < 5 ? "medium" : "low"
+  };
 }
 
-export function classifyVisualActivity(samples: readonly ColorSample[]): "steady" | "moving" | "unknown" {
+export function classifyVisualActivity(
+  samples: readonly ColorSample[]
+): "steady" | "moving" | "unknown" {
   if (samples.length < 10) return "unknown";
   const motion = samples.reduce((sum, sample) => sum + sample.motion, 0) / samples.length;
   return motion > 8 ? "moving" : "steady";

@@ -12,6 +12,13 @@ import { MqttProvider } from "./devices/mqtt.provider.js";
 
 @Module({
   controllers: [AppController, AssessmentController, CompanionController, DevicesController],
-  providers: [AssessmentService, CompanionService, OpenRouterProvider, SafetyService, DevicesService, MqttProvider]
+  providers: [
+    AssessmentService,
+    CompanionService,
+    OpenRouterProvider,
+    SafetyService,
+    DevicesService,
+    MqttProvider
+  ]
 })
 export class AppModule {}
