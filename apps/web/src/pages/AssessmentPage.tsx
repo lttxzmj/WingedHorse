@@ -4,6 +4,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 
+function stableHash(value: string) {
+  let result = 2166136261;
+  for (const character of value) {
+    result ^= character.charCodeAt(0);
+    result = Math.imul(result, 16777619);
+  }
+  return result >>> 0;
+}
+
 export function AssessmentPage() {
   const navigate = useNavigate();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -12,6 +21,8 @@ export function AssessmentPage() {
   const setAnswer = useAppStore((state) => state.setAnswer);
   const setIndex = useAppStore((state) => state.setAssessmentIndex);
   const setResult = useAppStore((state) => state.setResult);
+  const assessmentOptionSeed = useAppStore((state) => state.assessmentOptionSeed);
+  const ensureAssessmentVersion = useAppStore((state) => state.ensureAssessmentVersion);
   const [error, setError] = useState("");
   const safeIndex = Math.min(index, questionSetV1.questions.length - 1);
   const question = questionSetV1.questions[safeIndex];
@@ -19,11 +30,19 @@ export function AssessmentPage() {
   useEffect(() => {
     headingRef.current?.focus();
   }, [safeIndex]);
+  useEffect(() => {
+    ensureAssessmentVersion(questionSetV1.version);
+  }, [ensureAssessmentVersion]);
   if (!question) return null;
 
   const selected = answers[question.id];
   const isLast = safeIndex === questionSetV1.questions.length - 1;
   const progress = ((safeIndex + 1) / questionSetV1.questions.length) * 100;
+  const options = [...question.options].sort(
+    (left, right) =>
+      stableHash(`${assessmentOptionSeed}:${question.id}:${left.id}`) -
+      stableHash(`${assessmentOptionSeed}:${question.id}:${right.id}`)
+  );
 
   function goBack() {
     setError("");
@@ -74,8 +93,9 @@ export function AssessmentPage() {
         <h1 ref={headingRef} tabIndex={-1}>
           {question.prompt}
         </h1>
+        <p className="question-panel__hint">选最常发生的你，不是最理想的你</p>
         <div className="question-options" role="radiogroup" aria-label={question.prompt}>
-          {question.options.map((option, optionIndex) => {
+          {options.map((option, optionIndex) => {
             const active = selected === option.id;
             return (
               <button

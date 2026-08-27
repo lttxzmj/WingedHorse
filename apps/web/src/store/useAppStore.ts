@@ -1,6 +1,7 @@
 import {
   addItem,
   consumeItem,
+  createPetVitalsFromAssessment,
   INITIAL_PET_VITALS,
   type AssessmentAnswers,
   type AssessmentResult,
@@ -14,6 +15,8 @@ import { persist } from "zustand/middleware";
 interface AppState {
   answers: Record<string, string>;
   assessmentIndex: number;
+  assessmentVersion: string;
+  assessmentOptionSeed: string;
   result: AssessmentResult | null;
   inventory: Inventory;
   petVitals: PetVitals;
@@ -38,6 +41,7 @@ interface AppState {
   updateMemory: (id: string, content: string) => void;
   deleteMemory: (id: string) => void;
   setResultFeedback: (feedback: AppState["resultFeedback"]) => void;
+  ensureAssessmentVersion: (version: string) => void;
   getAnswers: () => AssessmentAnswers;
 }
 
@@ -46,6 +50,8 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       answers: {},
       assessmentIndex: 0,
+      assessmentVersion: "",
+      assessmentOptionSeed: Math.random().toString(36).slice(2),
       result: null,
       inventory: {},
       petVitals: INITIAL_PET_VITALS,
@@ -58,9 +64,19 @@ export const useAppStore = create<AppState>()(
       setAnswer: (questionId, optionId) =>
         set((state) => ({ answers: { ...state.answers, [questionId]: optionId } })),
       setAssessmentIndex: (assessmentIndex) => set({ assessmentIndex }),
-      setResult: (result) => set({ result }),
+      setResult: (result) =>
+        set({
+          result,
+          petVitals: createPetVitalsFromAssessment(result.normalizedScores)
+        }),
       resetAssessment: () =>
-        set({ answers: {}, assessmentIndex: 0, result: null, resultFeedback: null }),
+        set({
+          answers: {},
+          assessmentIndex: 0,
+          result: null,
+          resultFeedback: null,
+          assessmentOptionSeed: Math.random().toString(36).slice(2)
+        }),
       collectItem: (itemId, quantity = 1) =>
         set((state) => ({ inventory: addItem(state.inventory, itemId, quantity) })),
       useItem: (itemId) => {
@@ -81,6 +97,8 @@ export const useAppStore = create<AppState>()(
         set({
           answers: {},
           assessmentIndex: 0,
+          assessmentVersion: "",
+          assessmentOptionSeed: Math.random().toString(36).slice(2),
           result: null,
           inventory: {},
           petVitals: INITIAL_PET_VITALS,
@@ -116,14 +134,29 @@ export const useAppStore = create<AppState>()(
       deleteMemory: (id) =>
         set((state) => ({ memories: state.memories.filter((memory) => memory.id !== id) })),
       setResultFeedback: (resultFeedback) => set({ resultFeedback }),
+      ensureAssessmentVersion: (version) =>
+        set((state) =>
+          state.assessmentVersion === version
+            ? {}
+            : {
+                answers: {},
+                assessmentIndex: 0,
+                result: null,
+                resultFeedback: null,
+                assessmentVersion: version,
+                assessmentOptionSeed: Math.random().toString(36).slice(2)
+              }
+        ),
       getAnswers: () => get().answers
     }),
     {
       name: "wingedhorse-local-state",
-      version: 2,
+      version: 3,
       partialize: (state) => ({
         answers: state.answers,
         assessmentIndex: state.assessmentIndex,
+        assessmentVersion: state.assessmentVersion,
+        assessmentOptionSeed: state.assessmentOptionSeed,
         result: state.result,
         inventory: state.inventory,
         petVitals: state.petVitals,

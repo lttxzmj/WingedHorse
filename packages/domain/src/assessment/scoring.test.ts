@@ -15,7 +15,7 @@ describe("assessment scoring", () => {
     expect(computeReachableRanges(questionSetV1)).toEqual({
       energy: { min: -16, max: 16 },
       engine: { min: -12, max: 14 },
-      chaos: { min: -11, max: 19 },
+      chaos: { min: -13, max: 23 },
       direction: { min: -9, max: 10 }
     });
   });
@@ -59,6 +59,25 @@ describe("assessment scoring", () => {
     expect(first.rawScores).toEqual(second.rawScores);
     expect(first.easterEggs).toHaveLength(1);
     expect(second.easterEggs).toHaveLength(0);
+  });
+  it("requires the non-scoring Q17 because it is part of the 16+1 flow", () => {
+    const answers = { ...getExtremeAnswers(questionSetV1, "energy", "min") };
+    delete answers.q17;
+    expect(() => scoreAssessment(questionSetV1, answers)).toThrowError(
+      expect.objectContaining({ code: "MISSING_ANSWERS" })
+    );
+  });
+  it("returns a bloodline that totals 100 and a direction hint", () => {
+    const result = scoreAssessment(
+      questionSetV1,
+      getExtremeAnswers(questionSetV1, "direction", "max")
+    );
+    expect(result.bloodline.purity).toBeGreaterThanOrEqual(55);
+    expect(
+      result.bloodline.purity +
+        result.bloodline.hidden.reduce((sum, item) => sum + item.percentage, 0)
+    ).toBe(100);
+    expect(result.directionHint).toBe("clear-direction");
   });
   it("rejects missing, unknown, and invalid answers", () => {
     const complete = getExtremeAnswers(questionSetV1, "energy", "min");

@@ -51,6 +51,7 @@ export function ResultPage() {
         <div className="result-hero__copy">
           <p className="eyebrow">你的当前形态</p>
           <h1>{profile.name}</h1>
+          <p className="result-rarity">{profile.rarity}</p>
           <p className="result-tagline">{profile.tagline}</p>
         </div>
         <WingedHorseCharacter
@@ -94,6 +95,34 @@ export function ResultPage() {
           ) : null}
         </Card>
 
+        <Card className="result-card bloodline-card">
+          <h2>你的牛马血统</h2>
+          <div className="bloodline-card__primary">
+            <span>{profile.name}</span>
+            <strong>{result.bloodline.purity}%</strong>
+          </div>
+          <div className="score-track" aria-hidden="true">
+            <span style={{ width: `${result.bloodline.purity}%` }} />
+          </div>
+          {result.bloodline.hidden.length > 0 ? (
+            <ul className="bloodline-card__hidden">
+              {result.bloodline.hidden.map((item) => (
+                <li key={item.typeId}>
+                  <span>隐藏着一点 {getResultProfile(item.typeId).name}</span>
+                  <strong>{item.percentage}%</strong>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="edge-note">这一型很纯，暂时没有明显的隐藏血统。</p>
+          )}
+          <p className="direction-note">
+            {result.directionHint === "clear-direction"
+              ? "你的导航仪还算清楚：先照顾好续航，再沿着想走的方向慢慢加速。"
+              : "你的导航仪正在找信号：不用现在决定远方，先找一件愿意往前挪一点的小事。"}
+          </p>
+        </Card>
+
         <Card className="result-card">
           <h2>有点像你的地方</h2>
           <ul className="observation-list">
@@ -104,7 +133,7 @@ export function ResultPage() {
           <div className="advice-box">
             <span aria-hidden="true">☀</span>
             <div>
-              <strong>今天的小药方</strong>
+              <strong>牛马护理小贴士</strong>
               <p>{profile.advice}</p>
             </div>
           </div>

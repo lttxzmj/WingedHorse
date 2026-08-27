@@ -45,4 +45,9 @@ export interface AssessmentResult {
   typeId: HorseTypeId;
   edgeDimensions: Dimension[];
   easterEggs: string[];
+  bloodline: {
+    purity: number;
+    hidden: Array<{ typeId: HorseTypeId; percentage: number }>;
+  };
+  directionHint: "needs-direction" | "clear-direction";
 }

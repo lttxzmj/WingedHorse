@@ -101,7 +101,7 @@ function normalizeScores(raw: DimensionScores, ranges: ReachableRanges): Dimensi
   for (const dimension of DIMENSIONS) {
     const { min, max } = ranges[dimension];
     const value = max === min ? 50 : ((raw[dimension] - min) / (max - min)) * 100;
-    normalized[dimension] = Math.min(100, Math.max(0, value));
+    normalized[dimension] = Math.round(Math.min(100, Math.max(0, value)));
   }
   return normalized;
 }
@@ -139,6 +139,42 @@ function collectEasterEggs(questionSet: QuestionSet, answers: AssessmentAnswers)
   return eggs;
 }
 
+function buildBloodline(scores: DimensionScores): AssessmentResult["bloodline"] {
+  const distances = TYPING_DIMENSIONS.map((dimension) => ({
+    dimension,
+    distance: Math.abs(scores[dimension] - TYPE_THRESHOLD)
+  }));
+  const meanDistance = distances.reduce((sum, item) => sum + item.distance, 0) / distances.length;
+  const purity = Math.min(100, 55 + Math.round((45 * meanDistance) / 50));
+  const remaining = 100 - purity;
+  if (remaining === 0) return { purity, hidden: [] };
+
+  const closest = [...distances]
+    .sort(
+      (left, right) =>
+        left.distance - right.distance || left.dimension.localeCompare(right.dimension)
+    )
+    .slice(0, 2);
+  const candidates = closest.map(({ dimension, distance }) => {
+    const flipped = { ...scores };
+    flipped[dimension] = scores[dimension] >= TYPE_THRESHOLD ? 0 : 100;
+    return { typeId: classifyScores(flipped), weight: Math.max(1, 51 - distance) };
+  });
+  const totalWeight = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+  const firstPercentage = Math.round((remaining * (candidates[0]?.weight ?? 0)) / totalWeight);
+  const percentages = [firstPercentage, remaining - firstPercentage];
+  const merged = new Map<HorseTypeId, number>();
+  candidates.forEach((candidate, index) => {
+    merged.set(candidate.typeId, (merged.get(candidate.typeId) ?? 0) + (percentages[index] ?? 0));
+  });
+  return {
+    purity,
+    hidden: [...merged.entries()]
+      .map(([typeId, percentage]) => ({ typeId, percentage }))
+      .filter((item) => item.percentage > 0)
+  };
+}
+
 function validate(
   questionSet: QuestionSet,
   answers: AssessmentAnswers
@@ -150,7 +186,7 @@ function validate(
   }
 
   const missing = questionSet.questions
-    .filter((question) => question.scored && answers[question.id] == null)
+    .filter((question) => answers[question.id] == null)
     .map((question) => question.id);
   if (missing.length > 0) {
     return new AssessmentValidationError("MISSING_ANSWERS", `缺少答案：${missing.join(", ")}`);
@@ -192,6 +228,9 @@ export function scoreAssessment(
     normalizedScores,
     typeId: classifyScores(normalizedScores),
     edgeDimensions: collectEdgeDimensions(normalizedScores),
-    easterEggs: collectEasterEggs(questionSet, answers)
+    easterEggs: collectEasterEggs(questionSet, answers),
+    bloodline: buildBloodline(normalizedScores),
+    directionHint:
+      normalizedScores.direction < TYPE_THRESHOLD ? "needs-direction" : "clear-direction"
   };
 }

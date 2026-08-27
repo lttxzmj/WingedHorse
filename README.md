@@ -10,6 +10,7 @@
 - [技术架构](docs/TECHNICAL_ARCHITECTURE.md)
 - [UI 与角色风格规范](docs/UI_STYLE_GUIDE.md)
 - [问卷计分审计](docs/QUESTIONNAIRE_AUDIT.md)
+- [新版问卷材料接入记录](docs/QUESTIONNAIRE_V2_1_INTAKE.md)
 - [安全与合规](docs/SECURITY_COMPLIANCE.md)
 - [实施计划](docs/IMPLEMENTATION_PLAN.md)
 - [多 Agent 协作任务包](docs/AI_WORKPACKS.md)

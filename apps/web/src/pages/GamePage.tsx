@@ -48,7 +48,7 @@ export function GamePage() {
                   {Object.entries(summary.caught).length ? (
                     Object.entries(summary.caught).map(([id, count]) => (
                       <span key={id}>
-                        {ITEM_CATALOG[id as ItemId].emoji} × {count}
+                        {ITEM_CATALOG[id as ItemId].icon} × {count}
                       </span>
                     ))
                   ) : (

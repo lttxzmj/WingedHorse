@@ -15,6 +15,7 @@ test("questionnaire reaches result, lawn and game without a broken step", async 
     await page.getByRole("button", { name: index === 16 ? "看看我是哪种牛马" : "下一题" }).click();
   }
   await expect(page.getByText("你的当前形态")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "你的牛马血统" })).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-result-${testInfo.project.name}.png`,
@@ -37,6 +38,20 @@ test("questionnaire reaches result, lawn and game without a broken step", async 
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth
   );
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test("question option order stays stable when navigating back within one assessment", async ({
+  page
+}) => {
+  await page.getByRole("button", { name: "开始 90 秒测评" }).click();
+  const optionLabels = async () =>
+    (await page.getByRole("radio").allTextContents()).map((text) => text.replace("✓", ""));
+  const firstQuestionOptions = await optionLabels();
+  await page.getByRole("radio").first().click();
+  await page.getByRole("button", { name: "下一题" }).click();
+  await page.getByRole("button", { name: "上一题" }).click();
+  await expect(page.getByText("选最常发生的你，不是最理想的你")).toBeVisible();
+  expect(await optionLabels()).toEqual(firstQuestionOptions);
 });
 
 test("AI disclosure, memory controls and network fallback remain usable", async ({

@@ -8,7 +8,7 @@ describe("AssessmentService", () => {
     expect(questionSet.questions).toHaveLength(17);
     expect(questionSet.questions[0]?.options[0]).toEqual({
       id: "a",
-      label: "闹钟没响我就醒了，甚至有点期待今天"
+      label: "闹钟没响我就醒了，还有点期待"
     });
     expect(questionSet.questions[0]?.options[0]).not.toHaveProperty("effects");
   });

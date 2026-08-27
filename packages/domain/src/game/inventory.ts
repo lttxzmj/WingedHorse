@@ -1,14 +1,25 @@
+import type { DimensionScores } from "../assessment/types.js";
 import { ITEM_CATALOG, type ItemEffect, type ItemId } from "./items.js";
 
 export type Inventory = Partial<Record<ItemId, number>>;
 
 export interface PetVitals {
   energy: number;
-  warmth: number;
-  joy: number;
+  engine: number;
+  chaos: number;
+  direction: number;
 }
 
-export const INITIAL_PET_VITALS: PetVitals = { energy: 68, warmth: 72, joy: 64 };
+export const INITIAL_PET_VITALS: PetVitals = { energy: 50, engine: 50, chaos: 50, direction: 50 };
+
+export function createPetVitalsFromAssessment(scores: DimensionScores): PetVitals {
+  return {
+    energy: clampMeter(scores.energy),
+    engine: clampMeter(scores.engine),
+    chaos: clampMeter(scores.chaos),
+    direction: clampMeter(scores.direction)
+  };
+}
 
 function clampMeter(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -16,14 +27,17 @@ function clampMeter(value: number): number {
 
 export function addItem(inventory: Inventory, itemId: ItemId, quantity = 1): Inventory {
   if (!Number.isInteger(quantity) || quantity <= 0) throw new Error("INVALID_ITEM_QUANTITY");
-  return { ...inventory, [itemId]: (inventory[itemId] ?? 0) + quantity };
+  const next = (inventory[itemId] ?? 0) + quantity;
+  if (next > ITEM_CATALOG[itemId].stackLimit) throw new Error("ITEM_STACK_LIMIT");
+  return { ...inventory, [itemId]: next };
 }
 
 export function applyEffect(vitals: PetVitals, effect: ItemEffect): PetVitals {
   return {
     energy: clampMeter(vitals.energy + (effect.energy ?? 0)),
-    warmth: clampMeter(vitals.warmth + (effect.warmth ?? 0)),
-    joy: clampMeter(vitals.joy + (effect.joy ?? 0))
+    engine: clampMeter(vitals.engine + (effect.engine ?? 0)),
+    chaos: clampMeter(vitals.chaos + (effect.chaos ?? 0)),
+    direction: clampMeter(vitals.direction + (effect.direction ?? 0))
   };
 }
 

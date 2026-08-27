@@ -38,7 +38,26 @@ export const assessmentResultSchema = z.object({
     "mad-literature"
   ]),
   edgeDimensions: z.array(z.enum(["energy", "engine", "chaos", "direction"])),
-  easterEggs: z.array(z.string())
+  easterEggs: z.array(z.string()),
+  bloodline: z.object({
+    purity: z.number().int().min(55).max(100),
+    hidden: z.array(
+      z.object({
+        typeId: z.enum([
+          "chosen",
+          "perpetual",
+          "veteran",
+          "explosive",
+          "saving",
+          "overthinker",
+          "tired",
+          "mad-literature"
+        ]),
+        percentage: z.number().int().min(1).max(45)
+      })
+    )
+  }),
+  directionHint: z.enum(["needs-direction", "clear-direction"])
 });
 
 export type AssessmentSubmission = z.infer<typeof assessmentSubmissionSchema>;

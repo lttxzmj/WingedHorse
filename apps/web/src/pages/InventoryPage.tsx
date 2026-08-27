@@ -22,9 +22,10 @@ export function InventoryPage() {
       </header>
       <section className="vitals-card" aria-label="飞马状态">
         {[
-          { key: "energy", label: "力气", value: vitals.energy },
-          { key: "warmth", label: "暖意", value: vitals.warmth },
-          { key: "joy", label: "开心", value: vitals.joy }
+          { key: "energy", label: "电量", value: vitals.energy },
+          { key: "engine", label: "发动机", value: vitals.engine },
+          { key: "chaos", label: "疯感", value: vitals.chaos },
+          { key: "direction", label: "导航仪", value: vitals.direction }
         ].map((meter) => (
           <div key={meter.key}>
             <span>{meter.label}</span>
@@ -46,12 +47,17 @@ export function InventoryPage() {
             const item = ITEM_CATALOG[id];
             return (
               <Card className="item-card" key={id}>
-                <span className="item-card__emoji">{item.emoji}</span>
+                <span className="item-card__emoji" aria-hidden="true">
+                  {item.icon}
+                </span>
                 <div>
                   <h2>
                     {item.name} <small>× {inventory[id]}</small>
                   </h2>
                   <p>{item.description}</p>
+                  {item.sponsored ? (
+                    <small className="sponsor-label">品牌赞助/活动道具</small>
+                  ) : null}
                 </div>
                 <Button
                   variant="secondary"
@@ -61,7 +67,7 @@ export function InventoryPage() {
                     setNotice(okay ? `飞马收下了${item.name}。` : "现在还不能使用它。");
                   }}
                 >
-                  {item.consumable ? "送给飞马" : "制作素材"}
+                  {item.consumable ? "给牛马使用" : "已经收藏"}
                 </Button>
               </Card>
             );

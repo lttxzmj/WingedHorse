@@ -95,7 +95,12 @@ export function DropGameCanvas({ durationSeconds = 30, onFinish }: DropGameCanva
           const drop = selectDrop(this.random);
           const x = 30 + this.random() * (this.scale.width - 60);
           const label = this.add
-            .text(x, -28, ITEM_CATALOG[drop.itemId].emoji, { fontSize: "34px" })
+            .text(x, -28, ITEM_CATALOG[drop.itemId].icon, {
+              fontFamily: "PingFang SC, sans-serif",
+              fontSize: "28px",
+              fontStyle: "bold",
+              color: "#3B2E24"
+            })
             .setOrigin(0.5);
           this.drops.push({ itemId: drop.itemId, label, points: drop.points, speed: drop.speed });
         }
