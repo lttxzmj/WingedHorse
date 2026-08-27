@@ -65,15 +65,16 @@
 
 ## 4. GitHub 手动部署
 
-仓库需要配置以下 Secrets（Settings → Secrets and variables → Actions）：
+仓库需要配置以下 Secrets（Settings → Secrets and variables → Actions → 选择 `production` 环境，deploy.yml 通过 `environment: production` 读取）：
 
 - `VPS_HOST`：`43.140.245.191`
 - `VPS_USER`：`root`
 - `VPS_SSH_KEY`：`~/.ssh/id_ed25519` 的私钥内容（其公钥已在服务器 `authorized_keys`）
 - `PUBLIC_DOMAIN`：`wingedhorse.leisuremaking.cn`
 - `OPENROUTER_API_KEY`：OpenRouter 密钥（`sk-or-v1-...`），部署时由 workflow 注入服务器 `.env.production`
+- `OPENROUTER_CHAT_MODEL` / `OPENROUTER_SUMMARY_MODEL` / `OPENROUTER_VISION_MODEL`：可选，配了则在部署时覆盖服务器默认值
 
-模型 ID 不是秘密，直接在服务器 `.env.production`（golden copy）按 Model Policy 配置：
+模型 ID 既可在 GitHub Secrets 配置（部署时注入），也可在服务器 `.env.production`（golden copy）按 Model Policy 配置：
 
 | 任务       | 变量                                    | 值                               |
 | ---------- | --------------------------------------- | -------------------------------- |
