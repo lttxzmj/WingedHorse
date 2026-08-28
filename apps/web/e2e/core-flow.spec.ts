@@ -97,7 +97,9 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   );
   await page.getByRole("link", { name: "回到草原" }).click();
   await page.locator(".character-hotspot").click();
-  await expect(page.getByRole("dialog", { name: "陪它做一件小事" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "家园养成" })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "元气状态" })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "松弛状态" })).toBeVisible();
   await page.getByRole("button", { name: /摸摸它/ }).click();
   await expect(page.getByText(/同行值 \+1/)).toBeVisible();
   await expect(page.locator(".character-hotspot")).toBeFocused();
@@ -111,10 +113,9 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
       path: `/private/tmp/wingedhorse-home-${testInfo.project.name}.png`,
       fullPage: true
     });
+  await expect(page.getByRole("button", { name: "家园养成" })).toBeVisible();
   await page.getByRole("link", { name: "开始游戏" }).click();
   await expect(page.getByRole("heading", { name: "接住今天的补给" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "开始接补给" })).toBeVisible();
-  await page.getByRole("button", { name: "开始接补给" }).click();
   await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 6_000 });
   await expect(page.locator(".drop-game-canvas canvas")).toBeVisible({ timeout: 6_000 });
   await page.waitForTimeout(900);
@@ -177,7 +178,7 @@ test("legacy questionnaire drafts are deleted instead of migrated", async ({ pag
   await expect(page.getByText("第 1/17 题")).toBeVisible();
 });
 
-test("care happens in the prairie and advances the same relationship", async ({ page }) => {
+test("care happens in the prairie and advances the same relationship", async ({ page }, testInfo) => {
   await page.evaluate(() => {
     localStorage.setItem(
       "wingedhorse-local-state-v2-1",
@@ -208,9 +209,29 @@ test("care happens in the prairie and advances the same relationship", async ({ 
   });
   await page.goto("/home");
   await expect(page.getByRole("heading", { name: "熟悉阶段" })).toBeVisible();
-  await expect(page.getByText("背包里有新东西")).toBeVisible();
+  await expect(page.getByRole("link", { name: "进入飞马对话" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "家园养成" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开共同生活簿" })).toBeVisible();
+  await expect(
+    page.locator(".digital-life-stage").getByRole("link", { name: "开始游戏：30 秒补给雨" })
+  ).toBeVisible();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-digital-life-home-${testInfo.project.name}.png`,
+      fullPage: true
+    });
   await page.locator(".character-hotspot").click();
-  await page.getByRole("button", { name: /给它冰美式补给/ }).click();
+  await expect(page.getByRole("dialog", { name: "家园养成" })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "元气状态" })).toHaveAttribute(
+    "aria-valuenow",
+    "40"
+  );
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-cultivation-sheet-${testInfo.project.name}.png`,
+      fullPage: true
+    });
+  await page.getByRole("button", { name: /给它冰美式/ }).click();
   await expect(page.getByText(/它收下了冰美式补给/)).toBeVisible();
   const state = await page.evaluate(() => {
     const raw = localStorage.getItem("wingedhorse-local-state-v2-1") ?? "{}";
@@ -470,8 +491,9 @@ test("a real game finishes, settles once, enters the bag and changes the life st
     });
 
   await page.getByRole("link", { name: "带着补给回草原" }).click();
-  await expect(page.locator(".prairie-game-gate")).toContainText("宇宙 Online · 今日补给雨");
-  await expect(page.getByRole("link", { name: "开始游戏" })).toBeVisible();
+  await expect(
+    page.locator(".digital-life-stage").getByRole("link", { name: "开始游戏：30 秒补给雨" })
+  ).toBeVisible();
   await page.getByRole("link", { name: /打开背包，共 [1-9]\d* 件/ }).click();
   await expect(page.getByRole("heading", { name: "今天接住的东西" })).toBeVisible();
   if (process.env.VISUAL_QA)

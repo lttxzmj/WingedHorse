@@ -11,7 +11,7 @@ import {
   Play,
   Sparkles
 } from "lucide-react";
-import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
 import { ItemIcon } from "../components/ItemIcon";
@@ -38,6 +38,7 @@ export function GamePage() {
   const [controlDirection, setControlDirection] = useState<-1 | 0 | 1>(0);
   const [catchNotice, setCatchNotice] = useState("");
   const [showGuide, setShowGuide] = useState(true);
+  const autoStartHandled = useRef(false);
   const settleGame = useAppStore((state) => state.settleGame);
   const result = useAppStore((state) => state.result);
   const playing = phase === "playing";
@@ -71,6 +72,12 @@ export function GamePage() {
     setCountdown(3);
     setPhase("countdown");
   };
+
+  useEffect(() => {
+    if (autoStartHandled.current || window.location.hash !== "#start") return;
+    autoStartHandled.current = true;
+    start();
+  }, []);
 
   const finish = (nextSummary: GameSummary) => {
     settleGame(nextSummary.sessionId, nextSummary.caught);

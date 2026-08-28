@@ -537,7 +537,7 @@
   bottom: 0.78rem;
   left: 0.7rem;
   display: grid;
-  grid-template-columns: 3.6rem minmax(0, 1fr) 3.6rem;
+  grid-template-columns: 4.15rem minmax(0, 1fr) 4.15rem;
   align-items: end;
   gap: 0.5rem;
   pointer-events: none;
@@ -545,12 +545,12 @@
 
 .game-controls button {
   display: grid;
-  min-width: 3.6rem;
-  min-height: 3.6rem;
+  min-width: 4.15rem;
+  min-height: 4.15rem;
   place-items: center;
   padding: 0;
   border: 1px solid rgb(255 255 255 / 75%);
-  border-radius: 1rem;
+  border-radius: 50%;
   color: #624b10;
   background: rgb(255 247 217 / 90%);
   box-shadow: 0 3px 0 rgb(200 161 66 / 70%), 0 8px 18px rgb(68 56 35 / 11%);

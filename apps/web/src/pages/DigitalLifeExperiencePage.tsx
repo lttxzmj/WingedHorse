@@ -8,6 +8,7 @@ import {
 import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+  BatteryCharging,
   BookHeart,
   ChevronRight,
   CloudSun,
@@ -17,6 +18,7 @@ import {
   MessageCircle,
   Package,
   Settings,
+  Waves,
   X
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -112,6 +114,10 @@ export function DigitalLifeExperiencePage() {
           ? "深夜"
           : "傍晚";
   const currentMoment = latestStoryEvent ?? latestAutonomousEvent;
+  const careMeters = [
+    { id: "energy", label: "元气", value: petVitals.energy, icon: BatteryCharging },
+    { id: "ease", label: "松弛", value: 100 - petVitals.chaos, icon: Waves }
+  ];
   const openInteraction = (trigger: HTMLElement) => {
     interactionTriggerRef.current = trigger;
     setInteractionOpen(true);
@@ -182,11 +188,11 @@ export function DigitalLifeExperiencePage() {
           />
         </button>
         <div className="digital-life-actions" aria-label="和飞马互动">
-          <Link className="digital-life-actions__talk" to="/companion" aria-label="进入飞马对话">
-            <AppIcon icon={MessageCircle} size={20} />
+          <Link className="digital-life-actions__game" to="/game" hash="start" aria-label="开始游戏：30 秒补给雨">
+            <AppIcon icon={Gamepad2} size={20} />
             <span>
-              <strong>和它说句话</strong>
-              <small>它会回应，也会记住你</small>
+              <strong>开始游戏</strong>
+              <small>{gamesPlayed > 0 ? "再接一场补给雨" : "接补给，带回草原"}</small>
             </span>
           </Link>
           <button
@@ -194,7 +200,7 @@ export function DigitalLifeExperiencePage() {
             onClick={(event) => openInteraction(event.currentTarget)}
           >
             <AppIcon icon={Hand} size={20} />
-            <span>照顾</span>
+            <span>家园养成</span>
           </button>
           <Link
             className="digital-life-actions__journal"
@@ -228,29 +234,13 @@ export function DigitalLifeExperiencePage() {
         </div>
         <div className="digital-life-continuity__activity">
           <span className="digital-life-continuity__activity-icon" aria-hidden="true">
-            <AppIcon icon={inventoryCount > 0 ? Package : Gamepad2} size={20} />
+            <AppIcon icon={MessageCircle} size={20} />
           </span>
           <div>
-            <p>{inventoryCount > 0 ? "背包里有新东西" : "今天可以一起做"}</p>
-            <strong>
-              {inventoryCount > 0
-                ? "选一份补给，看看它的真实反应"
-                : gamesPlayed > 0
-                  ? "再接一场 30 秒补给雨"
-                  : "接住第一份补给，带回草原"}
-            </strong>
+            <p>数字生命</p>
+            <strong>和它说句话，它会记得这段对话</strong>
           </div>
-          {inventoryCount > 0 ? (
-            <Link to="/inventory" aria-label="去照顾：选一份补给给它">
-              <span>去照顾</span>
-              <AppIcon icon={ChevronRight} size={18} />
-            </Link>
-          ) : (
-            <Link to="/game" hash="start" aria-label="开始游戏">
-              <span>开始</span>
-              <AppIcon icon={ChevronRight} size={18} />
-            </Link>
-          )}
+          <Link to="/companion" aria-label="进入飞马对话"><span>聊聊</span><AppIcon icon={ChevronRight} size={18} /></Link>
         </div>
       </section>
 
@@ -271,9 +261,18 @@ export function DigitalLifeExperiencePage() {
             >
               <AppIcon icon={X} size={22} />
             </button>
-            <p className="eyebrow">{growth.relationshipLabel} · 陪伴</p>
-            <h2 id="interaction-title">陪它做一件小事</h2>
-            <p>不需要打卡，也不会因为离开而扣分。它会记得每一次真实互动。</p>
+            <p className="eyebrow">{growth.relationshipLabel} · 照顾</p>
+            <h2 id="interaction-title">家园养成</h2>
+            <p>接到的补给会进入背包；使用和陪伴都会改变它此刻的状态。</p>
+            <div className="cultivation-vitals" aria-label="飞马当前状态">
+              {careMeters.map(({ id, label, value, icon }) => (
+                <div className="cultivation-vitals__item" key={id}>
+                  <span><AppIcon icon={icon} size={17} />{label}</span>
+                  <div className="cultivation-vitals__meter" role="progressbar" aria-label={`${label}状态`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}><i style={{ width: `${value}%` }} /></div>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
             <div className="interaction-options interaction-options--care">
               <button
                 disabled={comfortedToday}

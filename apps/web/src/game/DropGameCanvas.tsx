@@ -114,7 +114,7 @@ export function DropGameCanvas({
           private missed = 0;
           private remaining = durationSeconds;
           private elapsedMs = 0;
-          private nextDropInMs = 280;
+          private nextDropInMs = 920;
           private spawnedCount = 0;
           private finished = false;
           private cursors: PhaserType.Types.Input.Keyboard.CursorKeys | undefined;
@@ -189,6 +189,16 @@ export function DropGameCanvas({
             this.cursors = this.input.keyboard?.createCursorKeys();
             this.leftKey = this.input.keyboard?.addKey("A");
             this.rightKey = this.input.keyboard?.addKey("D");
+
+            this.time.delayedCall(120, () => {
+              if (!this.finished) this.spawnDrop(0);
+            });
+            this.time.delayedCall(460, () => {
+              if (!this.finished) this.spawnDrop(0);
+            });
+            this.time.delayedCall(800, () => {
+              if (!this.finished) this.spawnDrop(0);
+            });
 
             this.emitStats();
             if (!settled) {
