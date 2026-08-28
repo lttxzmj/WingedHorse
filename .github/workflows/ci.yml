@@ -43,5 +43,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Validate production Compose
+        run: |
+          cp deploy/.env.production.example .env.production
+          docker compose --env-file .env.production -f deploy/docker-compose.prod.yml config --quiet
       - run: pnpm --filter @wingedhorse/web exec playwright install --with-deps chromium
       - run: pnpm test:e2e

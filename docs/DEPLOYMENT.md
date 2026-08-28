@@ -4,22 +4,22 @@
 
 ## 0. 当前实际部署（2026-08-27）
 
-| 项               | 值                                                                                                                                       |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 服务器           | 腾讯云 CVM `43.140.245.191`（2C2G TencentOS，Docker 26 + Compose v2）                                                                    |
-| 访问地址（过渡） | `http://43.140.245.191:8080/`                                                                                                            |
-| 目标域名         | `wingedhorse.leisuremaking.cn`（待 DNS + 证书 + 备案确认）                                                                               |
-| 端口             | web/nginx 绑定宿主 `8080`(HTTP) / `8443`(HTTPS)；`api:3100`、`postgres:5432` 仅内网；`mosquitto:1883` 对公网（设备直连，鉴权 + ACL）     |
-| 目录             | `/opt/wingedhorse/live/`（线上代码）、`/opt/wingedhorse/manual/`（golden copy：`.env.production`）、`/opt/wingedhorse/backups/postgres/` |
-| 容器             | `wingedhorse-web-1`（nginx+静态）、`wingedhorse-api-1`（NestJS）、`wingedhorse-postgres-1`、`wingedhorse-mosquitto-1`（MQTT broker）     |
-| 备份             | 每日 03:00 crontab → `backup-postgres.sh`，保留 7 天                                                                                     |
-| OpenRouter       | 未配置，Agent 走 `local-fallback`                                                                                                        |
+| 项               | 值                                                                                                                                                                          |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 服务器           | 腾讯云 CVM `43.140.245.191`（2C2G TencentOS，Docker 26 + Compose v2）                                                                                                       |
+| 访问地址（过渡） | `http://43.140.245.191:8080/`                                                                                                                                               |
+| 目标域名         | `wingedhorse.leisuremaking.cn`（待 DNS + 证书 + 备案确认）                                                                                                                  |
+| 端口             | web/nginx 绑定宿主 `8080`(HTTP) / `8443`(HTTPS)；`api:3100`、`postgres:5432` 仅内网；`mosquitto:1883` 对公网（设备直连，鉴权 + ACL）                                        |
+| 目录             | `/opt/wingedhorse/releases/<SHA>/`（候选版本）、`/opt/wingedhorse/current`（当前版本软链）、`/opt/wingedhorse/manual/`（golden copy）、`/opt/wingedhorse/backups/postgres/` |
+| 容器             | `wingedhorse-web-1`（nginx+静态）、`wingedhorse-api-1`（NestJS）、`wingedhorse-postgres-1`、`wingedhorse-mosquitto-1`（MQTT broker）                                        |
+| 备份             | 每日 03:00 crontab → `backup-postgres.sh`，保留 7 天                                                                                                                        |
+| OpenRouter       | 未配置，Agent 走 `local-fallback`                                                                                                                                           |
 
 共存说明：宿主 `80/443` 已被 VibeShot 的 `vibeshot-nginx` 占用，因此 WingedHorse 的 nginx 改为 `8080/8443`。上域名后按「域名与 TLS」章节接入 443（经 VibeShot nginx 分流或独立监听）。
 
 ### 设备联动（MQTT）
 
-- broker：`eclipse-mosquitto:2`，配置文件在 `deploy/mosquitto/`（`mosquitto.conf` + `aclfile`，可提交；`passwd` 在服务器生成，不入库）。
+- broker：`eclipse-mosquitto:2`，属于可选 `hardware` Compose profile，默认 Web/API 发布不会启动或暴露 1883。确认需要设备联动后，以 `--profile hardware` 启动；配置文件在 `deploy/mosquitto/`（`mosquitto.conf` + `aclfile`，可提交；`passwd` 在服务器生成，不入库）。
 - 服务端用户 `wingedhorse`（API 连接用，凭据在 `.env.production` 的 `MQTT_URL/MQTT_USER/MQTT_PASSWORD`）；设备用户按 `lamp-001` 模式逐台建（凭据烧录进 ESP32）。
 - 下行 `devices/{id}/effect`，上行 `devices/{id}/telemetry`，ACL 按用户隔离防越权。
 - 固件：`hardware/esp32/wingedhorse_lamp/`（接线见 `hardware/esp32/README.md`）。
@@ -34,7 +34,9 @@
     /opt/wingedhorse/manual/.env.production
     /opt/wingedhorse/manual/cert/https/fullchain.pem
     /opt/wingedhorse/manual/cert/https/privkey.pem
-    /opt/wingedhorse/live/
+    /opt/wingedhorse/incoming/
+    /opt/wingedhorse/releases/
+    /opt/wingedhorse/current -> /opt/wingedhorse/releases/<SHA>
     /opt/wingedhorse/backups/postgres/
 
 ## 2. 生产环境变量
@@ -52,12 +54,12 @@
 
 ## 3. 首次部署
 
-1. 先在服务器手动复制仓库到 `/opt/wingedhorse/live`。
-2. 从 `manual` 恢复环境变量和证书。
-3. 在 `deploy` 目录运行 `docker compose --env-file ../.env.production -f docker-compose.prod.yml config --quiet`。
+1. 把经过审阅的 Git SHA 归档解压到 `/opt/wingedhorse/releases/<SHA>`，不要上传整个工作目录或 `.git`。
+2. 从 `manual` 以 600 权限复制环境变量，并恢复证书。
+3. 在候选版本的 `deploy` 目录运行 `docker compose --env-file ../.env.production -f docker-compose.prod.yml config --quiet`。
 4. 审阅展开后的端口、卷和环境变量来源。
 5. 运行 `docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d --build`。
-6. 检查 `docker compose -f docker-compose.prod.yml ps` 与 `https://域名/api/health`。
+6. 检查 `docker compose --env-file ../.env.production -f docker-compose.prod.yml ps` 与 `https://域名/api/health`，健康后再原子更新 `current` 软链。
 
 生产 Compose 不公开 PostgreSQL 端口；Web、API 以只读根文件系统、最小 capability、资源限制和日志轮转运行。
 
@@ -70,11 +72,8 @@
 - `VPS_HOST`：`43.140.245.191`
 - `VPS_USER`：`root`
 - `VPS_SSH_KEY`：`~/.ssh/id_ed25519` 的私钥内容（其公钥已在服务器 `authorized_keys`）
-- `PUBLIC_DOMAIN`：`wingedhorse.leisuremaking.cn`
-- `OPENROUTER_API_KEY`：OpenRouter 密钥（`sk-or-v1-...`），部署时由 workflow 注入服务器 `.env.production`
-- `OPENROUTER_CHAT_MODEL` / `OPENROUTER_SUMMARY_MODEL` / `OPENROUTER_VISION_MODEL`：可选，配了则在部署时覆盖服务器默认值
 
-模型 ID 既可在 GitHub Secrets 配置（部署时注入），也可在服务器 `.env.production`（golden copy）按 Model Policy 配置：
+OpenRouter 密钥和模型策略只在服务器 600 权限的 `manual/.env.production` 中维护，不经过 GitHub Action 环境变量、`sed` 命令或构建参数。模型配置如下：
 
 | 任务       | 变量                                    | 值                               |
 | ---------- | --------------------------------------- | -------------------------------- |
@@ -83,7 +82,7 @@
 | 视觉理解   | `OPENROUTER_VISION_MODEL`               | `qwen/qwen3-vl-30b-a3b-thinking` |
 | 高风险分类 | —（本地规则 `SafetyService`，不调模型） | —                                |
 
-`.github/workflows/deploy.yml` 只有 `workflow_dispatch`，不会因推送代码自动改动生产。OpenRouter 密钥只写入服务器 600 权限的 `.env.production` 与 golden copy，不落日志、不进镜像。首次人工部署、备份恢复演练和域名确认完成后，再单独评审是否开放自动部署。
+`.github/workflows/deploy.yml` 只有 `workflow_dispatch`，不会因推送代码自动改动生产。工作流使用 `git archive` 只上传受版本控制的文件，解压到 SHA 版本目录；OpenRouter 密钥只从服务器 golden copy 复制到候选版本，不落日志、不进镜像。首次人工部署、备份恢复演练和域名确认完成后，再单独评审是否开放自动部署。
 
 ## 5. 备份与恢复
 
@@ -108,7 +107,7 @@
 当前 `deploy/nginx.conf` 为 HTTP-only 过渡配置。绑定 `wingedhorse.leisuremaking.cn` 的步骤如下：
 
 1. 域名解析：`wingedhorse.leisuremaking.cn` A 记录 → `43.140.245.191`，并确认 ICP 备案覆盖。
-2. 证书：腾讯云免费证书（或 certbot）签发该子域名证书，放 `/opt/wingedhorse/live/deploy/cert/https/`（`fullchain.pem` + `privkey.pem`）。
+2. 证书：腾讯云免费证书（或 certbot）签发该子域名证书，放 `/opt/wingedhorse/manual/cert/https/`（`fullchain.pem` + `privkey.pem`），发布时复制到候选版本。
 3. nginx：在 `deploy/nginx.conf` 增加 `listen 8443 ssl` 的 server 块（含 HSTS），并把 `listen 8080` 块改回 `301 https://` 跳转；`docker compose restart web`。
 4. 443 分流（二选一）：
    - 让 VibeShot 的 `vibeshot-nginx`（持有 80/443）新增 `server_name wingedhorse.leisuremaking.cn`，反向代理到 `http://127.0.0.1:8080`；

@@ -79,6 +79,7 @@ services:
 
   mosquitto:
     image: eclipse-mosquitto:2
+    profiles: [hardware]
     restart: unless-stopped
     ports: ["1883:1883"]
     volumes:

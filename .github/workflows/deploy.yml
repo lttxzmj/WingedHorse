@@ -17,38 +17,37 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - name: Upload reviewed candidate
+      - name: Package tracked release files
+        run: git archive --format=tar.gz --output="wingedhorse-${GITHUB_SHA}.tar.gz" HEAD
+      - name: Upload reviewed release archive
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "."
-          target: "/opt/wingedhorse/live"
+          source: "wingedhorse-${{ github.sha }}.tar.gz"
+          target: "/opt/wingedhorse/incoming"
       - name: Build and start reviewed candidate
         uses: appleboy/ssh-action@v1
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_CHAT_MODEL: ${{ secrets.OPENROUTER_CHAT_MODEL }}
-          OPENROUTER_SUMMARY_MODEL: ${{ secrets.OPENROUTER_SUMMARY_MODEL }}
-          OPENROUTER_VISION_MODEL: ${{ secrets.OPENROUTER_VISION_MODEL }}
+          RELEASE_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: OPENROUTER_API_KEY,OPENROUTER_CHAT_MODEL,OPENROUTER_SUMMARY_MODEL,OPENROUTER_VISION_MODEL
+          envs: RELEASE_SHA
           script: |
             set -euo pipefail
-            cp /opt/wingedhorse/manual/.env.production /opt/wingedhorse/live/.env.production
-            # 仅当 GitHub secret 非空时覆盖，否则保留服务器默认值
-            [ -n "${OPENROUTER_API_KEY}" ] && sed -i "s|^OPENROUTER_API_KEY=.*|OPENROUTER_API_KEY=${OPENROUTER_API_KEY}|" /opt/wingedhorse/live/.env.production
-            [ -n "${OPENROUTER_CHAT_MODEL}" ] && sed -i "s|^OPENROUTER_CHAT_MODEL=.*|OPENROUTER_CHAT_MODEL=${OPENROUTER_CHAT_MODEL}|" /opt/wingedhorse/live/.env.production
-            [ -n "${OPENROUTER_SUMMARY_MODEL}" ] && sed -i "s|^OPENROUTER_SUMMARY_MODEL=.*|OPENROUTER_SUMMARY_MODEL=${OPENROUTER_SUMMARY_MODEL}|" /opt/wingedhorse/live/.env.production
-            [ -n "${OPENROUTER_VISION_MODEL}" ] && sed -i "s|^OPENROUTER_VISION_MODEL=.*|OPENROUTER_VISION_MODEL=${OPENROUTER_VISION_MODEL}|" /opt/wingedhorse/live/.env.production
-            [ -n "${OPENROUTER_API_KEY}" ] && sed -i "s|^OPENROUTER_API_KEY=.*|OPENROUTER_API_KEY=${OPENROUTER_API_KEY}|" /opt/wingedhorse/manual/.env.production
-            mkdir -p /opt/wingedhorse/live/deploy/cert
-            cp -R /opt/wingedhorse/manual/cert/https /opt/wingedhorse/live/deploy/cert/ 2>/dev/null || true
-            cd /opt/wingedhorse/live/deploy
+            release_dir="/opt/wingedhorse/releases/${RELEASE_SHA}"
+            archive="/opt/wingedhorse/incoming/wingedhorse-${RELEASE_SHA}.tar.gz"
+            test -f /opt/wingedhorse/manual/.env.production
+            test -f "${archive}"
+            mkdir -p "${release_dir}"
+            tar -xzf "${archive}" -C "${release_dir}"
+            install -m 600 /opt/wingedhorse/manual/.env.production "${release_dir}/.env.production"
+            mkdir -p "${release_dir}/deploy/cert"
+            cp -R /opt/wingedhorse/manual/cert/https "${release_dir}/deploy/cert/" 2>/dev/null || true
+            cd "${release_dir}/deploy"
             docker compose --env-file ../.env.production -f docker-compose.prod.yml config --quiet
             docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d postgres
             until docker compose --env-file ../.env.production -f docker-compose.prod.yml exec -T postgres pg_isready -U "$(grep '^POSTGRES_USER=' ../.env.production | cut -d= -f2-)"; do sleep 2; done
@@ -56,5 +55,7 @@ jobs:
               docker compose --env-file ../.env.production -f docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U "$(grep '^POSTGRES_USER=' ../.env.production | cut -d= -f2-)" -d "$(grep '^POSTGRES_DB=' ../.env.production | cut -d= -f2-)" < "$migration"
             done
             docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d --build
-            docker compose -f docker-compose.prod.yml ps
+            docker compose --env-file ../.env.production -f docker-compose.prod.yml ps
             curl --fail --retry 12 --retry-delay 5 http://127.0.0.1:8080/api/health
+            ln -sfn "${release_dir}" /opt/wingedhorse/current.next
+            mv -Tf /opt/wingedhorse/current.next /opt/wingedhorse/current
