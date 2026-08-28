@@ -1,15 +1,16 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
+import { getResultProfile } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-  Activity,
-  BookHeart,
+  Camera,
+  CloudSun,
   Hand,
   Heart,
   MapPinned,
   MessageCircle,
   Package,
+  Settings,
   X
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -22,6 +23,13 @@ function relationshipLabel(value: number) {
   if (value >= 25) return "默契搭子";
   if (value >= 10) return "熟悉伙伴";
   return "刚刚同行";
+}
+
+function momentTime(value: string | undefined) {
+  if (!value) return "现在";
+  return new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit" }).format(
+    new Date(value)
+  );
 }
 
 export function HomePage() {
@@ -78,28 +86,24 @@ export function HomePage() {
   const latestStoryEvent = lifeEvents.find(
     (event) => event.kind === "story" || event.kind === "visitor"
   );
-  const journey = deriveJourneyGoal({ events: lifeEvents, gamesPlayed, relationshipXp });
-  const greeting =
+  const periodLabel =
     worldContext?.period === "morning"
-      ? "早上好"
+      ? "清晨"
       : worldContext?.period === "afternoon"
-        ? "下午好"
+        ? "午后"
         : worldContext?.period === "night"
-          ? "夜深了"
-          : "晚上好";
+          ? "深夜"
+          : "傍晚";
+  const currentMoment = latestStoryEvent ?? latestAutonomousEvent;
   return (
     <main className="home-page home-page--immersive">
-      <header className="home-header">
-        <div>
-          <p className="eyebrow">{profile.name} · 你的飞马草原</p>
-          <h1>{greeting}。</h1>
-          <p className="home-header__subtitle">先喘口气，看看它在忙什么。</p>
+      <header className="home-header home-header--quiet">
+        <div className="home-header__identity">
+          <p className="eyebrow">你的飞马草原</p>
+          <h1>{profile.name}</h1>
+          <span>{periodLabel} · AI 飞马正在生活</span>
         </div>
         <nav className="home-header__tools" aria-label="草原常用入口">
-          <Link className="home-tool-link" to="/life" aria-label="打开生活簿">
-            <AppIcon icon={BookHeart} size={17} />
-            <span>生活簿</span>
-          </Link>
           <Link
             className="home-tool-link"
             aria-label={`打开背包，共 ${inventoryCount} 件`}
@@ -109,19 +113,31 @@ export function HomePage() {
             <span>背包</span>
             {inventoryCount > 0 ? <small>{inventoryCount}</small> : null}
           </Link>
+          <Link className="home-tool-link" to="/settings" aria-label="打开设置与隐私">
+            <AppIcon icon={Settings} size={17} />
+            <span>设置</span>
+          </Link>
         </nav>
       </header>
 
       <section className="lawn-stage lawn-stage--alive" aria-label="飞马生活草原">
-        <div className="prairie-status" aria-label="同行状态">
-          <span>{relationshipLabel(relationshipXp)}</span>
-          <strong>同行值 {relationshipXp}</strong>
+        <div className="prairie-status prairie-status--now" aria-label="飞马当前状态">
+          <AppIcon icon={CloudSun} size={15} />
+          <span>{periodLabel}的草原</span>
         </div>
         <p className="lawn-stage__bubble" aria-live="polite">
-          {reaction ||
-            latestStoryEvent?.body ||
-            latestAutonomousEvent?.body ||
-            "我不会催你。想一起做件小事，还是先休息？"}
+          <small>
+            {reaction
+              ? "刚刚"
+              : currentMoment
+                ? `${momentTime(currentMoment.occurredAt)} · ${currentMoment.title}`
+                : "现在"}
+          </small>
+          <span>
+            {reaction ||
+              currentMoment?.body ||
+              "我不会催你。想一起做件小事，还是先在草原坐一会儿？"}
+          </span>
         </p>
         <button
           ref={characterButtonRef}
@@ -132,7 +148,7 @@ export function HomePage() {
           <WingedHorseCharacter mood={profile.mood} typeId={result.typeId} alt={profile.name} />
           <span>
             <AppIcon icon={Hand} size={15} />
-            互动
+            陪陪它
           </span>
         </button>
         {latestStoryEvent?.kind === "visitor" ? (
@@ -140,26 +156,23 @@ export function HomePage() {
             有位 AI 牛马来坐过
           </Link>
         ) : null}
-        <Link className="prairie-tent" to="/life" hash="map" aria-label="从帐篷打开共同草原地图">
+        <Link className="prairie-tent" to="/life" hash="map" aria-label="从帐篷打开共同足迹">
           <AppIcon icon={MapPinned} size={15} />
-          <span>地图</span>
+          <span>共同足迹</span>
         </Link>
-        <div className={`prairie-task-dock ${taskDone ? "is-complete" : ""}`}>
+        <div className="prairie-task-dock prairie-game-gate">
           <div>
-            <p>{taskDone ? "今天已经接住" : "今天的一件小事"}</p>
-            <strong>{taskDone ? "补给已经安全到家" : "陪我接一场 30 秒补给雨"}</strong>
+            <p>{taskDone ? "补给雨仍在继续" : "今天的一件小事"}</p>
+            <strong>{taskDone ? "想玩时，再接一场" : "陪我接一场 30 秒补给雨"}</strong>
           </div>
-          <Link to={taskDone ? "/inventory" : "/game"}>{taskDone ? "查看补给" : "一起去接"}</Link>
+          <Link to="/game">{taskDone ? "再玩一局" : "开始游戏"}</Link>
         </div>
       </section>
 
-      <footer className="home-footer">
-        <Link to="/life" hash="journey">
-          远行计划 {journey.completedCount}/{journey.totalCount}
-        </Link>
-        <span>漏接不扣状态，也不要求连续打卡</span>
-        <Link to="/settings">设置与隐私</Link>
-      </footer>
+      <div className="home-continuity">
+        <Link to="/life">看看它今天还做了什么</Link>
+        <span>{relationshipLabel(relationshipXp)} · 同行值 {relationshipXp}</span>
+      </div>
 
       {interactionOpen ? (
         <div className="interaction-backdrop" onPointerDown={() => setInteractionOpen(false)}>
@@ -179,8 +192,8 @@ export function HomePage() {
               <AppIcon icon={X} size={22} />
             </button>
             <p className="eyebrow">{relationshipLabel(relationshipXp)} · AI 飞马</p>
-            <h2 id="interaction-title">现在想怎么陪它？</h2>
-            <p>互动不会影响你的测评类型，也不会因为离开而扣分。</p>
+            <h2 id="interaction-title">陪它做一件小事</h2>
+            <p>不用打卡，也不会因为离开而扣分。</p>
             <div className="interaction-options">
               <button
                 disabled={comforted}
@@ -197,7 +210,7 @@ export function HomePage() {
               </button>
               <Link to="/companion">
                 <AppIcon icon={MessageCircle} size={21} />
-                <strong>递张小纸条</strong>
+                <strong>写张小纸条</strong>
                 <span>进入有边界的 AI 对话</span>
               </Link>
               <Link to="/inventory">
@@ -205,10 +218,10 @@ export function HomePage() {
                 <strong>给它一份补给</strong>
                 <span>先查看效果，再决定使用</span>
               </Link>
-              <Link to="/signals">
-                <AppIcon icon={Activity} size={21} />
-                <strong>告诉它现在的状态</strong>
-                <span>可以只手动选择，不开镜头</span>
+              <Link to="/life" hash="map">
+                <AppIcon icon={Camera} size={21} />
+                <strong>贴张生活照片</strong>
+                <span>放进只属于你们的共同足迹</span>
               </Link>
             </div>
           </section>

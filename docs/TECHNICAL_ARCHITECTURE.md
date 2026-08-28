@@ -300,11 +300,12 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 - rPPG 使用独立的 `VITE_FEATURE_RPPG`，即使镜头/表情实验开启也不会隐式启用趣味脉搏趋势。
 - 停止与卸载会递增运行代次，迟到的 MediaPipe Promise 不得回写界面；同时停止轨道并清空视频源、采样和画布。
 
-### 私密草原照片地图
+### 私密共同足迹
 
 - `apps/web/src/lib/photoMap.ts` 管理独立 IndexedDB（`wingedhorse-private-photo-map`），图片 Blob 不进入 Zustand/localStorage，避免容量与同步风险。
-- 写入前在客户端校验 MIME 与 10 MB 上限，按最长边 1600 px 重绘并转为 WebP；地图记录只含虚构地标、80 字内说明、时间与处理后的 Blob。
-- `PhotoMapPanel` 提供新增、查看、逐张删除；设置页的全量清除同时调用 `clearPhotoMoments`。首版不包含上传、公开信息流、真实定位或 AI 视觉分析。
+- 写入前在客户端校验 MIME 与 10 MB 上限，按最长边 1600 px 重绘并转为 WebP；记录只含用户手动选择的省级地区、80 字内说明、时间与处理后的 Blob。旧虚构地标记录在读取时迁移到“草原角落”。
+- `PhotoMapPanel` 提供新增、查看、逐张删除；设置页的全量清除同时调用 `clearPhotoMoments`。首版不包含上传、公开信息流、Geolocation、精确坐标、EXIF 持久化或 AI 视觉分析。
+- 使用不含行政边界和地理点位的旅行手账装饰底板；省级地区只作为用户手动选择的文字标签。未来若引入地图能力，必须单独接入带审图号的标准地图并完成发布审核。
 
 ### 固件与资产
 

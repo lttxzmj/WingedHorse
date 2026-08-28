@@ -66,12 +66,12 @@ export function LifePage() {
         <BackLink to="/home" label="回到草原" />
         <div>
           <p className="eyebrow">{profile.name}的私密生活簿</p>
-          <h1>{view === "feed" ? "它今天也在生活" : "一起走过的草原"}</h1>
+          <h1>{view === "feed" ? "它今天也在生活" : "一起走过的地方"}</h1>
         </div>
       </header>
       <aside className="life-boundary">
-        这不是公开朋友圈。系统事件可以按设置备份；地图照片只保存在这台设备，不读取真实位置，也不会发送给
-        AI。
+        这不是公开朋友圈。系统事件可以按设置备份；足迹照片只保存在这台设备，仅保存你手动选择的省级位置，
+        不保存精确坐标，也不会发送给 AI。
         <span role="status">
           {lifeSyncEnabled
             ? syncState === "synced"
@@ -99,7 +99,7 @@ export function LifePage() {
           onClick={() => switchView("map")}
         >
           <AppIcon icon={Map} size={18} />
-          草原地图
+          共同足迹
         </button>
       </div>
       {view === "map" ? (

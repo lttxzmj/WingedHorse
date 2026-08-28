@@ -1,12 +1,12 @@
 import { Button } from "@wingedhorse/ui";
-import { Camera, MapPin, Navigation, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { Camera, MapPinned, Navigation, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addPhotoMoment,
   deletePhotoMoment,
   listPhotoMoments,
-  PHOTO_LANDMARKS,
-  type PhotoLandmarkId,
+  PHOTO_REGIONS,
+  type PhotoRegionId,
   type PhotoMoment
 } from "../lib/photoMap";
 import { AppIcon } from "./AppIcon";
@@ -15,16 +15,15 @@ interface PhotoMomentView extends PhotoMoment {
   imageUrl: string;
 }
 
-function landmarkLabel(id: PhotoLandmarkId) {
-  return PHOTO_LANDMARKS.find((landmark) => landmark.id === id)?.label ?? "共同草原";
+function regionLabel(id: PhotoRegionId) {
+  return PHOTO_REGIONS.find((region) => region.id === id)?.label ?? "草原角落";
 }
 
 function photoTime(value: string) {
   return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
     month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
+    day: "numeric"
   }).format(new Date(value));
 }
 
@@ -35,7 +34,7 @@ export function PhotoMapPanel() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
-  const [landmarkId, setLandmarkId] = useState<PhotoLandmarkId>("tent");
+  const [regionId, setRegionId] = useState<PhotoRegionId>("beijing");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -51,23 +50,41 @@ export function PhotoMapPanel() {
   }, []);
 
   useEffect(() => {
-    void refresh().catch(() => setError("本机照片地图暂时无法打开。"));
+    void refresh().catch(() => setError("本机照片足迹暂时无法打开。"));
     return () => {
       urlsRef.current.forEach((url) => URL.revokeObjectURL(url));
       urlsRef.current = [];
     };
   }, [refresh]);
 
+  const momentsByRegion = useMemo(() => {
+    const groups = new Map<PhotoRegionId, PhotoMomentView[]>();
+    moments.forEach((moment) => {
+      const group = groups.get(moment.regionId) ?? [];
+      group.push(moment);
+      groups.set(moment.regionId, group);
+    });
+    return groups;
+  }, [moments]);
+
+  function openComposer(nextRegion: PhotoRegionId = "beijing") {
+    setRegionId(nextRegion);
+    setFile(null);
+    setCaption("");
+    setError("");
+    setComposerOpen(true);
+  }
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
-      setError("先选择一张照片，再把它放进地图。");
+      setError("先选择一张照片，再把它贴到足迹里。");
       return;
     }
     setSaving(true);
     setError("");
     try {
-      const moment = await addPhotoMoment(file, landmarkId, caption);
+      const moment = await addPhotoMoment(file, regionId, caption);
       await refresh();
       setSelectedId(moment.id);
       setFile(null);
@@ -80,7 +97,7 @@ export function PhotoMapPanel() {
           ? "照片不能超过 10 MB。"
           : message === "PHOTO_TYPE_UNSUPPORTED"
             ? "请选择浏览器可读取的 JPG、PNG 或 WebP 图片。"
-            : "这张照片暂时没有放进去，请换一张再试。"
+            : "这张照片暂时没有贴进去，请换一张再试。"
       );
     } finally {
       setSaving(false);
@@ -93,51 +110,66 @@ export function PhotoMapPanel() {
     <section className="photo-map" aria-labelledby="photo-map-title">
       <div className="photo-map__heading">
         <div>
-          <p className="eyebrow">只属于你们的足迹</p>
-          <h2 id="photo-map-title">把一张今天放进草原</h2>
+          <p className="eyebrow">共同足迹 · 仅自己可见</p>
+          <h2 id="photo-map-title">把照片贴回它发生的地方</h2>
         </div>
-        <button className="photo-map__add" onClick={() => setComposerOpen(true)}>
+        <button className="photo-map__add" onClick={() => openComposer()}>
           <AppIcon icon={Camera} size={18} />
-          放照片
+          贴照片
         </button>
       </div>
       <p className="photo-map__intro">
-        选择虚构地标，不记录现实坐标。图片会先在本机重绘、移除原文件元数据并压缩。
+        选择照片后手动标记省份或地区。这里只保存省级位置和重绘后的压缩照片，不保存精确坐标、原文件或 EXIF。
       </p>
-      <div className="photo-map__canvas">
-        <img
-          src="/scene/private-photo-map.webp"
-          alt="帐篷、静风湖、补给站、花坡和看云空地组成的共同草原地图"
-        />
-        {PHOTO_LANDMARKS.map((landmark) => {
-          const moment = moments.find((item) => item.landmarkId === landmark.id);
-          return (
+
+      <div className="photo-map__atlas" aria-label="共同旅行照片手账">
+        <img src="/scene/travel-atlas-bg.webp" alt="暖色草原旅行手账底板" />
+        <div className="photo-map__atlas-title" aria-hidden="true">
+          <strong>共同足迹</strong>
+          <span>{moments.length ? `已经贴下 ${moments.length} 张` : "从一张照片开始"}</span>
+        </div>
+        <div className="photo-map__atlas-photos">
+          {moments.slice(0, 8).map((moment, index) => (
             <button
-              className={`photo-map__pin ${moment ? "has-photo" : ""}`}
-              style={{ left: `${landmark.x}%`, top: `${landmark.y}%` }}
-              key={landmark.id}
-              aria-label={moment ? `查看${landmark.label}的照片` : `在${landmark.label}放一张照片`}
-              onClick={() => {
-                if (moment) setSelectedId(moment.id);
-                else {
-                  setLandmarkId(landmark.id);
-                  setComposerOpen(true);
-                }
-              }}
+              className={`photo-map__polaroid photo-map__polaroid--${(index % 4) + 1}`}
+              key={moment.id}
+              aria-label={`查看${regionLabel(moment.regionId)}的照片`}
+              onClick={() => setSelectedId(moment.id)}
             >
-              {moment ? <img src={moment.imageUrl} alt="" /> : <AppIcon icon={MapPin} size={21} />}
-              <span>{landmark.label}</span>
+              <img src={moment.imageUrl} alt="" />
+              <small>{regionLabel(moment.regionId)}</small>
             </button>
-          );
-        })}
+          ))}
+        </div>
+        <button
+          className="photo-map__grassland-pocket"
+          onClick={() => {
+            const latest = momentsByRegion.get("grassland")?.[0];
+            if (latest) setSelectedId(latest.id);
+            else openComposer("grassland");
+          }}
+        >
+          <AppIcon icon={MapPinned} size={18} />
+          <span>
+            <strong>草原角落</strong>
+            <small>没有地点的照片放这里</small>
+          </span>
+          {(momentsByRegion.get("grassland")?.length ?? 0) > 0 ? (
+            <b>{momentsByRegion.get("grassland")?.length}</b>
+          ) : null}
+        </button>
       </div>
+
+      <p className="photo-map__map-note">
+        这是旅行手账，不是地图，也不展示行政边界或精确坐标；地区只作为你手动选择的照片标签。
+      </p>
       {moments.length === 0 ? (
         <div className="photo-map__empty">
           <AppIcon icon={Navigation} size={22} />
-          <p>地图还是空的。可以从帐篷开始，放进第一张不需要公开的生活照片。</p>
+          <p>足迹还是空的。选一张照片，再告诉飞马它发生在哪个省份或地区。</p>
         </div>
       ) : null}
-      {error ? (
+      {error && !composerOpen ? (
         <p className="error-message" role="alert">
           {error}
         </p>
@@ -162,7 +194,7 @@ export function PhotoMapPanel() {
               <AppIcon icon={X} size={22} />
             </button>
             <p className="eyebrow">只保存在这台设备</p>
-            <h2 id="photo-composer-title">把一张生活放进草原</h2>
+            <h2 id="photo-composer-title">贴下一张共同足迹</h2>
             <label>
               照片
               <input
@@ -173,14 +205,14 @@ export function PhotoMapPanel() {
               />
             </label>
             <label>
-              放在哪里
+              这张照片发生在哪里
               <select
-                value={landmarkId}
-                onChange={(event) => setLandmarkId(event.target.value as PhotoLandmarkId)}
+                value={regionId}
+                onChange={(event) => setRegionId(event.target.value as PhotoRegionId)}
               >
-                {PHOTO_LANDMARKS.map((landmark) => (
-                  <option value={landmark.id} key={landmark.id}>
-                    {landmark.label}
+                {PHOTO_REGIONS.map((region) => (
+                  <option value={region.id} key={region.id}>
+                    {region.label}
                   </option>
                 ))}
               </select>
@@ -191,11 +223,11 @@ export function PhotoMapPanel() {
                 maxLength={80}
                 value={caption}
                 onChange={(event) => setCaption(event.target.value)}
-                placeholder="比如：今天的风终于没催我。"
+                placeholder="比如：这天走了很远，但风很温柔。"
               />
             </label>
             <p className="photo-composer__privacy">
-              不会读取真实位置；原照片不会上传，处理后也不会交给 AI。
+              不请求定位权限，不保存精确坐标；原照片不会上传，处理后也不会交给 AI。
             </p>
             {error ? (
               <p className="error-message" role="alert">
@@ -203,7 +235,7 @@ export function PhotoMapPanel() {
               </p>
             ) : null}
             <Button type="submit" loading={saving}>
-              放进草原
+              贴到共同足迹
             </Button>
           </form>
         </div>
@@ -212,10 +244,10 @@ export function PhotoMapPanel() {
       {selected ? (
         <div className="interaction-backdrop" onPointerDown={() => setSelectedId(null)}>
           <section
-            className="photo-detail"
+            className="photo-detail photo-detail--polaroid"
             role="dialog"
             aria-modal="true"
-            aria-label="地图照片"
+            aria-label="共同足迹照片"
             onPointerDown={(event) => event.stopPropagation()}
           >
             <button
@@ -225,11 +257,11 @@ export function PhotoMapPanel() {
             >
               <AppIcon icon={X} size={22} />
             </button>
-            <img src={selected.imageUrl} alt="共同草原地图中的生活照片" />
+            <img src={selected.imageUrl} alt={`${regionLabel(selected.regionId)}的共同足迹`} />
             <p className="eyebrow">
-              {landmarkLabel(selected.landmarkId)} · {photoTime(selected.createdAt)}
+              {regionLabel(selected.regionId)} · {photoTime(selected.createdAt)}
             </p>
-            <h2>{selected.caption || "一张没有公开的生活照片"}</h2>
+            <h2>{selected.caption || "一张只属于你们的生活照片"}</h2>
             <Button
               variant="tertiary"
               onClick={() =>
@@ -240,7 +272,7 @@ export function PhotoMapPanel() {
               }
             >
               <AppIcon icon={Trash2} size={17} />
-              从地图移除
+              从共同足迹移除
             </Button>
           </section>
         </div>

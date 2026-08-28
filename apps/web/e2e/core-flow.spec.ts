@@ -58,8 +58,8 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
     page.getByText("本结果为娱乐测评，不构成心理、医疗或职业建议。类型只会在你主动复测时改变。")
   ).toBeVisible();
   await page.getByRole("button", { name: "去看看平行世界里的你" }).click();
-  await expect(page.getByRole("heading", { name: /下午好|早上好|晚上好|夜深了/ })).toBeVisible();
-  await page.getByRole("link", { name: /生活簿/ }).click();
+  await expect(page.getByText(/清晨|午后|傍晚|深夜/).first()).toBeVisible();
+  await page.getByRole("link", { name: "看看它今天还做了什么" }).click();
   await expect(page.getByRole("heading", { name: "它今天也在生活" })).toBeVisible();
   await expect(page.getByText("新住客到达草原")).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "共同远行进展" })).toHaveAttribute(
@@ -71,17 +71,17 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
       path: `/private/tmp/wingedhorse-life-${testInfo.project.name}.png`,
       fullPage: true
     });
-  await page.getByRole("tab", { name: "草原地图" }).click();
-  await expect(page.getByRole("heading", { name: "把一张今天放进草原" })).toBeVisible();
-  await expect(page.getByRole("img", { name: /共同草原地图/ })).toBeVisible();
+  await page.getByRole("tab", { name: "共同足迹" }).click();
+  await expect(page.getByRole("heading", { name: "把照片贴回它发生的地方" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "暖色草原旅行手账底板" })).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-photo-map-${testInfo.project.name}.png`,
       fullPage: true
     });
-  await page.getByRole("button", { name: "在帐篷营地放一张照片" }).click();
-  await expect(page.getByRole("dialog", { name: "把一张生活放进草原" })).toContainText(
-    "不会读取真实位置"
+  await page.getByRole("button", { name: "贴照片" }).click();
+  await expect(page.getByRole("dialog", { name: "贴下一张共同足迹" })).toContainText(
+    "不请求定位权限"
   );
   await page.getByRole("button", { name: "关闭照片编辑" }).click();
   await page.getByRole("tab", { name: "生活动态" }).click();
@@ -97,7 +97,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   );
   await page.getByRole("link", { name: "回到草原" }).click();
   await page.locator(".character-hotspot").click();
-  await expect(page.getByRole("dialog", { name: "现在想怎么陪它？" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "陪它做一件小事" })).toBeVisible();
   await page.getByRole("button", { name: /摸摸它/ }).click();
   await expect(page.getByText(/同行值 \+1/)).toBeVisible();
   await expect(page.locator(".character-hotspot")).toBeFocused();
@@ -111,7 +111,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
       path: `/private/tmp/wingedhorse-home-${testInfo.project.name}.png`,
       fullPage: true
     });
-  await page.getByRole("link", { name: "一起去接" }).click();
+  await page.getByRole("link", { name: "开始游戏" }).click();
   await expect(page.getByRole("heading", { name: "接住今天的补给" })).toBeVisible();
   await expect(page.getByRole("button", { name: "准备开始" })).toBeVisible();
   await page.getByRole("button", { name: "准备开始" }).click();
@@ -149,6 +149,19 @@ test("question option order stays stable and a quick answer can be undone", asyn
   await expect(page.getByText("第 1/17 题")).toBeVisible();
   await expect(page.getByText("选最常发生的你，不是最理想的你")).toBeVisible();
   expect(await optionLabels()).toEqual(firstQuestionOptions);
+});
+
+test("reduced motion keeps question transitions short and moves focus to the next prompt", async ({
+  page
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "开始测测" }).click();
+  await expect(page.getByText("第 1/17 题")).toBeVisible();
+  await expect(page.locator(".question-panel")).toHaveCSS("animation-name", "none");
+  await page.getByRole("radio").first().click();
+  await expect(page.getByText("第 2/17 题")).toBeVisible({ timeout: 1_000 });
+  await expect(page.locator(".question-panel h1")).toBeFocused();
+  await expect(page.locator(".question-panel")).toHaveCSS("animation-name", "none");
 });
 
 test("legacy questionnaire drafts are deleted instead of migrated", async ({ page }) => {
@@ -249,7 +262,8 @@ test("a real game finishes, settles once, enters the bag and changes the life st
   await expect(page.getByLabel("本局获得物品").locator("span").first()).toBeVisible();
 
   await page.getByRole("link", { name: "带着补给回草原" }).click();
-  await expect(page.getByText("补给已经安全到家")).toBeVisible();
+  await expect(page.getByText("想玩时，再接一场")).toBeVisible();
+  await expect(page.getByRole("link", { name: "再玩一局" })).toBeVisible();
   await page.getByRole("link", { name: /打开背包，共 [1-9]\d* 件/ }).click();
   await expect(page.getByRole("heading", { name: "今天接住的东西" })).toBeVisible();
   await page.getByRole("button", { name: "给牛马使用" }).first().click();
@@ -323,7 +337,7 @@ test("returning after a week reveals the private story arc without a check-in st
   });
   await page.goto("/life");
   await expect(page.getByText("帐篷里多了一盏小灯")).toBeVisible();
-  await expect(page.getByText("你们画下第一张草原地图")).toBeVisible();
+  await expect(page.getByText("你们写下第一张远行手账")).toBeVisible();
   await expect(page.getByText("翅膀第一次留下完整影子")).toBeVisible();
   await expect(page.getByText("不是公开朋友圈")).toBeVisible();
 });

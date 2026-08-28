@@ -44,7 +44,8 @@
 | `apps/web/public/characters/types/*.webp`      | 八类型结果页、草原、生活簿与小游戏角色 | 协作 AI 产出的扁平 2D 运行时原型；仓库尚缺生成工具、提示词、人工修改记录和可商用确认，不得仅凭已提交文件宣称正式版权链完整                                                                               |
 | `apps/web/public/game/prairie-drop-bg.webp`    | 掉落游戏与相关场景的草原背景           | 协作 AI 于视觉精修阶段新增的原型背景；当前无嵌入元数据和生成记录，生产发布前必须补齐来源/生成记录、人工相似性复核和商用范围                                                                              |
 | `apps/web/public/scene/prairie-tent.webp`      | 草原主场景帐篷与共同地图入口           | 2026-08-28 使用 OpenAI 内置 ImageGen，参考现有草原背景与角色画风生成；提示方向为暖金/奶油色 2D 帆布帐篷、透明背景、灯笼与生活细节，已压缩为 WebP；仍需发布前人工相似性与商用复核                         |
-| `apps/web/public/scene/private-photo-map.webp` | 私密照片地图底图                       | 2026-08-28 使用 OpenAI 内置 ImageGen 生成；提示方向为暖色 2D 鸟瞰草原、帐篷/湖/补给站/花坡/看云空地、蜿蜒路径、无文字与角色，已压缩为 WebP；仍需发布前人工相似性与商用复核                               |
+| `apps/web/public/scene/private-photo-map.webp` | 旧版虚构草原地图底图（已停用）         | 2026-08-28 使用 OpenAI 内置 ImageGen 生成；保留作视觉来源记录，不再由运行时引用，避免与真实地区共同足迹混用。                                                                                                      |
+| `apps/web/public/scene/travel-atlas-bg.webp`   | 共同足迹内测旅行手账装饰底板           | 2026-08-28 使用 OpenAI 内置 ImageGen 生成并压缩为约 100 KB WebP；以旧版草原地图作风格参考，提示明确要求无国界、无国家轮廓、无省界、无地名。仅用于承载省级拍立得交互的内测视觉，公开发布前须替换带审图号标准地图并完成审核。 |
 | `apps/web/public/scene/prairie-home-v2.webp`   | 草原主页一体化生活场景                 | 2026-08-28 使用 OpenAI 内置 ImageGen，以现有草原和帐篷为风格参考生成；提示方向为 9:16 暖色 2D 草原、右侧中景帐篷、中央角色安全区、无角色/文字/UI，已压缩为 960×1707 WebP；仍需发布前人工相似性与商用复核 |
 | `apps/web/public/game/item-icons/*.svg`        | 小游戏与背包物品图标                   | Lucide Static 1.34.0 官方 SVG，ISC License；与页面 Lucide React 图标保持同源，发布时保留依赖许可清单                                                                                                     |
 

@@ -28,6 +28,10 @@ function stableHash(value: string) {
   return result >>> 0;
 }
 
+function answerConfirmationDelay() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 80 : 360;
+}
+
 export function AssessmentPage() {
   const navigate = useNavigate();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -97,7 +101,7 @@ export function AssessmentPage() {
         setUndoIndex(safeIndex);
         undoTimer.current = window.setTimeout(() => setUndoIndex(null), 4_000);
       }
-    }, 520);
+    }, answerConfirmationDelay());
   }
 
   function undoLastAnswer() {
@@ -132,7 +136,11 @@ export function AssessmentPage() {
           </div>
         </div>
       </header>
-      <section className="question-panel" aria-describedby={error ? "answer-error" : undefined}>
+      <section
+        key={question.id}
+        className={"question-panel" + (advancing ? " question-panel--advancing" : "")}
+        aria-describedby={error ? "answer-error" : undefined}
+      >
         <p className="question-panel__scene">{question.scene}</p>
         <h1 ref={headingRef} tabIndex={-1}>
           {question.prompt}

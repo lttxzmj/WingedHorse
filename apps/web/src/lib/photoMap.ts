@@ -1,18 +1,48 @@
 import { createClientId } from "./clientId";
 
-export const PHOTO_LANDMARKS = [
-  { id: "tent", label: "帐篷营地", x: 18, y: 18 },
-  { id: "pond", label: "静风湖", x: 72, y: 20 },
-  { id: "supply", label: "补给站", x: 80, y: 48 },
-  { id: "flower", label: "花坡", x: 70, y: 76 },
-  { id: "cloud", label: "看云空地", x: 26, y: 66 }
+export const PHOTO_REGIONS = [
+  { id: "heilongjiang", label: "黑龙江" },
+  { id: "jilin", label: "吉林" },
+  { id: "liaoning", label: "辽宁" },
+  { id: "neimenggu", label: "内蒙古" },
+  { id: "xinjiang", label: "新疆" },
+  { id: "gansu", label: "甘肃" },
+  { id: "ningxia", label: "宁夏" },
+  { id: "qinghai", label: "青海" },
+  { id: "xizang", label: "西藏" },
+  { id: "beijing", label: "北京" },
+  { id: "tianjin", label: "天津" },
+  { id: "hebei", label: "河北" },
+  { id: "shanxi", label: "山西" },
+  { id: "shaanxi", label: "陕西" },
+  { id: "shandong", label: "山东" },
+  { id: "henan", label: "河南" },
+  { id: "anhui", label: "安徽" },
+  { id: "jiangsu", label: "江苏" },
+  { id: "shanghai", label: "上海" },
+  { id: "zhejiang", label: "浙江" },
+  { id: "fujian", label: "福建" },
+  { id: "jiangxi", label: "江西" },
+  { id: "hubei", label: "湖北" },
+  { id: "hunan", label: "湖南" },
+  { id: "sichuan", label: "四川" },
+  { id: "chongqing", label: "重庆" },
+  { id: "guizhou", label: "贵州" },
+  { id: "yunnan", label: "云南" },
+  { id: "guangxi", label: "广西" },
+  { id: "guangdong", label: "广东" },
+  { id: "hongkong", label: "香港" },
+  { id: "macau", label: "澳门" },
+  { id: "hainan", label: "海南" },
+  { id: "taiwan", label: "台湾" },
+  { id: "grassland", label: "草原角落" }
 ] as const;
 
-export type PhotoLandmarkId = (typeof PHOTO_LANDMARKS)[number]["id"];
+export type PhotoRegionId = (typeof PHOTO_REGIONS)[number]["id"];
 
 export interface PhotoMoment {
   id: string;
-  landmarkId: PhotoLandmarkId;
+  regionId: PhotoRegionId;
   caption: string;
   createdAt: string;
   image: Blob;
@@ -20,7 +50,7 @@ export interface PhotoMoment {
 
 const DB_NAME = "wingedhorse-private-photo-map";
 const STORE_NAME = "moments";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 const MAX_EDGE = 1600;
 
@@ -94,9 +124,14 @@ export async function listPhotoMoments() {
       const request = database.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).getAll();
       request.onsuccess = () =>
         resolve(
-          (request.result as PhotoMoment[]).sort((left, right) =>
-            right.createdAt.localeCompare(left.createdAt)
-          )
+          (request.result as Array<PhotoMoment & { landmarkId?: string }>)
+            .map((moment) => ({
+              ...moment,
+              regionId: PHOTO_REGIONS.some((region) => region.id === moment.regionId)
+                ? moment.regionId
+                : "grassland"
+            }))
+            .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
         );
       request.onerror = () => reject(request.error ?? new Error("PHOTO_DB_READ_FAILED"));
     });
@@ -105,11 +140,11 @@ export async function listPhotoMoments() {
   }
 }
 
-export async function addPhotoMoment(file: File, landmarkId: PhotoLandmarkId, caption: string) {
+export async function addPhotoMoment(file: File, regionId: PhotoRegionId, caption: string) {
   const image = await sanitizePhoto(file);
   const moment: PhotoMoment = {
     id: createClientId(),
-    landmarkId,
+    regionId,
     caption: caption.trim().slice(0, 80),
     createdAt: new Date().toISOString(),
     image
