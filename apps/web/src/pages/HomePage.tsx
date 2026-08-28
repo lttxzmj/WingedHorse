@@ -1,10 +1,10 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import {
   ITEM_CATALOG,
-  ITEM_IDS,
   deriveCompanionGrowth,
   deriveJourneyGoal,
-  getResultProfile
+  getResultProfile,
+  recommendCareItem
 } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -35,7 +35,7 @@ function momentTime(value: string | undefined) {
 export function HomePage() {
   const navigate = useNavigate();
   const [interactionOpen, setInteractionOpen] = useState(false);
-  const [reaction, setReaction] = useState("");
+  const [reaction, setReaction] = useState<{ id: number; message: string } | null>(null);
   const characterButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const wasInteractionOpen = useRef(false);
@@ -47,6 +47,7 @@ export function HomePage() {
   const relationshipXp = useAppStore((state) => state.relationshipXp);
   const lifeEvents = useAppStore((state) => state.lifeEvents);
   const inventory = useAppStore((state) => state.inventory);
+  const petVitals = useAppStore((state) => state.petVitals);
   const useItem = useAppStore((state) => state.useItem);
   const worldContext = useAppStore((state) => state.worldContext);
   useDigitalLife();
@@ -69,6 +70,15 @@ export function HomePage() {
     }
   }, [interactionOpen]);
 
+  useEffect(() => {
+    if (!reaction) return;
+    const timeout = window.setTimeout(
+      () => setReaction((current) => (current?.id === reaction.id ? null : current)),
+      6_500
+    );
+    return () => window.clearTimeout(timeout);
+  }, [reaction]);
+
   if (!result) {
     return (
       <main className="centered-page">
@@ -85,12 +95,7 @@ export function HomePage() {
   const growth = deriveCompanionGrowth(relationshipXp);
   const journey = deriveJourneyGoal({ events: lifeEvents, gamesPlayed, relationshipXp });
   const nextMilestone = journey.milestones.find((milestone) => !milestone.completed)?.id;
-  const recommendedItemId = ITEM_IDS.find(
-    (id) =>
-      (inventory[id] ?? 0) > 0 &&
-      ITEM_CATALOG[id].consumable &&
-      ITEM_CATALOG[id].rarity !== "rare"
-  );
+  const recommendedItemId = recommendCareItem(inventory, petVitals);
   const comfortedToday = lifeEvents.some(
     (event) => event.eventKey === `quiet-moment:${new Date().toISOString().slice(0, 10)}`
   );
@@ -119,6 +124,7 @@ export function HomePage() {
           ? "深夜"
           : "傍晚";
   const currentMoment = latestStoryEvent ?? latestAutonomousEvent;
+  const showReaction = (message: string) => setReaction({ id: Date.now(), message });
   return (
     <main className="home-page home-page--immersive">
       <header className="home-header home-header--quiet">
@@ -158,7 +164,7 @@ export function HomePage() {
                 : "现在"}
           </small>
           <span>
-            {reaction ||
+            {reaction?.message ||
               currentMoment?.body ||
               "我不会催你。想一起做件小事，还是先在草原坐一会儿？"}
           </span>
@@ -169,7 +175,12 @@ export function HomePage() {
           onClick={() => setInteractionOpen(true)}
           aria-label={`和${profile.name}互动`}
         >
-          <WingedHorseCharacter mood={profile.mood} typeId={result.typeId} alt={profile.name} />
+          <WingedHorseCharacter
+            key={reaction?.id ?? "rest"}
+            mood={profile.mood}
+            typeId={result.typeId}
+            alt={profile.name}
+          />
           <span>
             <AppIcon icon={Hand} size={15} />
             陪陪它
@@ -240,7 +251,7 @@ export function HomePage() {
                 disabled={comfortedToday}
                 onClick={() => {
                   if (comfortPet())
-                    setReaction("收到摸摸了。今天不用表现得很厉害。同行值 +1");
+                    showReaction("收到摸摸了。今天不用表现得很厉害。同行值 +1");
                   setInteractionOpen(false);
                 }}
               >
@@ -258,7 +269,9 @@ export function HomePage() {
                   onClick={() => {
                     const item = ITEM_CATALOG[recommendedItemId];
                     if (useItem(recommendedItemId))
-                      setReaction(`它收下了${item.name}。不是数字涨了，是今天真的被照顾到了一点。`);
+                      showReaction(
+                        `它收下了${item.name}。不是数字涨了，是今天真的被照顾到了一点。`
+                      );
                     setInteractionOpen(false);
                   }}
                 >
@@ -266,6 +279,12 @@ export function HomePage() {
                   <strong>给它{ITEM_CATALOG[recommendedItemId].name}</strong>
                   <span>背包还有 {inventory[recommendedItemId]} 件 · 使用后会留下共同记录</span>
                 </button>
+              ) : inventoryCount > 0 ? (
+                <Link to="/inventory">
+                  <AppIcon icon={Package} size={21} />
+                  <strong>先把补给收好</strong>
+                  <span>它现在状态刚好，需要时再使用</span>
+                </Link>
               ) : (
                 <Link to="/game">
                   <AppIcon icon={Package} size={21} />

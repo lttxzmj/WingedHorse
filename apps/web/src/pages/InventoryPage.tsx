@@ -4,6 +4,7 @@ import {
   ITEM_IDS,
   deriveCompanionGrowth,
   getResultProfile,
+  recommendCareItem,
   type ItemEffect,
   type ItemId
 } from "@wingedhorse/domain";
@@ -33,6 +34,8 @@ const FILTERS: Array<{ id: InventoryFilter; label: string }> = [
   { id: "direction", label: "方向" },
   { id: "keepsake", label: "收藏" }
 ];
+
+const PREVIEW_ITEM_COUNT = 4;
 
 function itemMatchesFilter(itemId: ItemId, filter: InventoryFilter) {
   const item = ITEM_CATALOG[itemId];
@@ -70,12 +73,19 @@ export function InventoryPage() {
   const useItem = useAppStore((state) => state.useItem);
   const [notice, setNotice] = useState("");
   const [filter, setFilter] = useState<InventoryFilter>("all");
+  const [expanded, setExpanded] = useState(false);
   const [pendingItem, setPendingItem] = useState<(typeof ITEM_IDS)[number] | null>(null);
   const owned = ITEM_IDS.filter((id) => (inventory[id] ?? 0) > 0);
   const visibleItems = owned.filter((id) => itemMatchesFilter(id, filter));
-  const recommendedItem = owned.find(
-    (id) => ITEM_CATALOG[id].consumable && ITEM_CATALOG[id].rarity !== "rare"
-  );
+  const recommendedItem = recommendCareItem(inventory, vitals);
+  const orderedVisibleItems = recommendedItem && visibleItems.includes(recommendedItem)
+    ? [recommendedItem, ...visibleItems.filter((id) => id !== recommendedItem)]
+    : visibleItems;
+  const displayedItems =
+    filter !== "all" || expanded
+      ? orderedVisibleItems
+      : orderedVisibleItems.slice(0, PREVIEW_ITEM_COUNT);
+  const hiddenItemCount = orderedVisibleItems.length - displayedItems.length;
   const growth = deriveCompanionGrowth(relationshipXp);
   const profile = result ? getResultProfile(result.typeId) : null;
 
@@ -161,7 +171,10 @@ export function InventoryPage() {
               key={option.id}
               className={filter === option.id ? "is-active" : ""}
               aria-pressed={filter === option.id}
-              onClick={() => setFilter(option.id)}
+              onClick={() => {
+                setFilter(option.id);
+                setExpanded(false);
+              }}
             >
               {option.label}
             </button>
@@ -170,7 +183,7 @@ export function InventoryPage() {
       ) : null}
       <section className="inventory-grid">
         {owned.length ? (
-          visibleItems.length ? visibleItems.map((id) => {
+          displayedItems.length ? displayedItems.map((id) => {
             const item = ITEM_CATALOG[id];
             return (
               <Card className="item-card" key={id}>
@@ -221,6 +234,15 @@ export function InventoryPage() {
           </section>
         )}
       </section>
+      {filter === "all" && visibleItems.length > PREVIEW_ITEM_COUNT ? (
+        <button
+          className="inventory-reveal"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? "收起物品" : `查看其余 ${hiddenItemCount} 种物品`}
+        </button>
+      ) : null}
       {pendingItem ? (
         <section
           className="inventory-confirm"

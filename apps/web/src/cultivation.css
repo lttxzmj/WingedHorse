@@ -262,6 +262,38 @@
   font-weight: 700;
 }
 
+.inventory-page .item-card .ui-button {
+  grid-column: 2;
+  width: auto;
+  min-height: 2.65rem;
+  padding-inline: 1rem;
+  justify-self: start;
+}
+
+.inventory-reveal {
+  display: flex;
+  width: 100%;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.75rem;
+  border: 1px solid rgb(90 69 50 / 12%);
+  border-radius: 1rem;
+  color: var(--color-ink-700);
+  background: rgb(255 255 255 / 68%);
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+
+.inventory-reveal:hover {
+  background: #fff9e9;
+}
+
+.inventory-reveal:focus-visible {
+  outline: 3px solid rgb(224 169 31 / 32%);
+  outline-offset: 2px;
+}
+
 @media (max-width: 540px) {
   .companion-growth-card__footer,
   .care-response {

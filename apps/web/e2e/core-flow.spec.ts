@@ -228,6 +228,61 @@ test("care happens in the prairie and advances the same relationship", async ({ 
   expect(state.lifeEvents.some((event) => event.kind === "gift")).toBe(true);
 });
 
+test("the bag recommends a real need and progressively reveals the long list", async ({
+  page
+}, testInfo) => {
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "wingedhorse-local-state-v2-1",
+      JSON.stringify({
+        version: 5,
+        state: {
+          assessmentOptionSeed: "inventory-density-e2e",
+          result: {
+            questionSetId: "wingedhorse-v2-1",
+            questionSetVersion: "2.1.0",
+            rawScores: { energy: 0, engine: 0, chaos: 0, direction: 0 },
+            normalizedScores: { energy: 50, engine: 50, chaos: 50, direction: 50 },
+            typeId: "chosen",
+            edgeDimensions: [],
+            easterEggs: [],
+            bloodline: { purity: 100, hidden: [] },
+            directionHint: "clear-direction"
+          },
+          inventory: {
+            "iced-americano": 2,
+            "nap-mask": 1,
+            "steering-wheel-charm": 1,
+            "main-quest-note": 1,
+            "screaming-chicken": 2,
+            "mad-note": 1
+          },
+          petVitals: { energy: 80, engine: 70, chaos: 92, direction: 70 },
+          relationshipXp: 10,
+          lifeEvents: []
+        }
+      })
+    );
+  });
+  await page.goto("/inventory");
+  await expect(page.getByRole("heading", { name: "把尖叫鸡给它" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "给牛马使用" })).toHaveCount(4);
+  await expect(page.locator(".item-card h2").first()).toContainText("尖叫鸡");
+  const reveal = page.getByRole("button", { name: "查看其余 2 种物品" });
+  await expect(reveal).toBeVisible();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-inventory-compact-${testInfo.project.name}.png`,
+      fullPage: true
+    });
+  await reveal.click();
+  await expect(page.getByRole("button", { name: "给牛马使用" })).toHaveCount(6);
+  await expect(page.getByRole("button", { name: "收起物品" })).toHaveAttribute(
+    "aria-expanded",
+    "true"
+  );
+});
+
 test("game start and companion entry survive an HTTP context without randomUUID", async ({
   page
 }) => {
@@ -283,6 +338,15 @@ test("game intro fills common H5 viewport heights without an orphan title line",
     const metrics = await page.evaluate(() => {
       const shell = document.querySelector<HTMLElement>(".game-shell")?.getBoundingClientRect();
       const title = document.querySelector<HTMLElement>(".game-intro__brief h2");
+      const character = document
+        .querySelector<HTMLElement>(".game-intro__character")
+        ?.getBoundingClientRect();
+      const dock = document
+        .querySelector<HTMLElement>(".game-intro__dock")
+        ?.getBoundingClientRect();
+      const action = document
+        .querySelector<HTMLElement>(".game-intro__actions .ui-button")
+        ?.getBoundingClientRect();
       const titleStyle = title ? getComputedStyle(title) : null;
       return {
         innerHeight,
@@ -290,7 +354,13 @@ test("game intro fills common H5 viewport heights without an orphan title line",
         shellBottom: shell?.bottom ?? 0,
         shellHeight: shell?.height ?? 0,
         titleHeight: title?.getBoundingClientRect().height ?? 0,
-        titleLineHeight: titleStyle ? Number.parseFloat(titleStyle.lineHeight) : 0
+        titleLineHeight: titleStyle ? Number.parseFloat(titleStyle.lineHeight) : 0,
+        characterBottom: character?.bottom ?? 0,
+        dockTop: dock?.top ?? 0,
+        dockBottom: dock?.bottom ?? 0,
+        actionHeight: action?.height ?? 0,
+        actionRight: action?.right ?? 0,
+        dockRight: dock?.right ?? 0
       };
     });
     expect(metrics.pageHeight).toBeLessThanOrEqual(metrics.innerHeight + 1);
@@ -298,6 +368,10 @@ test("game intro fills common H5 viewport heights without an orphan title line",
     expect(metrics.shellBottom).toBeLessThanOrEqual(metrics.innerHeight + 1);
     expect(metrics.shellHeight).toBeGreaterThan(500);
     expect(metrics.titleHeight).toBeLessThan(metrics.titleLineHeight * 1.5);
+    expect(Math.abs(metrics.characterBottom - metrics.dockTop)).toBeLessThan(32);
+    expect(metrics.dockBottom).toBeLessThanOrEqual(metrics.shellBottom - 8);
+    expect(metrics.actionHeight).toBeGreaterThanOrEqual(44);
+    expect(metrics.actionRight).toBeLessThanOrEqual(metrics.dockRight - 8);
     if (process.env.VISUAL_QA)
       await page.screenshot({
         path: `/private/tmp/wingedhorse-game-intro-${viewport.name}-${testInfo.project.name}.png`,

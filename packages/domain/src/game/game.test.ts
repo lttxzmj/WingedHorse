@@ -5,7 +5,8 @@ import {
   consumeItem,
   createPetVitalsFromAssessment,
   grantItems,
-  INITIAL_PET_VITALS
+  INITIAL_PET_VITALS,
+  recommendCareItem
 } from "./inventory.js";
 
 describe("inventory transactions", () => {
@@ -47,6 +48,24 @@ describe("inventory transactions", () => {
       compass: 1
     });
     expect(() => grantItems({}, { compass: -1 })).toThrow("INVALID_ITEM_QUANTITY");
+  });
+
+  it("recommends the owned common item that best matches the current need", () => {
+    const inventory = {
+      "iced-americano": 2,
+      "nap-mask": 1,
+      "steering-wheel-charm": 1,
+      "screaming-chicken": 1,
+      "emotion-valve": 1
+    } as const;
+    expect(
+      recommendCareItem(inventory, { energy: 80, engine: 70, chaos: 92, direction: 70 })
+    ).toBe("screaming-chicken");
+    expect(
+      recommendCareItem(inventory, { energy: 12, engine: 70, chaos: 10, direction: 70 })
+    ).toBe("nap-mask");
+    expect(recommendCareItem({ "emotion-valve": 1 }, INITIAL_PET_VITALS)).toBeNull();
+    expect(recommendCareItem({}, INITIAL_PET_VITALS)).toBeNull();
   });
 });
 

@@ -71,3 +71,37 @@ export function consumeItem(
   else nextInventory[itemId] = current - 1;
   return { inventory: nextInventory, vitals: applyEffect(vitals, item.effect) };
 }
+
+function careBenefit(vitals: PetVitals, itemId: ItemId): number {
+  const effect = ITEM_CATALOG[itemId].effect;
+  const restore = (change: number | undefined, current: number) =>
+    change && change > 0 ? Math.min(change, 100 - current) * ((101 - current) / 100) : 0;
+  const release =
+    effect.chaos && effect.chaos < 0
+      ? Math.min(-effect.chaos, vitals.chaos) * ((vitals.chaos + 1) / 100)
+      : 0;
+  return (
+    restore(effect.energy, vitals.energy) +
+    restore(effect.engine, vitals.engine) +
+    restore(effect.direction, vitals.direction) +
+    release
+  );
+}
+
+export function recommendCareItem(inventory: Inventory, vitals: PetVitals): ItemId | null {
+  const candidates = Object.keys(inventory).filter((id): id is ItemId => {
+    const itemId = id as ItemId;
+    const item = ITEM_CATALOG[itemId];
+    return Boolean((inventory[itemId] ?? 0) > 0 && item.consumable && item.rarity !== "rare");
+  });
+  let best: ItemId | null = null;
+  let bestBenefit = 0;
+  for (const itemId of candidates) {
+    const benefit = careBenefit(vitals, itemId);
+    if (benefit > bestBenefit) {
+      best = itemId;
+      bestBenefit = benefit;
+    }
+  }
+  return best;
+}
