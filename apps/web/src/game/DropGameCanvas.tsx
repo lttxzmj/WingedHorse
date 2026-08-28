@@ -3,6 +3,7 @@ import type { WingedHorseType } from "@wingedhorse/character-runtime";
 import { useEffect, useRef } from "react";
 import type PhaserType from "phaser";
 import { ITEM_ICON_ASSETS } from "../lib/itemIconAssets";
+import { GAME_CHARACTER_ASSETS } from "./gameCharacterAssets";
 
 export interface GameStats {
   score: number;
@@ -120,7 +121,7 @@ export function DropGameCanvas({
 
           preload() {
             this.load.image("prairie-background", "/game/prairie-drop-bg.webp");
-            this.load.image("player-character", `/characters/types/${characterType}.webp`);
+            this.load.image("player-character", GAME_CHARACTER_ASSETS[characterType]);
             Object.entries(ITEM_ICON_ASSETS).forEach(([itemId, path]) => {
               this.load.svg(`item-icon-${itemId}`, path, { width: 30, height: 30 });
             });
@@ -136,11 +137,15 @@ export function DropGameCanvas({
             }
 
             const catcherSprite = this.textures.exists("player-character")
-              ? this.add
-                  .image(0, 0, "player-character")
-                  .setDisplaySize(184, 184)
-                  .setOrigin(0.5, 0.56)
+              ? this.add.image(0, 0, "player-character").setOrigin(0.5, 0.58)
               : this.add.circle(0, 0, 42, 0xffd057).setStrokeStyle(4, 0x3b2e24);
+            if (catcherSprite instanceof Phaser.GameObjects.Image) {
+              const displayHeight = 190;
+              catcherSprite.setDisplaySize(
+                (catcherSprite.width / catcherSprite.height) * displayHeight,
+                displayHeight
+              );
+            }
             this.catcher = this.add.container(width / 2, height - 94, [catcherSprite]);
 
             const move = (x: number) => {

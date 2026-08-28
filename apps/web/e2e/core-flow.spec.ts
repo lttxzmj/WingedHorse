@@ -187,6 +187,10 @@ test("game start and companion entry survive an HTTP context without randomUUID"
     });
   });
   await page.goto("/game");
+  await expect(page.locator(".game-intro__character img")).toHaveAttribute(
+    "src",
+    "/game/characters/chosen.webp"
+  );
   await page.getByRole("button", { name: "准备开始" }).click();
   await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 8_000 });
   await page.goto("/companion");
@@ -219,7 +223,7 @@ test("game loading failure offers a usable retry path", async ({ page }) => {
 
 test("a real game finishes, settles once, enters the bag and changes the life story", async ({
   page
-}) => {
+}, testInfo) => {
   test.setTimeout(70_000);
   await page.evaluate(() => {
     localStorage.setItem(
@@ -260,6 +264,13 @@ test("a real game finishes, settles once, enters the bag and changes the life st
   await expect(page.getByText("本局得分")).toBeVisible({ timeout: 35_000 });
   await expect(page.getByText(/最高 \d+ 连击/)).toBeVisible();
   await expect(page.getByLabel("本局获得物品").locator("span").first()).toBeVisible();
+  await expect(page.getByRole("img", { name: "长出翅膀后的进化天马形象" })).toBeVisible();
+  await expect(page.getByText(/飞升能量 \+\d+/)).toBeVisible();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-game-summary-${testInfo.project.name}.png`,
+      fullPage: true
+    });
 
   await page.getByRole("link", { name: "带着补给回草原" }).click();
   await expect(page.getByText("想玩时，再接一场")).toBeVisible();

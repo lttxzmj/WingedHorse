@@ -1,4 +1,3 @@
-import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
@@ -8,6 +7,8 @@ import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
 import { ItemIcon } from "../components/ItemIcon";
 import { DropGameCanvas, type GameStats, type GameSummary } from "../game/DropGameCanvas";
+import { ASCENDED_HORSE_ASSET, GAME_CHARACTER_ASSETS } from "../game/gameCharacterAssets";
+import "../game/gameAssets.css";
 import { createClientId } from "../lib/clientId";
 import { useAppStore } from "../store/useAppStore";
 
@@ -209,7 +210,12 @@ export function GamePage() {
         ) : (
           <div className="game-intro">
             <div className="game-intro__character" aria-hidden="true">
-              <WingedHorseCharacter typeId={result?.typeId ?? "chosen"} alt="" />
+              <img
+                src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]}
+                alt=""
+                width="640"
+                height="640"
+              />
             </div>
             <span className="game-intro__tag">30 秒 · 漏接不扣分</span>
             {summary ? (
@@ -229,6 +235,22 @@ export function GamePage() {
                     <p>这次没有接住也没关系，不扣分，也不会影响飞马。</p>
                   )}
                 </div>
+                <figure className="game-summary__ascension">
+                  <img
+                    src={ASCENDED_HORSE_ASSET}
+                    alt="长出翅膀后的进化天马形象"
+                    width="512"
+                    height="512"
+                  />
+                  <figcaption>
+                    <strong>飞升能量 +{summary.caughtCount}</strong>
+                    <span>
+                      {summary.maxCombo >= 5
+                        ? "这次连击让天马形态闪了一下。"
+                        : "继续接住补给，天马形态会慢慢靠近。"}
+                    </span>
+                  </figcaption>
+                </figure>
               </div>
             ) : (
               <>
