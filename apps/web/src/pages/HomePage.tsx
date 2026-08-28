@@ -80,28 +80,22 @@ export function HomePage() {
     <main className="home-page home-page--immersive">
       <header className="home-header">
         <div>
-          <p className="eyebrow">你的飞马草原</p>
+          <p className="eyebrow">{profile.name} · 你的飞马草原</p>
           <h1>{greeting}，先喘口气。</h1>
         </div>
-        <div className="home-header__tools">
-          <Link
-            className="icon-button"
-            aria-label={`打开背包，共 ${inventoryCount} 件`}
-            to="/inventory"
-          >
-            包<small>{inventoryCount}</small>
+        <nav className="home-header__tools" aria-label="草原常用入口">
+          <Link className="home-tool-link" to="/life">生活簿</Link>
+          <Link className="home-tool-link" aria-label={`打开背包，共 ${inventoryCount} 件`} to="/inventory">
+            背包{inventoryCount > 0 ? <small>{inventoryCount}</small> : null}
           </Link>
-          <Link className="icon-button" aria-label="打开生活簿" to="/life">
-            簿
-          </Link>
-          <Link className="icon-button" aria-label="打开设置" to="/settings">
-            设
-          </Link>
-        </div>
+        </nav>
       </header>
 
       <section className="lawn-stage lawn-stage--alive" aria-label="飞马生活草原">
-        <div className="lawn-stage__sun" aria-hidden="true" />
+        <div className="prairie-status" aria-label="同行状态">
+          <span>{relationshipLabel(relationshipXp)}</span>
+          <strong>同行值 {relationshipXp}</strong>
+        </div>
         <p className="lawn-stage__bubble" aria-live="polite">
           {reaction ||
             latestStoryEvent?.body ||
@@ -122,41 +116,22 @@ export function HomePage() {
             有位 AI 牛马来坐过
           </Link>
         ) : null}
-        <div className="tent" aria-label="飞马休息的小帐篷">
-          <span aria-hidden="true">休</span>
-        </div>
-        <div className="lawn-progress" aria-label="同行进展">
+        <div className={`prairie-task-dock ${taskDone ? "is-complete" : ""}`}>
           <div>
-            <span>{relationshipLabel(relationshipXp)}</span>
-            <strong>同行值 {relationshipXp}</strong>
+            <p>{taskDone ? "今天已经接住" : "今天的一件小事"}</p>
+            <strong>{taskDone ? "补给已安全到家" : "陪我接一场 30 秒补给雨"}</strong>
           </div>
-          <Link
-            to="/life"
-            hash="journey"
-            aria-label={`查看共同远行计划，已完成 ${journey.completedCount} 项`}
-          >
-            远行计划 {journey.completedCount}/{journey.totalCount}
+          <Link to={taskDone ? "/inventory" : "/game"}>
+            {taskDone ? "查看补给" : "一起去接"}
           </Link>
         </div>
       </section>
 
-      <section className={`daily-event ${taskDone ? "daily-event--done" : ""}`}>
-        <div>
-          <p className="eyebrow">{taskDone ? "今天已经接住" : "今天的一件小事"}</p>
-          <h2>{taskDone ? "补给已经安全到家" : "陪我接一场 30 秒补给雨"}</h2>
-          <p>
-            {taskDone
-              ? "不用继续打卡。你可以把补给给飞马，也可以留在背包里。"
-              : "漏接不扣状态，完成第一局会增加 8 点同行值。"}
-          </p>
-        </div>
-        <Link
-          className="ui-button ui-button--primary inline-link-button"
-          to={taskDone ? "/inventory" : "/game"}
-        >
-          {taskDone ? "看看补给" : "一起去接"}
-        </Link>
-      </section>
+      <footer className="home-footer">
+        <Link to="/life" hash="journey">远行计划 {journey.completedCount}/{journey.totalCount}</Link>
+        <span>漏接不扣状态，也不要求连续打卡</span>
+        <Link to="/settings">设置与隐私</Link>
+      </footer>
 
       {interactionOpen ? (
         <div className="interaction-backdrop" onPointerDown={() => setInteractionOpen(false)}>

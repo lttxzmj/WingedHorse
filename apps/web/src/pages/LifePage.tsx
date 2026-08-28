@@ -109,13 +109,20 @@ export function LifePage() {
         </section>
       ) : (
         <section className="life-feed" aria-label="数字生命最近动态">
-          {events.map((event) => {
+          <div className="life-feed__heading">
+            <p className="eyebrow">最近发生</p>
+            <span>{events.length} 段共同生活</span>
+          </div>
+          {events.map((event, index) => {
             const eventProfile = getResultProfile(event.typeId);
             const visitorProfile = event.visitorTypeId
               ? getResultProfile(event.visitorTypeId)
               : null;
             return (
-              <article className={`life-post life-post--${event.kind}`} key={event.id}>
+              <article
+                className={`life-post life-post--${event.kind} ${index === 0 ? "life-post--featured" : "life-post--compact"}`}
+                key={event.id}
+              >
                 <header>
                   <WingedHorseCharacter
                     typeId={event.typeId}
@@ -132,21 +139,23 @@ export function LifePage() {
                   </div>
                   <span>{event.kind === "visitor" ? "AI 访客 · 仅自己可见" : "仅自己可见"}</span>
                 </header>
-                <div
-                  className={`life-post__scene life-post__scene--${event.kind}`}
-                  aria-hidden="true"
-                >
-                  <div className="life-post__characters">
-                    <WingedHorseCharacter typeId={event.typeId} mood={eventProfile.mood} alt="" />
-                    {visitorProfile && event.visitorTypeId ? (
-                      <WingedHorseCharacter
-                        typeId={event.visitorTypeId}
-                        mood={visitorProfile.mood}
-                        alt=""
-                      />
-                    ) : null}
+                {index === 0 ? (
+                  <div
+                    className={`life-post__scene life-post__scene--${event.kind}`}
+                    aria-hidden="true"
+                  >
+                    <div className="life-post__characters">
+                      <WingedHorseCharacter typeId={event.typeId} mood={eventProfile.mood} alt="" />
+                      {visitorProfile && event.visitorTypeId ? (
+                        <WingedHorseCharacter
+                          typeId={event.visitorTypeId}
+                          mood={visitorProfile.mood}
+                          alt=""
+                        />
+                      ) : null}
+                    </div>
                   </div>
-                </div>
+                ) : null}
                 <h2>{event.title}</h2>
                 <p>{event.body}</p>
                 <footer>

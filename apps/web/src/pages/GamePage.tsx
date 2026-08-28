@@ -2,6 +2,7 @@ import { ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { DropGameCanvas, type GameStats, type GameSummary } from "../game/DropGameCanvas";
 import { createClientId } from "../lib/clientId";
 import { useAppStore } from "../store/useAppStore";
@@ -179,9 +180,10 @@ export function GamePage() {
           </div>
         ) : (
           <div className="game-intro">
-            <span className="game-intro__mark" aria-hidden="true">
-              补给雨
-            </span>
+            <div className="game-intro__character" aria-hidden="true">
+              <WingedHorseCharacter typeId={result?.typeId ?? "chosen"} alt="" />
+            </div>
+            <span className="game-intro__tag">30 秒 · 漏接不扣分</span>
             {summary ? (
               <div className="game-summary">
                 <p className="eyebrow">本局得分</p>
