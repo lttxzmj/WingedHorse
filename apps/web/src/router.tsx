@@ -8,7 +8,9 @@ const AssessmentPage = lazy(() =>
   import("./pages/AssessmentPage").then((module) => ({ default: module.AssessmentPage }))
 );
 const HomePage = lazy(() =>
-  import("./pages/HomePage").then((module) => ({ default: module.HomePage }))
+  import("./pages/DigitalLifeExperiencePage").then((module) => ({
+    default: module.DigitalLifeExperiencePage
+  }))
 );
 const GamePage = lazy(() =>
   import("./pages/GamePage").then((module) => ({ default: module.GamePage }))
