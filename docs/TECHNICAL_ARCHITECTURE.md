@@ -273,13 +273,16 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 ### 通信
 
 ```
-浏览器/服务端 → MQTT broker(Mosquitto, 与 API 同 VPS) → ESP32
+浏览器/服务端 ──(HTTP/SSE)──> API 服务端 ──(MQTT)──> Mosquitto Broker ──(MQTT)──> ESP32 硬件
   下行 topic: devices/{deviceId}/effect
   上行 topic: devices/{deviceId}/telemetry
 ```
 
 - broker 鉴权 + ACL 按用户隔离：服务端用户可 `write devices/#`；设备用户只 `read devices/{id}/effect`、`write devices/{id}/telemetry`（防越权）。
 - 服务端 `MqttProvider` 适配器，未配置 `MQTT_URL` 时优雅降级为 no-op。
+- **实时事件通道 (SSE)**：服务端监听设备 `telemetry` 上报，通过 `/api/devices/:deviceId/events` 推送至前端：
+  - **超声波人员靠近 / Boss 来袭预警**：检测到有人靠近时，若处于摸鱼/游戏中立即弹出 Boss 预警并支持一键伪装工作表格；若处于日常陪伴则主动打招呼。
+  - **FSR 压力触控**：检测到抚摸/按压时，触发角色治愈与安心反馈。
 
 ### 心情 → 灯效（领域纯函数，packages/domain/src/signals/lighting.ts）
 

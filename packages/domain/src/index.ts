@@ -14,3 +14,4 @@ export * from "./digital-life/journey.js";
 export * from "./digital-life/growth.js";
 export * from "./signals/expression.js";
 export * from "./signals/lighting.js";
+export * from "./signals/hardwareEvents.js";

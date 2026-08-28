@@ -2,13 +2,16 @@ import type { CompanionMessageRequest, CompanionMessageResponse } from "@wingedh
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { getResultProfile, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
+import { BookOpen, ChevronDown, Heart, Info, Send, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { BackLink } from "../components/BackLink";
 import { createClientId } from "../lib/clientId";
+import { subscribeDeviceEvents } from "../lib/devices";
 import { CompanionStreamError, streamCompanionMessage } from "../lib/companionStream";
 import { useAppStore } from "../store/useAppStore";
 import { useDigitalLife } from "../hooks/useDigitalLife";
+import "../companion-experience.css";
 
 interface ChatMessage {
   id: string;
@@ -32,7 +35,7 @@ export function CompanionPage() {
       id: "hello",
       role: "assistant",
       content:
-        "嗨，我是 AI 飞马，不是真人或心理咨询师。今天想让我安静听你说，还是一起把一件事拆小一点？"
+        "你回来啦。我刚在帐篷旁边看了一会儿云，想先听听你今天过得怎么样。"
     }
   ]);
   const [draft, setDraft] = useState("");
@@ -52,15 +55,41 @@ export function CompanionPage() {
   const inventory = useAppStore((state) => state.inventory);
   const manualMood = useAppStore((state) => state.manualMood);
   const addMemory = useAppStore((state) => state.addMemory);
+  const deviceId = useAppStore((state) => state.deviceId);
   const profile = result ? getResultProfile(result.typeId) : null;
   const companionName = profile?.name ?? "飞马";
   const lifeContextAvailable = Boolean(result && dailyPlan && worldContext);
+
+  // 监听硬件实体触摸并注入对话流
+  useEffect(() => {
+    const targetDeviceId = deviceId || "lamp-001";
+    const unsubscribe = subscribeDeviceEvents(targetDeviceId, (event) => {
+      if (event.type === "touch_comfort") {
+        setMessages((current) => [
+          ...current,
+          {
+            id: createClientId(),
+            role: "assistant",
+            content: event.message
+          }
+        ]);
+      }
+    });
+    return unsubscribe;
+  }, [deviceId]);
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView?.({ block: "end", behavior: "smooth" });
   }, [messages.length, partialReply, sending]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  useEffect(() => {
+    const draftFromHome = sessionStorage.getItem("wingedhorse-companion-draft");
+    if (!draftFromHome) return;
+    setDraft(draftFromHome);
+    sessionStorage.removeItem("wingedhorse-companion-draft");
+  }, []);
 
   const send = async (event?: FormEvent) => {
     event?.preventDefault();
@@ -150,35 +179,68 @@ export function CompanionPage() {
   };
 
   return (
-    <main className="companion-page">
+    <main className="companion-page companion-page--warm-chat">
       <header
         className={`subpage-header companion-header ${result ? "" : "companion-header--generic"}`}
       >
         <BackLink to="/home" label="回到草原" />
-        {result && profile ? (
-          <WingedHorseCharacter
-            typeId={result.typeId}
-            mood={profile.mood}
-            activity={sending && partialReply ? "talking" : draft.trim() ? "listening" : "idle"}
-            alt=""
-          />
-        ) : null}
-        <div>
-          <p className="eyebrow">AI 伙伴 · {companionName}</p>
-          <h1>说两句也好</h1>
+        <div className="companion-header__identity">
+          {result && profile ? (
+            <WingedHorseCharacter
+              typeId={result.typeId}
+              mood={profile.mood}
+              activity={sending && partialReply ? "talking" : draft.trim() ? "listening" : "idle"}
+              alt=""
+            />
+          ) : (
+            <img className="companion-header__mascot" src="/wingedhorse-icon.svg" alt="" />
+          )}
+          <div>
+            <p className="eyebrow">天选牛马 · 在草原</p>
+            <h1>{companionName}</h1>
+            <p className="companion-presence">
+              <span aria-hidden="true" /> 想和你说说话
+            </p>
+          </div>
         </div>
-        <span className="ai-pill">AI</span>
+        <span className="ai-pill" aria-label="AI 陪伴伙伴">
+          AI
+        </span>
       </header>
-      <aside className="ai-boundary">
-        它会犯错，不提供心理诊断或医疗建议。紧急危险请联系现实中的人和当地紧急服务。
-      </aside>
-      <section className="chat-list" aria-live="polite" aria-label="与 AI 飞马的对话">
+      <details className="companion-safety">
+        <summary>
+          <ShieldCheck aria-hidden="true" size={16} />
+          AI 陪伴，不替代专业支持
+          <ChevronDown aria-hidden="true" size={16} />
+        </summary>
+        <p>
+          它会犯错，不提供心理诊断或医疗建议。若你正处于紧急危险中，请联系身边可信任的人和当地紧急服务。
+        </p>
+      </details>
+      <section className="chat-list" aria-live="polite" aria-label={`与 ${companionName} 的对话`}>
+        <div className="companion-day-marker" aria-hidden="true">
+          <span /> 今天 <span />
+        </div>
+        {latestLifeEvent ? (
+          <button
+            type="button"
+            className="companion-context-note"
+            onClick={() => setDraft(`聊聊刚才的「${latestLifeEvent.title}」`)}
+          >
+            <BookOpen aria-hidden="true" size={16} />
+            <span>
+              <strong>它刚刚写下了一件小事</strong>
+              <small>{latestLifeEvent.title}</small>
+            </span>
+            <ChevronDown aria-hidden="true" size={16} />
+          </button>
+        ) : null}
         {messages.map((message) => (
           <article
             className={`chat-bubble chat-bubble--${message.role} ${message.safety && message.safety !== "normal" ? `chat-bubble--${message.safety}` : ""}`}
             key={message.id}
           >
-            <span>{message.role === "assistant" ? `AI · ${companionName}` : "你"}</span>
+            <span>{message.role === "assistant" ? companionName : "你"}</span>
             <p>{message.content}</p>
             {message.role === "assistant" && message.source ? (
               <small className="chat-source">
@@ -211,7 +273,7 @@ export function CompanionPage() {
         ))}
         {sending ? (
           <article className="chat-bubble chat-bubble--assistant">
-            <span>AI · {companionName}</span>
+            <span>{companionName}</span>
             {partialReply ? (
               <p aria-label="正在回复">{partialReply}</p>
             ) : (
@@ -230,8 +292,10 @@ export function CompanionPage() {
       ) : null}
       <div className="prompt-chips" aria-label="快捷开场">
         {[
-          "我们接下来做什么？",
+          "我有点累",
+          "想说件小事",
           "陪我安静一下",
+          "我们接下来做什么？",
           ...(Object.values(inventory).some(Boolean) ? ["背包里有什么？"] : []),
           ...(latestLifeEvent ? [`聊聊刚才的「${latestLifeEvent.title}」`] : [])
         ].map((prompt) => (
@@ -241,24 +305,28 @@ export function CompanionPage() {
         ))}
       </div>
       <form className="chat-composer" onSubmit={(event) => void send(event)}>
-        <label htmlFor="chat-message">想说什么都可以</label>
+        <label htmlFor="chat-message" className="sr-only">
+          想说什么都可以
+        </label>
         <textarea
           id="chat-message"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           maxLength={1200}
-          rows={3}
-          placeholder="不用组织得很完整……"
+          rows={1}
+          placeholder="和它说点什么……"
         />
         <div className="chat-composer__footer">
           <details className="chat-consent-options">
             <summary>
-              本次发送范围
-              <span>
+              <Info aria-hidden="true" size={15} />
+              <span className="chat-consent-options__label">本次发送范围</span>
+              <span className="chat-consent-options__state">
                 {memoryEnabled || lifeContextEnabled
-                  ? `已选择 ${Number(memoryEnabled) + Number(lifeContextEnabled)} 项`
-                  : "默认不带入额外资料"}
+                  ? `已带入 ${Number(memoryEnabled) + Number(lifeContextEnabled)} 项`
+                  : "默认仅此对话"}
               </span>
+              <ChevronDown aria-hidden="true" size={15} />
             </summary>
             <div>
               <p>每次进入对话都默认关闭；勾选只对当前页面会话生效。</p>
@@ -284,9 +352,13 @@ export function CompanionPage() {
             </div>
           </details>
           <Button type="submit" loading={sending} disabled={!draft.trim()}>
+            <Send aria-hidden="true" size={18} />
             发送
           </Button>
         </div>
+        <p className="chat-composer__hint">
+          <Heart aria-hidden="true" size={14} /> 你可以随时停下，也可以只说一句。
+        </p>
       </form>
     </main>
   );

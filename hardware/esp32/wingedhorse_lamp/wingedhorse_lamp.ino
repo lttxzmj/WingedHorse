@@ -35,11 +35,11 @@
 const char *WIFI_SSID = "你的WiFi名称";
 const char *WIFI_PASS = "你的WiFi密码";
 
-const char *MQTT_HOST = "43.140.245.191";
+const char *MQTT_HOST = "192.168.97.129";
 const uint16_t MQTT_PORT = 1883;
-const char *MQTT_USER = "wingedhorse";
-const char *MQTT_PASS = "设备专用密码";   // broker 里为每个设备单独建的用户名/密码
-const char *DEVICE_ID = "lamp-001";        // 与服务器配对一致
+const char *MQTT_USER = "";
+const char *MQTT_PASS = "";   // 本地免密连接
+const char *DEVICE_ID = "lamp-001";        // 与网页端设置一致
 
 #define ENABLE_DHT 0      // 有 DHT22 时置 1
 #define ENABLE_HEART 0    // 有 MAX30102 时置 1

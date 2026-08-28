@@ -8,10 +8,10 @@ import {
   type ItemEffect,
   type ItemId
 } from "@wingedhorse/domain";
-import { Button, Card } from "@wingedhorse/ui";
+import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
-import { Heart, PackageOpen, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { PackageOpen, Sparkles, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
 import { ItemIcon } from "../components/ItemIcon";
@@ -27,6 +27,11 @@ const EFFECT_LABELS = {
 
 type InventoryFilter = "all" | "care" | "release" | "direction" | "keepsake";
 
+type ItemUseFeedback = {
+  itemId: ItemId;
+  remaining: number;
+};
+
 const FILTERS: Array<{ id: InventoryFilter; label: string }> = [
   { id: "all", label: "全部" },
   { id: "care", label: "照顾" },
@@ -34,8 +39,6 @@ const FILTERS: Array<{ id: InventoryFilter; label: string }> = [
   { id: "direction", label: "方向" },
   { id: "keepsake", label: "收藏" }
 ];
-
-const PREVIEW_ITEM_COUNT = 4;
 
 function itemMatchesFilter(itemId: ItemId, filter: InventoryFilter) {
   const item = ITEM_CATALOG[itemId];
@@ -72,31 +75,54 @@ export function InventoryPage() {
   const relationshipXp = useAppStore((state) => state.relationshipXp);
   const useItem = useAppStore((state) => state.useItem);
   const [notice, setNotice] = useState("");
+  const [useFeedback, setUseFeedback] = useState<ItemUseFeedback | null>(null);
   const [filter, setFilter] = useState<InventoryFilter>("all");
-  const [expanded, setExpanded] = useState(false);
-  const [pendingItem, setPendingItem] = useState<(typeof ITEM_IDS)[number] | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ItemId | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const owned = ITEM_IDS.filter((id) => (inventory[id] ?? 0) > 0);
   const visibleItems = owned.filter((id) => itemMatchesFilter(id, filter));
   const recommendedItem = recommendCareItem(inventory, vitals);
-  const orderedVisibleItems = recommendedItem && visibleItems.includes(recommendedItem)
-    ? [recommendedItem, ...visibleItems.filter((id) => id !== recommendedItem)]
-    : visibleItems;
-  const displayedItems =
-    filter !== "all" || expanded
-      ? orderedVisibleItems
-      : orderedVisibleItems.slice(0, PREVIEW_ITEM_COUNT);
-  const hiddenItemCount = orderedVisibleItems.length - displayedItems.length;
+  const orderedVisibleItems =
+    recommendedItem && visibleItems.includes(recommendedItem)
+      ? [recommendedItem, ...visibleItems.filter((id) => id !== recommendedItem)]
+      : visibleItems;
   const growth = deriveCompanionGrowth(relationshipXp);
   const profile = result ? getResultProfile(result.typeId) : null;
 
+  useEffect(() => {
+    if (!selectedItem) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedItem(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [selectedItem]);
+
+  useEffect(() => {
+    if (!notice && !useFeedback) return;
+    const timer = window.setTimeout(() => {
+      setNotice("");
+      setUseFeedback(null);
+    }, 5_200);
+    return () => window.clearTimeout(timer);
+  }, [notice, useFeedback]);
+
   function useAndRespond(id: ItemId) {
     const item = ITEM_CATALOG[id];
+    const previousCount = inventory[id] ?? 0;
     const okay = useItem(id);
     setNotice(
       okay
-        ? `飞马收下了${item.name}。${describeEffect(item.effect)}，你们又多了一段共同记录。`
+        ? `它收下了${item.name}。${describeEffect(item.effect)}。`
         : "现在还不能使用它。"
     );
+    if (okay) setUseFeedback({ itemId: id, remaining: Math.max(0, previousCount - 1) });
     return okay;
   }
 
@@ -110,170 +136,246 @@ export function InventoryPage() {
         </div>
         <span>{owned.reduce((sum, id) => sum + (inventory[id] ?? 0), 0)} 件</span>
       </header>
-      <section className="inventory-companion-card" aria-labelledby="inventory-companion-title">
-        {result && profile ? (
-          <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />
-        ) : null}
-        <div>
-          <p className="eyebrow">{growth.relationshipLabel} · {growth.name}阶段</p>
-          <h2 id="inventory-companion-title">先看看它今天需要什么</h2>
-          <p>{growth.description}</p>
-        </div>
-      </section>
-      <section className="vitals-card vitals-card--human" aria-label="飞马今天的状态">
-        {[
-          { key: "energy", label: "喘息余量", value: vitals.energy },
-          { key: "engine", label: "行动手感", value: vitals.engine },
-          { key: "chaos", label: "心里噪音", value: vitals.chaos },
-          { key: "direction", label: "方向感", value: vitals.direction }
-        ].map((meter) => (
-          <div key={meter.key}>
-            <span>
-              {meter.label}
-              <small>{vitalState(meter.key as keyof typeof EFFECT_LABELS, meter.value)}</small>
-            </span>
-            <div className="mini-meter">
-              <i
-                className={meter.key === "chaos" ? "is-inverse" : ""}
-                style={{ width: `${meter.value}%` }}
-              />
-            </div>
-            <b>{meter.value}</b>
-          </div>
-        ))}
-      </section>
-      {recommendedItem ? (
-        <section className="inventory-recommendation" aria-labelledby="recommendation-title">
-          <span className="inventory-recommendation__icon" aria-hidden="true">
-            <AppIcon icon={Heart} size={22} />
-          </span>
+      <div className="inventory-overview">
+        <section className="inventory-companion-card" aria-labelledby="inventory-companion-title">
+          {result && profile ? (
+            <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />
+          ) : null}
           <div>
-            <p className="eyebrow">现在可以做的小事</p>
-            <h2 id="recommendation-title">把{ITEM_CATALOG[recommendedItem].name}给它</h2>
-            <p>{ITEM_CATALOG[recommendedItem].description}</p>
+            <p className="eyebrow">
+              {growth.relationshipLabel} · {growth.name}阶段
+            </p>
+            <h2 id="inventory-companion-title">先看看它今天需要什么</h2>
+            <p>{growth.description}</p>
           </div>
-          <Button variant="secondary" onClick={() => useAndRespond(recommendedItem)}>
-            给它使用
-          </Button>
         </section>
-      ) : null}
-      {notice ? (
-        <div className="care-response" role="status">
+        <section className="vitals-card vitals-card--human" aria-label="飞马今天的状态">
+          {[
+            { key: "energy", label: "喘息余量", value: vitals.energy },
+            { key: "engine", label: "行动手感", value: vitals.engine },
+            { key: "chaos", label: "心里噪音", value: vitals.chaos },
+            { key: "direction", label: "方向感", value: vitals.direction }
+          ].map((meter) => (
+            <div key={meter.key}>
+              <span>
+                {meter.label}
+                <small>{vitalState(meter.key as keyof typeof EFFECT_LABELS, meter.value)}</small>
+              </span>
+              <div className="mini-meter">
+                <i
+                  className={meter.key === "chaos" ? "is-inverse" : ""}
+                  style={{ width: `${meter.value}%` }}
+                />
+              </div>
+              <b>{meter.value}</b>
+            </div>
+          ))}
+        </section>
+      </div>
+      {notice && !useFeedback ? (
+        <div className="inventory-use-toast" role="status" aria-live="polite">
           <AppIcon icon={Sparkles} size={19} />
           <p>{notice}</p>
-          <Link to="/home">回草原看看它</Link>
         </div>
       ) : null}
-      {owned.length ? (
-        <div className="inventory-filters" aria-label="筛选背包物品">
-          {FILTERS.map((option) => (
+      {useFeedback ? (() => {
+        const usedItem = ITEM_CATALOG[useFeedback.itemId];
+        return (
+          <section
+            className="inventory-use-feedback"
+            aria-label="物品已使用"
+            role="status"
+            aria-live="polite"
+          >
             <button
-              key={option.id}
-              className={filter === option.id ? "is-active" : ""}
-              aria-pressed={filter === option.id}
+              type="button"
+              className="inventory-use-feedback__close"
+              aria-label="关闭使用反馈"
               onClick={() => {
-                setFilter(option.id);
-                setExpanded(false);
+                setNotice("");
+                setUseFeedback(null);
               }}
             >
-              {option.label}
+              <AppIcon icon={X} size={18} />
             </button>
-          ))}
-        </div>
-      ) : null}
-      <section className="inventory-grid">
-        {owned.length ? (
-          displayedItems.length ? displayedItems.map((id) => {
-            const item = ITEM_CATALOG[id];
-            return (
-              <Card className="item-card" key={id}>
-                <span className="item-card__emoji" aria-hidden="true">
-                  <ItemIcon itemId={id} size={28} />
-                </span>
-                <div>
-                  <h2>
-                    {item.name} <small>× {inventory[id]}</small>
-                  </h2>
-                  <p>{item.description}</p>
-                  <p className="item-card__effect">使用后：{describeEffect(item.effect)}</p>
-                  {item.sponsored ? (
-                    <small className="sponsor-label">品牌赞助/活动道具</small>
-                  ) : null}
-                </div>
-                <Button
-                  variant="secondary"
-                  disabled={!item.consumable}
-                  onClick={() => {
-                    if (item.rarity === "rare") {
-                      setPendingItem(id);
-                      return;
-                    }
-                    useAndRespond(id);
-                  }}
-                >
-                  {item.consumable ? "给牛马使用" : "已经收藏"}
-                </Button>
-              </Card>
-            );
-          }) : (
-            <section className="inventory-filter-empty">
-              <p>这一类还没有物品。</p>
-              <button onClick={() => setFilter("all")}>查看全部</button>
-            </section>
-          )
-        ) : (
-          <section className="empty-state inventory-empty">
-            <span className="empty-state__icon">
-              <AppIcon icon={PackageOpen} size={42} />
+            <span className="inventory-use-feedback__icon" data-kind={usedItem.kind} aria-hidden="true">
+              <ItemIcon itemId={useFeedback.itemId} size={36} />
             </span>
-            <h2>背包还是空的</h2>
-            <p>去接一局掉落，第一份礼物也许正在路上。</p>
-            <Link className="ui-button ui-button--primary inline-link-button" to="/game">
-              去接礼物
-            </Link>
+            <div className="inventory-use-feedback__copy">
+              <p className="eyebrow">它收下了</p>
+              <h2>{usedItem.name}</h2>
+              <p>背包还剩 {useFeedback.remaining} 件</p>
+            </div>
+            <div className="inventory-use-feedback__effects" aria-label="本次变化">
+              {Object.entries(usedItem.effect).map(([key, value]) => (
+                <span key={key}>
+                  {EFFECT_LABELS[key as keyof typeof EFFECT_LABELS]} {value && value > 0 ? "+" : ""}
+                  {value}
+                </span>
+              ))}
+              <span>默契 +2</span>
+            </div>
+            <div className="inventory-use-feedback__actions">
+              <Link to="/home" onClick={() => setUseFeedback(null)}>
+                去草原看看它
+              </Link>
+              <button type="button" onClick={() => setUseFeedback(null)}>
+                继续整理
+              </button>
+            </div>
           </section>
-        )}
-      </section>
-      {filter === "all" && visibleItems.length > PREVIEW_ITEM_COUNT ? (
-        <button
-          className="inventory-reveal"
-          aria-expanded={expanded}
-          onClick={() => setExpanded((current) => !current)}
-        >
-          {expanded ? "收起物品" : `查看其余 ${hiddenItemCount} 种物品`}
-        </button>
-      ) : null}
-      {pendingItem ? (
-        <section
-          className="inventory-confirm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="use-item-title"
-        >
+        );
+      })() : null}
+      <section className="inventory-workspace" aria-labelledby="inventory-items-title">
+        <div className="inventory-toolbar">
           <div>
-            <p className="eyebrow">稀有物品</p>
-            <h2 id="use-item-title">要使用{ITEM_CATALOG[pendingItem].name}吗？</h2>
-            <p>
-              使用后：{describeEffect(ITEM_CATALOG[pendingItem].effect)}。这件物品会从背包中减少 1
-              件。
-            </p>
-            <div>
-              <Button
+            <p className="eyebrow">我的物品</p>
+            <h2 id="inventory-items-title">背包格子</h2>
+          </div>
+          <span>{owned.length} 种</span>
+        </div>
+        {owned.length ? (
+          <div className="inventory-filters" aria-label="筛选背包物品">
+            {FILTERS.map((option) => (
+              <button
+                key={option.id}
+                className={filter === option.id ? "is-active" : ""}
+                aria-pressed={filter === option.id}
                 onClick={() => {
-                  const item = ITEM_CATALOG[pendingItem];
-                  useAndRespond(item.id);
-                  setPendingItem(null);
+                  setFilter(option.id);
+                  setSelectedItem(null);
                 }}
               >
-                确认使用
-              </Button>
-              <Button variant="secondary" onClick={() => setPendingItem(null)}>
-                先留着
-              </Button>
-            </div>
+                {option.label}
+              </button>
+            ))}
           </div>
-        </section>
-      ) : null}
+        ) : null}
+        <div className="inventory-grid">
+          {owned.length ? (
+            orderedVisibleItems.length ? (
+              orderedVisibleItems.map((id) => {
+                const item = ITEM_CATALOG[id];
+                const isSelected = selectedItem === id;
+                return (
+                  <button
+                    type="button"
+                    className={"inventory-slot" + (isSelected ? " is-selected" : "")}
+                    key={id}
+                    data-kind={item.kind}
+                    aria-pressed={isSelected}
+                    aria-label={`${item.name}，${inventory[id]} 件${recommendedItem === id ? "，推荐使用" : ""}`}
+                    onClick={() => setSelectedItem(id)}
+                  >
+                    {recommendedItem === id ? (
+                      <small className="inventory-slot__recommended">推荐</small>
+                    ) : null}
+                    <span className="inventory-slot__icon" aria-hidden="true">
+                      <ItemIcon itemId={id} size={44} />
+                    </span>
+                    <strong>{item.name}</strong>
+                    <span className="inventory-slot__count" aria-hidden="true">
+                      <small>持有</small>
+                      {inventory[id]}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <section className="inventory-filter-empty">
+                <p>这一类还没有物品。</p>
+                <button onClick={() => setFilter("all")}>查看全部</button>
+              </section>
+            )
+          ) : (
+            <section className="empty-state inventory-empty">
+              <span className="empty-state__icon">
+                <AppIcon icon={PackageOpen} size={42} />
+              </span>
+              <h2>背包还是空的</h2>
+              <p>去接一局掉落，第一份礼物也许正在路上。</p>
+              <Link className="ui-button ui-button--primary inline-link-button" to="/game">
+                去接礼物
+              </Link>
+            </section>
+          )}
+        </div>
+      </section>
+      {selectedItem
+        ? (() => {
+            const item = ITEM_CATALOG[selectedItem];
+            return (
+              <section className="inventory-item-sheet" aria-label="物品操作">
+                <button
+                  type="button"
+                  className="inventory-item-sheet__backdrop"
+                  aria-label="关闭物品详情"
+                  onClick={() => setSelectedItem(null)}
+                />
+                <div
+                  className="inventory-item-sheet__panel"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="inventory-item-sheet-title"
+                >
+                  <span className="inventory-item-sheet__handle" aria-hidden="true" />
+                  <button
+                    ref={closeButtonRef}
+                    type="button"
+                    className="inventory-item-sheet__close"
+                    aria-label="关闭物品详情"
+                    onClick={() => setSelectedItem(null)}
+                  >
+                    <AppIcon icon={X} size={20} />
+                  </button>
+                  <div className="inventory-item-sheet__heading">
+                    <span
+                      className="inventory-item-sheet__icon"
+                      data-kind={item.kind}
+                      aria-hidden="true"
+                    >
+                      <ItemIcon itemId={selectedItem} size={54} />
+                    </span>
+                    <div>
+                      <p className="eyebrow">
+                        {item.sponsored
+                          ? "品牌合作物品"
+                          : recommendedItem === selectedItem
+                            ? "现在最适合它"
+                            : item.rarity === "rare"
+                              ? "稀有物品"
+                              : "背包物品"}
+                      </p>
+                      <h2 id="inventory-item-sheet-title">{item.name}</h2>
+                      <span>持有 {inventory[selectedItem]} 件</span>
+                    </div>
+                  </div>
+                  <p className="inventory-item-sheet__description">{item.description}</p>
+                  <div className="inventory-item-sheet__effect">
+                    <span>使用后</span>
+                    <strong>{describeEffect(item.effect)}</strong>
+                  </div>
+                  {item.sponsored ? (
+                    <small className="sponsor-label">品牌合作 · 虚拟体验与购买相互独立</small>
+                  ) : null}
+                  <div className="inventory-item-sheet__actions">
+                    <Button
+                      disabled={!item.consumable}
+                      onClick={() => {
+                        if (useAndRespond(selectedItem)) setSelectedItem(null);
+                      }}
+                    >
+                      {item.consumable ? "给飞马使用" : "收藏品，无需使用"}
+                    </Button>
+                    <Button variant="secondary" onClick={() => setSelectedItem(null)}>
+                      先留着
+                    </Button>
+                  </div>
+                </div>
+              </section>
+            );
+          })()
+        : null}
     </main>
   );
 }

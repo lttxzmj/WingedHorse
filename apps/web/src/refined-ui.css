@@ -95,7 +95,7 @@
   min-height: min(68svh, 39rem);
   border: 1px solid rgb(73 102 63 / 13%);
   border-radius: 1.75rem;
-  background: #dff3ff url("/scene/prairie-home-v2.webp") center / cover no-repeat;
+  background: #dff3ff url("/scene/prairie-home-bluebox-v1.webp") center / cover no-repeat;
   box-shadow: 0 14px 38px rgb(57 67 45 / 11%);
 }
 
@@ -286,7 +286,7 @@
 .interaction-sheet,
 .inventory-confirm > div {
   border: 1px solid rgb(90 69 50 / 12%);
-  border-radius: 1.8rem 1.8rem 1rem 1rem;
+  border-radius: 1.8rem 1.8rem 0 0;
 }
 
 .interaction-options > button,
@@ -931,31 +931,31 @@
   min-height: 100svh;
 }
 
-.home-header--quiet {
+.home-header--quiet:not(.digital-life-header) {
   align-items: center;
   margin-bottom: 0.6rem;
 }
 
-.home-header__identity {
+.home-header__identity:not(.digital-life-header__identity) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
   gap: 0.1rem 0.45rem;
 }
 
-.home-header__identity .eyebrow {
+.home-header__identity:not(.digital-life-header__identity) .eyebrow {
   grid-column: 1 / -1;
   margin: 0;
   font-size: 0.67rem;
 }
 
-.home-header__identity h1 {
+.home-header__identity:not(.digital-life-header__identity) h1 {
   margin: 0;
   font-size: clamp(1.15rem, 4vw, 1.45rem);
   letter-spacing: -0.02em;
 }
 
-.home-header__identity > span {
+.home-header__identity:not(.digital-life-header__identity) > span {
   overflow: hidden;
   color: var(--color-ink-500);
   font-size: 0.68rem;
@@ -985,7 +985,7 @@
   font-weight: 680;
 }
 
-.lawn-stage__bubble {
+.lawn-stage__bubble:not(.digital-life-stage__speech) {
   display: grid;
   gap: 0.18rem;
   max-width: min(72%, 21rem);

@@ -50,26 +50,65 @@
   --game-gold-deep: #d7a423;
   --game-ink: #493a2f;
   --game-glass: rgb(255 253 244 / 88%);
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 0.62rem;
-  width: min(100%, 46rem);
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: none;
   height: 100svh;
   height: 100dvh;
   min-height: 0;
-  margin: 0 auto;
-  padding: max(0.72rem, env(safe-area-inset-top))
-    max(0.75rem, env(safe-area-inset-right)) max(0.72rem, env(safe-area-inset-bottom))
-    max(0.75rem, env(safe-area-inset-left));
+  margin: 0;
+  padding: 0;
   overflow: hidden;
 }
 
 .game-page .subpage-header {
-  margin-bottom: 0;
+  position: absolute;
+  z-index: 20;
+  top: max(0.78rem, env(safe-area-inset-top));
+  right: max(0.85rem, env(safe-area-inset-right));
+  left: max(0.85rem, env(safe-area-inset-left));
+  margin: 0;
 }
 
 .game-page .subpage-header .eyebrow {
-  margin-bottom: 0.14rem;
+  display: none;
+}
+
+.game-page .subpage-header h1 {
+  margin: 0;
+  color: #4d3d31;
+  font-size: clamp(0.92rem, 4vw, 1.1rem);
+  line-height: 1.15;
+}
+
+.game-page .subpage-header > a:first-child,
+.game-page .subpage-header__tool {
+  width: 2.6rem;
+  height: 2.6rem;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 74%);
+  border-radius: 50%;
+  background: rgb(255 253 246 / 80%);
+  box-shadow: 0 7px 18px rgb(61 55 38 / 10%);
+  backdrop-filter: blur(10px);
+}
+
+.game-page .subpage-header > a:first-child span,
+.game-page .subpage-header__tool span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* During countdown and the timed round the scene owns the frame; navigation
+   stays available through pause once play begins. */
+.game-page--playing .subpage-header,
+.game-page--countdown .subpage-header {
+  display: none;
 }
 
 .game-shell {
@@ -78,20 +117,23 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid rgb(101 80 50 / 12%);
-  border-radius: 1.75rem;
+  border: 0;
+  border-radius: 0;
   background: #dff4fb;
-  box-shadow: 0 18px 48px rgb(75 58 38 / 12%);
+  box-shadow: none;
 }
 
-.game-shell--playing {
+.game-shell--playing,
+.game-shell--countdown {
+  position: relative;
   min-height: 0;
+  background: #dff4fb url("/scene/prairie-home-v2.webp") center / cover no-repeat;
 }
 
 .game-shell--summary {
   height: auto;
   min-height: 0;
-  background: url("/game/prairie-drop-bg.webp") center bottom / cover no-repeat;
+  background: url("/scene/prairie-home-v2.webp") center bottom / cover no-repeat;
 }
 
 .game-page--summary {
@@ -107,7 +149,7 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: url("/game/prairie-drop-bg.webp") center / cover no-repeat;
+  background: url("/scene/prairie-home-v2.webp") center / cover no-repeat;
 }
 
 .game-scene__tent {
@@ -122,7 +164,7 @@
 
 .game-intro {
   display: block;
-  padding: 0.8rem;
+  padding: 0;
   text-align: center;
 }
 
@@ -138,10 +180,10 @@
 .game-intro__character {
   position: absolute;
   z-index: 2;
-  bottom: clamp(10.8rem, 25dvh, 12.7rem);
+  bottom: clamp(8.8rem, 20dvh, 11rem);
   left: 50%;
-  width: min(67%, 15.8rem);
-  height: clamp(11.2rem, 31dvh, 15rem);
+  width: min(56%, 14.2rem);
+  height: clamp(10.2rem, 27dvh, 13.2rem);
   margin: 0;
   transform: translateX(-50%);
   animation: game-character-idle 2.2s ease-in-out infinite;
@@ -170,12 +212,13 @@
 
 .game-intro__dock {
   position: absolute;
-  right: 0.8rem;
-  bottom: 0.8rem;
-  left: 0.8rem;
-  display: grid;
-  gap: 0.72rem;
-  padding: 0.86rem 0.9rem 0.82rem;
+  right: max(0.85rem, env(safe-area-inset-right));
+  bottom: max(0.85rem, env(safe-area-inset-bottom));
+  left: max(0.85rem, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem 1.15rem 1rem;
 }
 
 .game-intro__brief {
@@ -184,34 +227,18 @@
 }
 
 .game-intro__brief h2 {
-  margin: 0.55rem 0 0.5rem;
+  margin: 0.45rem 0 0.25rem;
   color: var(--game-ink);
-  font-size: clamp(1.08rem, 5.25vw, 1.42rem);
-  line-height: 1.18;
-  letter-spacing: -0.03em;
-  white-space: nowrap;
+  font-size: clamp(1.15rem, 5.4vw, 1.45rem);
+  line-height: 1.22;
+  letter-spacing: -0.02em;
 }
 
-.game-intro__brief ul {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.36rem 0.7rem;
+.game-intro__brief p {
   margin: 0;
-  padding: 0;
   color: #706257;
-  font-size: 0.73rem;
+  font-size: 0.75rem;
   line-height: 1.45;
-  list-style: none;
-}
-
-.game-intro__brief li::before {
-  margin-right: 0.32rem;
-  color: #c99516;
-  content: "•";
-}
-
-.game-intro__brief li:last-child {
-  grid-column: 1 / -1;
 }
 
 .game-intro__tag {
@@ -227,71 +254,60 @@
 }
 
 .game-intro__actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.65rem;
-  padding-top: 0.68rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  padding-top: 0.65rem;
   border-top: 1px solid rgb(98 75 45 / 9%);
 }
 
 .game-intro__actions .ui-button,
-.game-intro--summary > .ui-button {
+.game-summary__actions .ui-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.8rem;
-  padding: 0.68rem 1rem;
+  width: 100%;
+  min-height: 3.1rem;
+  padding: 0.75rem 1rem;
   border: 1px solid rgb(188 139 24 / 16%);
-  border-radius: 0.88rem;
+  border-radius: 0.95rem;
   background: var(--game-gold);
   box-shadow: 0 3px 0 var(--game-gold-deep), 0 8px 18px rgb(97 72 18 / 10%);
   color: #4c3908;
-  font-weight: 780;
-}
-
-.game-intro__actions .ui-button {
-  grid-column: 2;
-  grid-row: 1;
-  white-space: nowrap;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
 }
 
 .game-intro__actions .ui-button:active,
-.game-intro--summary > .ui-button:active {
+.game-summary__actions .ui-button:active {
   transform: translateY(2px);
   box-shadow: 0 1px 0 var(--game-gold-deep), 0 4px 10px rgb(97 72 18 / 9%);
 }
 
 .game-intro__actions .quiet-link {
-  grid-column: 1;
-  grid-row: 1;
-  justify-self: start;
-  padding: 0.55rem 0.15rem;
-  color: rgb(61 51 39 / 66%);
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.4rem 0.15rem 0.1rem;
+  color: rgb(61 51 39 / 65%);
+  font-size: 0.78rem;
   font-weight: 650;
+  text-align: center;
   text-decoration: none;
 }
 
-.game-intro--summary > .ui-button {
-  position: relative;
-  z-index: 4;
-  width: min(100%, 18rem);
-  margin-top: 0.78rem;
-}
-
-.game-intro--summary > .quiet-link {
-  position: relative;
-  z-index: 4;
-  margin-top: 0.85rem;
-  color: rgb(61 51 39 / 68%);
-  font-size: 0.75rem;
-}
-
 .game-intro--summary {
-  justify-content: flex-start;
-  min-height: auto;
-  padding-top: 1rem;
+  display: grid;
+  min-height: 100svh;
+  min-height: 100dvh;
+  padding: max(4.7rem, calc(env(safe-area-inset-top) + 4.1rem)) 0.75rem
+    max(0.75rem, env(safe-area-inset-bottom));
+  align-items: start;
+  align-content: start;
   background-position: center bottom;
 }
 
@@ -301,40 +317,146 @@
 }
 
 .game-intro--summary .game-summary {
-  padding: 0.9rem;
+  display: grid;
+  gap: 0.9rem;
+  width: min(100%, 34rem);
+  max-height: none;
+  margin: 0 auto;
+  padding: 1rem;
+  overflow: visible;
 }
 
-.game-intro--summary .game-summary > strong {
-  display: block;
-  margin: 0.15rem 0 0.3rem;
+.game-page--summary .subpage-header {
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.game-page--summary .subpage-header > div {
+  display: none;
+}
+
+.game-page--summary .subpage-header > a {
+  pointer-events: auto;
+}
+
+.game-summary__headline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.game-summary__headline .eyebrow,
+.game-summary__headline h2,
+.game-summary__headline p {
+  margin: 0;
+}
+
+.game-summary__headline h2 {
+  margin-top: 0.12rem;
+  font-size: clamp(1.28rem, 6.4vw, 1.75rem);
+  line-height: 1.15;
+}
+
+.game-summary__headline p:not(.eyebrow) {
+  margin-top: 0.22rem;
+  color: var(--color-ink-500);
+  font-size: 0.72rem;
+}
+
+.game-summary__headline > span {
+  display: grid;
+  min-width: 5.4rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 1rem;
+  background: #fff3c7;
+  text-align: center;
+}
+
+.game-summary__headline strong {
   color: #dca814;
-  font-size: clamp(3.6rem, 20vw, 5.2rem);
+  font-size: clamp(2.1rem, 11vw, 3rem);
   line-height: 0.95;
 }
 
-.game-intro--summary .game-summary > p:not(.eyebrow) {
-  margin: 0 0 0.7rem;
-  font-size: 0.77rem;
-  line-height: 1.45;
+.game-summary__headline small {
+  margin-top: 0.22rem;
+  color: var(--color-ink-500);
+  font-size: 0.62rem;
 }
 
 .game-intro--summary .loot-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 0.38rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.42rem;
 }
 
 .game-intro--summary .loot-row > span {
-  padding: 0.36rem 0.5rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.5rem;
   border: 1px solid rgb(90 69 50 / 12%);
-  border-radius: 999px;
+  border-radius: 0.8rem;
   background: rgb(255 255 255 / 72%);
   font-size: 0.67rem;
 }
 
+.game-intro--summary .loot-row > span > span {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-intro--summary .loot-row > span > strong {
+  color: var(--game-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.game-summary__loot {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.game-summary__loot h3 {
+  margin: 0;
+  color: var(--game-ink);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .game-intro--summary .game-summary__ascension {
-  margin: 0.75rem 0 0;
+  margin: 0;
+}
+
+.game-summary__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-top: 0.3rem;
+}
+
+.game-summary__actions .ui-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 3.15rem;
+  margin: 0;
+  text-decoration: none;
+}
+
+.game-summary__actions .ui-button--secondary {
+  border-color: rgb(94 75 55 / 12%);
+  background: rgb(255 255 255 / 82%);
+  box-shadow: 0 3px 0 rgb(94 75 55 / 12%);
+  color: var(--game-ink);
 }
 
 .game-countdown {
@@ -343,13 +465,32 @@
   text-align: center;
 }
 
+.game-countdown--overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: transparent;
+  transition: opacity 200ms ease-out;
+}
+
+.game-countdown--overlay.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-countdown--overlay {
+    transition: none;
+  }
+}
+
 .game-countdown__character {
   position: absolute;
   z-index: 2;
-  bottom: 2rem;
+  bottom: 1.25rem;
   left: 50%;
-  width: min(55%, 13rem);
-  height: 13rem;
+  width: min(47%, 11rem);
+  height: 11rem;
   transform: translateX(-50%);
   filter: drop-shadow(0 15px 12px rgb(51 64 39 / 18%));
   object-fit: contain;
@@ -364,66 +505,87 @@
   position: absolute;
   z-index: 3;
   inset: 0;
-  background: linear-gradient(180deg, rgb(27 52 65 / 25%), rgb(35 51 32 / 8%));
+  background: radial-gradient(circle at center, rgb(20 40 50 / 22%) 0%, rgb(18 32 24 / 42%) 100%);
+  backdrop-filter: blur(2px);
 }
 
 .game-countdown__content {
-  position: relative;
+  position: absolute;
   z-index: 4;
-  display: grid;
-  place-items: center;
-  margin-top: -5.5rem;
+  top: 26%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  width: max-content;
+  max-width: 90vw;
   color: white;
   animation: game-count-beat 0.76s cubic-bezier(0.18, 0.82, 0.32, 1) both;
+  pointer-events: none;
 }
 
-.game-countdown__content small {
-  padding: 0.38rem 0.7rem;
-  border: 1px solid rgb(255 255 255 / 30%);
+.game-countdown__pill {
+  margin: 0;
+  padding: 0.42rem 1.1rem;
+  border: 1px solid rgb(255 255 255 / 45%);
   border-radius: 999px;
-  background: rgb(54 70 52 / 72%);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  backdrop-filter: blur(8px);
+  background: rgb(255 255 255 / 18%);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+  backdrop-filter: blur(14px);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 25%);
+}
+
+.game-countdown__core {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 6.8rem;
+  height: 6.8rem;
+}
+
+.game-countdown__halo {
+  position: absolute;
+  inset: -0.6rem;
+  border-radius: 50%;
+  border: 2px dashed rgb(255 255 255 / 40%);
+  animation: game-halo-spin 8s linear infinite;
 }
 
 .game-countdown__content strong {
   display: grid;
-  min-width: 8.5rem;
-  min-height: 8.5rem;
-  margin: 0.85rem 0 0.7rem;
-  place-items: center;
-  border: 2px solid rgb(255 255 255 / 82%);
-  border-radius: 50%;
-  background: var(--game-gold);
-  box-shadow: 0 0 0 0.8rem rgb(255 255 255 / 13%), 0 18px 45px rgb(62 47 16 / 24%);
-  color: #5b4206;
-  font-size: clamp(3.8rem, 19vw, 6rem);
-  font-weight: 850;
-  line-height: 1;
-  text-shadow: 0 2px 0 rgb(255 255 255 / 44%);
-}
-
-.game-countdown__content p {
+  width: 6.4rem;
+  height: 6.4rem;
   margin: 0;
-  padding: 0.36rem 0.65rem;
-  border-radius: 999px;
-  color: white;
-  background: rgb(48 61 44 / 54%);
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-shadow: 0 2px 9px rgb(24 35 28 / 45%);
+  place-items: center;
+  border: 3px solid rgb(255 255 255 / 95%);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffd868 0%, #f7b223 100%);
+  box-shadow: 0 0 0 0.45rem rgb(255 208 87 / 28%), 0 16px 36px rgb(40 28 6 / 35%);
+  color: #453103;
+  font-size: clamp(3.2rem, 14vw, 4rem);
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgb(255 255 255 / 60%);
 }
 
-.game-shell--playing .drop-game-canvas {
+.game-shell--playing .drop-game-canvas,
+.game-shell--countdown .drop-game-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100%;
   min-height: 0;
   max-height: none;
   overflow: hidden;
   border-radius: inherit;
-  background: #dff4fb;
+  background: #dff4fb url("/scene/prairie-home-v2.webp") center / cover no-repeat;
   cursor: grab;
   touch-action: none;
 }
@@ -436,13 +598,13 @@
   display: block;
   width: 100% !important;
   height: 100% !important;
-  object-fit: fill;
 }
 
 .game-hud {
-  top: 0.62rem;
-  right: 0.62rem;
-  left: 0.62rem;
+  position: absolute;
+  top: max(0.62rem, env(safe-area-inset-top));
+  right: max(0.62rem, env(safe-area-inset-right));
+  left: max(0.62rem, env(safe-area-inset-left));
   display: grid;
   grid-template-columns: 1.15fr 1fr 1fr 2.65rem;
   gap: 0.26rem;
@@ -452,6 +614,7 @@
   background: rgb(255 253 245 / 84%);
   box-shadow: 0 8px 24px rgb(63 49 31 / 11%);
   backdrop-filter: blur(13px);
+  z-index: 10;
 }
 
 .game-hud > span {
@@ -533,20 +696,24 @@
 }
 
 .game-controls {
-  right: 0.7rem;
-  bottom: 0.78rem;
-  left: 0.7rem;
+  position: absolute;
+  right: max(0.7rem, env(safe-area-inset-right));
+  bottom: max(0.78rem, env(safe-area-inset-bottom));
+  left: max(0.7rem, env(safe-area-inset-left));
   display: grid;
-  grid-template-columns: 4.15rem minmax(0, 1fr) 4.15rem;
-  align-items: end;
+  grid-template-columns: 3.6rem minmax(0, 1fr) 3.6rem;
+  align-items: center;
   gap: 0.5rem;
   pointer-events: none;
+  z-index: 10;
 }
 
 .game-controls button {
   display: grid;
-  min-width: 4.15rem;
-  min-height: 4.15rem;
+  width: 3.6rem;
+  height: 3.6rem;
+  min-width: 3.6rem;
+  min-height: 3.6rem;
   place-items: center;
   padding: 0;
   border: 1px solid rgb(255 255 255 / 75%);
@@ -556,6 +723,9 @@
   box-shadow: 0 3px 0 rgb(200 161 66 / 70%), 0 8px 18px rgb(68 56 35 / 11%);
   backdrop-filter: blur(10px);
   pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
 .game-controls button:active {
@@ -582,7 +752,8 @@
 }
 
 .game-play-guide {
-  top: 5.15rem;
+  position: absolute;
+  top: max(5.15rem, calc(env(safe-area-inset-top) + 4.5rem));
   right: 50%;
   bottom: auto;
   width: max-content;
@@ -597,6 +768,8 @@
   font-size: 0.69rem;
   animation: game-guide-in 240ms ease-out both;
   backdrop-filter: blur(10px);
+  z-index: 10;
+  pointer-events: none;
 }
 
 .game-loading {
@@ -630,15 +803,25 @@
 
 @keyframes game-count-beat {
   0% {
-    transform: scale(0.82);
-    opacity: 1;
+    transform: translateX(-50%) scale(0.82);
+    opacity: 0.85;
   }
-  62% {
-    transform: scale(1.06);
+  50% {
+    transform: translateX(-50%) scale(1.06);
     opacity: 1;
   }
   100% {
-    transform: scale(1);
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes game-halo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -676,17 +859,12 @@
     right: 0.65rem;
     bottom: 0.65rem;
     left: 0.65rem;
-    gap: 0.52rem;
-    padding: 0.68rem 0.75rem 0.65rem;
+    gap: 0.6rem;
+    padding: 0.85rem 0.9rem 0.8rem;
   }
 
   .game-intro__brief h2 {
-    margin: 0.5rem 0 0.42rem;
-  }
-
-  .game-intro__brief ul {
-    gap: 0.24rem 0.55rem;
-    font-size: 0.67rem;
+    margin: 0.38rem 0 0.22rem;
   }
 
   .game-intro__actions {
@@ -694,8 +872,8 @@
   }
 
   .game-intro__actions .ui-button {
-    min-height: 2.75rem;
-    padding: 0.58rem 0.85rem;
+    min-height: 2.85rem;
+    padding: 0.65rem 0.85rem;
   }
 }
 
@@ -719,22 +897,184 @@
     font-size: 0.75rem;
   }
 
-  .game-shell {
-    border-radius: 1.55rem;
+}
+
+@media (max-width: 360px) {
+  .game-intro--summary .loot-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game-summary__headline {
+    gap: 0.55rem;
+  }
+
+  .game-summary__headline > span {
+    min-width: 4.8rem;
+  }
+
+  .game-summary__actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 350px) {
+  .game-page:not(.game-page--playing) .subpage-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.42rem;
+  }
+
+  .game-page .subpage-header .eyebrow,
+  .game-page .subpage-header__tool span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .game-page .subpage-header__tool {
+    display: grid;
+    width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+    place-items: center;
+  }
+
+  .game-page .subpage-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .game-intro__brief ul {
+    font-size: 0.63rem;
+  }
+
+  .game-intro__character {
+    bottom: 11.5rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-countdown__content {
+    top: 18%;
+    gap: 0.75rem;
+  }
+
+  .game-countdown__core {
+    width: 5rem;
+    height: 5rem;
+  }
+
+  .game-countdown__content strong {
+    width: 4.8rem;
+    height: 4.8rem;
+    font-size: 2.6rem;
+  }
+
+  .game-page .subpage-header .eyebrow {
+    display: none;
+  }
+
+  .game-page .subpage-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .game-page:not(.game-page--summary) .game-shell {
+    min-height: 0;
+  }
+
+  .game-intro__character {
+    bottom: 7.2rem;
+    height: 7.8rem;
+  }
+
+  .game-intro__dock {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .game-intro__actions {
+    display: grid;
+    border-top: 0;
   }
 }
 
 @media (min-width: 680px) {
   .game-page:not(.game-page--summary) {
-    height: auto;
-    min-height: 100svh;
-    min-height: 100dvh;
-    overflow: visible;
+    height: 100svh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .game-page:not(.game-page--summary) .game-shell {
-    height: min(72svh, 38rem);
-    min-height: 34rem;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  .game-page .subpage-header {
+    width: min(100% - 2rem, 640px);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .game-page--summary .game-summary {
+    width: min(100%, 540px);
+    margin: 0 auto;
+  }
+}
+
+/* Wide phones still use the compact H5 game shell; this must follow the desktop breakpoint. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-page:not(.game-page--summary) {
+    height: 100svh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .game-page:not(.game-page--summary) .game-shell {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .game-intro__dock {
+    right: 0.5rem;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem 0.75rem;
+    padding: 0.55rem 0.7rem;
+  }
+
+  .game-intro__tag {
+    display: none;
+  }
+
+  .game-intro__brief h2 {
+    margin: 0 0 0.28rem;
+    font-size: 1rem;
+  }
+
+  .game-intro__brief ul {
+    gap: 0.14rem 0.55rem;
+    font-size: 0.62rem;
+  }
+
+  .game-intro__actions {
+    align-self: stretch;
+    padding: 0 0 0 0.65rem;
+    border-top: 0;
+    border-left: 1px solid rgb(98 75 45 / 9%);
+  }
+
+  .game-intro__actions .quiet-link {
+    display: none;
   }
 }
 

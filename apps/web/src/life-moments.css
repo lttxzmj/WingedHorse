@@ -1,6 +1,7 @@
 .life-page {
   width: min(100%, 42rem);
-  padding-inline: clamp(1rem, 4vw, 1.4rem);
+  margin: 0 auto;
+  padding: max(var(--space-4), env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
 }
 
 .life-header {

@@ -196,8 +196,8 @@ export const ITEM_CATALOG: Record<ItemId, ItemDefinition> = {
   ),
   "sponsored-tent-skin": item(
     "sponsored-tent-skin",
-    "品牌帐篷皮肤",
-    "牛马营地迎来了第一位金主。",
+    "蓝盒子帐篷布标",
+    "草原支持伙伴留下的限定布标。",
     "篷",
     "decoration",
     "rare",
@@ -209,8 +209,8 @@ export const ITEM_CATALOG: Record<ItemId, ItemDefinition> = {
   ),
   "sponsored-coffee-coupon": item(
     "sponsored-coffee-coupon",
-    "品牌咖啡券",
-    "品牌活动补给，使用时会明确展示赞助标识。",
+    "蓝盒子睡眠护理枕",
+    "品牌合作虚拟体验物品，给飞马一段舒服的休息时间。",
     "券",
     "sponsored-supply",
     "uncommon",

@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, Link, Outlet } from "@tanst
 import { Feather } from "lucide-react";
 import { Component, lazy, Suspense, type ReactNode } from "react";
 import { AppIcon } from "./components/AppIcon";
+import { GlobalHardwareListener } from "./components/GlobalHardwareListener";
 import { LandingPage } from "./pages/LandingPage";
 
 const AssessmentPage = lazy(() =>
@@ -85,6 +86,7 @@ function RootLayout() {
     <RouteErrorBoundary>
       <Suspense fallback={<RouteLoading />}>
         <Outlet />
+        <GlobalHardwareListener />
       </Suspense>
     </RouteErrorBoundary>
   );

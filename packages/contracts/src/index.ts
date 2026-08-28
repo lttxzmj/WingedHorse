@@ -313,14 +313,23 @@ export const deviceEffectSchema = z.object({
 
 export const deviceTelemetrySchema = z.object({
   deviceId: z.string().trim().min(1).max(64),
-  online: z.boolean(),
+  online: z.boolean().optional(),
+  // 硬件传感器数据
+  obstacle: z.boolean().optional(),
+  pressure: z.number().optional(),
+  hasPress: z.boolean().optional(),
+  led1: z.enum(["on", "off"]).optional(),
+  led2: z.enum(["on", "off"]).optional(),
+  // 智能推导/业务事件
+  eventType: z.enum(["proximity", "touch", "boss_alert", "idle"]).optional(),
   env: z
     .object({
       temperatureC: z.number().optional(),
       humidityPct: z.number().optional()
     })
     .optional(),
-  heartTrend: z.enum(["calm", "active", "elevated"]).optional()
+  heartTrend: z.enum(["calm", "active", "elevated"]).optional(),
+  timestamp: z.number().optional()
 });
 
 export type DeviceEffectRequest = z.infer<typeof deviceEffectRequestSchema>;

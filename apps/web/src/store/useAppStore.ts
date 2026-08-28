@@ -309,7 +309,7 @@ export const useAppStore = create<AppState>()(
       setLifeSyncEnabled: (lifeSyncEnabled) => set({ lifeSyncEnabled }),
       setManualMood: (manualMood) => set({ manualMood }),
       setHardwareLink: (hardwareLink) => set({ hardwareLink }),
-      setDeviceId: (deviceId) => set({ deviceId: deviceId.trim().slice(0, 64) }),
+      setDeviceId: (deviceId) => set({ deviceId: deviceId.slice(0, 64) }),
       resetAll: () =>
         set({
           answers: {},

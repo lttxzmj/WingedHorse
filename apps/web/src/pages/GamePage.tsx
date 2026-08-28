@@ -15,6 +15,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
 import { ItemIcon } from "../components/ItemIcon";
+import { subscribeDeviceEvents } from "../lib/devices";
 import { DropGameCanvas, type GameStats, type GameSummary } from "../game/DropGameCanvas";
 import { ASCENDED_HORSE_ASSET, GAME_CHARACTER_ASSETS } from "../game/gameCharacterAssets";
 import "../game/gameAssets.css";
@@ -41,17 +42,41 @@ export function GamePage() {
   const autoStartHandled = useRef(false);
   const settleGame = useAppStore((state) => state.settleGame);
   const result = useAppStore((state) => state.result);
+  const deviceId = useAppStore((state) => state.deviceId);
   const playing = phase === "playing";
+
+  // 监听硬件超声波：如果在游戏中检测到有人靠近，自动安全暂停防窥
+  useEffect(() => {
+    const targetDeviceId = deviceId || "lamp-001";
+    const unsubscribe = subscribeDeviceEvents(targetDeviceId, (event, telemetry) => {
+      if (telemetry.obstacle && phase === "playing") {
+        setPaused(true); // 自动暂停游戏，不丢分
+      }
+    });
+
+    return unsubscribe;
+  }, [deviceId, phase]);
+  const inLiveScene = phase === "countdown" || phase === "playing";
+  const [countdownLeaving, setCountdownLeaving] = useState(false);
 
   useEffect(() => {
     if (phase !== "countdown") return;
-    if (countdown === 0) {
-      const launchTimer = window.setTimeout(() => setPhase("playing"), 480);
+    if (countdown <= 1) {
+      const launchTimer = window.setTimeout(() => {
+        setCountdownLeaving(true);
+        setPhase("playing");
+      }, 860);
       return () => window.clearTimeout(launchTimer);
     }
     const timer = window.setTimeout(() => setCountdown((value) => value - 1), 860);
     return () => window.clearTimeout(timer);
   }, [countdown, phase]);
+
+  useEffect(() => {
+    if (!countdownLeaving) return;
+    const clearTimer = window.setTimeout(() => setCountdownLeaving(false), 220);
+    return () => window.clearTimeout(clearTimer);
+  }, [countdownLeaving]);
 
   useEffect(() => {
     if (!playing || gameLoadState !== "ready" || !showGuide) return;
@@ -69,6 +94,7 @@ export function GamePage() {
     setCatchNotice("");
     setShowGuide(true);
     setGameLoadState("loading");
+    setCountdownLeaving(false);
     setCountdown(3);
     setPhase("countdown");
   };
@@ -102,7 +128,7 @@ export function GamePage() {
 
   return (
     <main className={`game-page game-page--${phase}`}>
-      <header className="subpage-header">
+      <header className={`subpage-header${phase === "summary" ? " subpage-header--summary" : ""}`}>
         <BackLink to="/home" label="回到草原" />
         <div>
           <p className="eyebrow">宇宙 Online · 补给雨</p>
@@ -110,41 +136,12 @@ export function GamePage() {
         </div>
         <Link className="subpage-header__tool" to="/inventory">
           <AppIcon icon={Package} size={17} />
-          背包
+          <span>背包</span>
         </Link>
       </header>
       <section className={`game-shell game-shell--${phase}`}>
-        {playing ? (
+        {inLiveScene ? (
           <>
-            <div className="game-hud" aria-label="本局状态">
-              <span className="game-hud__time">
-                <AppIcon icon={Clock3} size={15} />
-                <strong>{stats.remainingSeconds}</strong>
-                <small>秒</small>
-              </span>
-              <span>
-                <small>得分 · {stats.caughtCount} 件</small>
-                <strong>{stats.score}</strong>
-              </span>
-              <span className={stats.combo >= 2 ? "is-hot" : ""}>
-                <small>连击</small>
-                <strong>×{Math.min(stats.combo, 10)}</strong>
-              </span>
-              <button
-                disabled={gameLoadState !== "ready"}
-                onClick={() => {
-                  setControlDirection(0);
-                  setPaused((value) => !value);
-                }}
-                aria-pressed={paused}
-              >
-                <AppIcon icon={paused ? Play : Pause} size={16} />
-                <span>{paused ? "继续" : "暂停"}</span>
-              </button>
-              <span className="game-time-progress">
-                <i style={{ width: `${(stats.remainingSeconds / 30) * 100}%` }} />
-              </span>
-            </div>
             {gameLoadState === "error" ? (
               <div className="game-recovery" role="alert">
                 <strong>补给雨还没打开</strong>
@@ -153,28 +150,86 @@ export function GamePage() {
                 <Link to="/home">回到草原</Link>
               </div>
             ) : (
-              <>
-                <DropGameCanvas
-                  sessionId={sessionId}
-                  characterType={result?.typeId ?? "chosen"}
-                  paused={paused}
-                  controlDirection={controlDirection}
-                  onStatsChange={setStats}
-                  onReady={() => setGameLoadState("ready")}
-                  onError={(message) => {
-                    setGameError(message);
-                    setPaused(false);
-                    setGameLoadState("error");
-                  }}
-                  onCatch={(itemId, points) => {
-                    setShowGuide(false);
-                    if ("vibrate" in navigator) navigator.vibrate(18);
-                    setCatchNotice(`${ITEM_CATALOG[itemId].name} +${points}`);
-                    window.setTimeout(() => setCatchNotice(""), 900);
-                  }}
-                  onFinish={finish}
+              <DropGameCanvas
+                sessionId={sessionId}
+                characterType={result?.typeId ?? "chosen"}
+                paused={!playing || paused}
+                controlDirection={playing ? controlDirection : 0}
+                onStatsChange={setStats}
+                onReady={() => setGameLoadState("ready")}
+                onError={(message) => {
+                  setGameError(message);
+                  setPaused(false);
+                  setGameLoadState("error");
+                }}
+                onCatch={(itemId, points) => {
+                  setShowGuide(false);
+                  if ("vibrate" in navigator) navigator.vibrate(18);
+                  setCatchNotice(`${ITEM_CATALOG[itemId].name} +${points}`);
+                  window.setTimeout(() => setCatchNotice(""), 900);
+                }}
+                onFinish={finish}
+              />
+            )}
+
+            {phase === "countdown" || countdownLeaving ? (
+              <div
+                className={`game-countdown game-countdown--overlay${
+                  countdownLeaving ? " is-leaving" : ""
+                }`.trim()}
+                aria-live="assertive"
+                aria-hidden={countdownLeaving || undefined}
+              >
+                <img
+                  className="game-countdown__character"
+                  src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]}
+                  alt=""
                 />
-                {gameLoadState === "loading" ? (
+                <div className="game-countdown__veil" />
+                <div className="game-countdown__content" key={countdown}>
+                  <p className="game-countdown__pill">
+                    <span>{countdown > 1 ? "稳住，准备接补给" : "左右拖动飞马"}</span>
+                  </p>
+                  <div className="game-countdown__core">
+                    <span className="game-countdown__halo" aria-hidden="true" />
+                    <strong>{countdown}</strong>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {playing ? (
+              <>
+                <div className="game-hud" aria-label="本局状态">
+                  <span className="game-hud__time">
+                    <AppIcon icon={Clock3} size={15} />
+                    <strong>{stats.remainingSeconds}</strong>
+                    <small>秒</small>
+                  </span>
+                  <span>
+                    <small>得分 · {stats.caughtCount} 件</small>
+                    <strong>{stats.score}</strong>
+                  </span>
+                  <span className={stats.combo >= 2 ? "is-hot" : ""}>
+                    <small>连击</small>
+                    <strong>×{Math.min(stats.combo, 10)}</strong>
+                  </span>
+                  <button
+                    disabled={gameLoadState !== "ready"}
+                    onClick={() => {
+                      setControlDirection(0);
+                      setPaused((value) => !value);
+                    }}
+                    aria-pressed={paused}
+                  >
+                    <AppIcon icon={paused ? Play : Pause} size={16} />
+                    <span>{paused ? "继续" : "暂停"}</span>
+                  </button>
+                  <span className="game-time-progress">
+                    <i style={{ width: `${(stats.remainingSeconds / 30) * 100}%` }} />
+                  </span>
+                </div>
+                {gameLoadState === "loading" && !countdownLeaving ? (
                   <div className="game-loading" role="status">
                     正在打开补给雨…
                   </div>
@@ -207,7 +262,7 @@ export function GamePage() {
                     </button>
                   </div>
                 ) : null}
-                {gameLoadState === "ready" && showGuide ? (
+                {gameLoadState === "ready" && showGuide && !countdownLeaving ? (
                   <p className="game-play-guide" role="status">
                     手指贴着飞马左右拖动，接住第一份补给
                   </p>
@@ -217,55 +272,51 @@ export function GamePage() {
                     接住了 · {catchNotice}
                   </p>
                 ) : null}
+                {paused ? (
+                  <div className="game-pause" role="dialog" aria-modal="true" aria-label="游戏已暂停">
+                    <strong>先喘口气</strong>
+                    <p>倒计时和掉落都停住了。</p>
+                    <Button onClick={() => setPaused(false)}>继续接住</Button>
+                    <Link to="/home">结束并回草原</Link>
+                  </div>
+                ) : null}
               </>
-            )}
-            {paused ? (
-              <div className="game-pause" role="dialog" aria-modal="true" aria-label="游戏已暂停">
-                <strong>先喘口气</strong>
-                <p>倒计时和掉落都停住了。</p>
-                <Button onClick={() => setPaused(false)}>继续接住</Button>
-                <Link to="/home">结束并回草原</Link>
-              </div>
             ) : null}
           </>
-        ) : phase === "countdown" ? (
-          <div className="game-countdown" aria-live="assertive">
-            <img className="game-scene__tent" src="/scene/prairie-tent.webp" alt="" />
-            <img
-              className="game-countdown__character"
-              src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]}
-              alt=""
-            />
-            <div className="game-countdown__veil" />
-            <div className="game-countdown__content" key={countdown}>
-              <small>{countdown ? "补给雨马上到" : "去接住它"}</small>
-              <strong>{countdown || "开始"}</strong>
-              <p>{countdown > 1 ? "稳住，先看落点" : "手指左右拖动飞马"}</p>
-            </div>
-          </div>
         ) : (
           <div className={`game-intro${summary ? " game-intro--summary" : ""}`}>
-            <img className="game-scene__tent" src="/scene/prairie-tent.webp" alt="" />
             <div className="game-intro__character" aria-hidden="true">
               <img src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]} alt="" />
             </div>
             {summary ? (
               <div className="game-summary">
-                <p className="eyebrow">本局得分</p>
-                <strong>{summary.score}</strong>
-                <p>最高 {summary.maxCombo} 连击 · 接住后已一次性放入背包</p>
-                <div className="loot-row" aria-label="本局获得物品">
-                  {Object.entries(summary.caught).length ? (
-                    Object.entries(summary.caught).map(([id, count]) => (
-                      <span key={id}>
-                        <ItemIcon itemId={id as ItemId} size={17} />
-                        {ITEM_CATALOG[id as ItemId].name} × {count}
-                      </span>
-                    ))
-                  ) : (
-                    <p>这次没有接住也没关系，不扣分，也不会影响飞马。</p>
-                  )}
+                <div className="game-summary__headline">
+                  <div>
+                    <p className="eyebrow">补给已入袋</p>
+                    <h2>接住了 {summary.caughtCount} 件</h2>
+                    <p>最高 {summary.maxCombo} 连击</p>
+                  </div>
+                  <span>
+                    <strong>{summary.score}</strong>
+                    <small>本局得分</small>
+                  </span>
                 </div>
+                <section className="game-summary__loot" aria-labelledby="game-loot-title">
+                  <h3 id="game-loot-title">本局获得</h3>
+                  <div className="loot-row" aria-label="本局获得物品">
+                    {Object.entries(summary.caught).length ? (
+                      Object.entries(summary.caught).map(([id, count]) => (
+                        <span key={id}>
+                          <ItemIcon itemId={id as ItemId} size={19} />
+                          <span>{ITEM_CATALOG[id as ItemId].name}</span>
+                          <strong>×{count}</strong>
+                        </span>
+                      ))
+                    ) : (
+                      <p>这次没有接住也没关系，不扣分，也不会影响飞马。</p>
+                    )}
+                  </div>
+                </section>
                 <figure className="game-summary__ascension">
                   <img
                     src={ASCENDED_HORSE_ASSET}
@@ -282,16 +333,17 @@ export function GamePage() {
                     </span>
                   </figcaption>
                 </figure>
+                <div className="game-summary__actions">
+                  <Link className="ui-button ui-button--primary" to="/home">
+                    带着补给回草原
+                  </Link>
+                  <Button variant="secondary" onClick={start}>
+                    再接一局
+                  </Button>
+                </div>
               </div>
             ) : null}
-            {summary ? (
-              <>
-                <Button onClick={start}>再接一局</Button>
-                <Link className="quiet-link" to="/home">
-                  带着补给回草原
-                </Link>
-              </>
-            ) : (
+            {!summary ? (
               <div className="game-intro__dock">
                 <div className="game-intro__brief">
                   <span className="game-intro__tag">
@@ -299,20 +351,16 @@ export function GamePage() {
                     今日补给雨
                   </span>
                   <h2>30 秒，把补给接回草原</h2>
-                  <ul>
-                    <li>第一件会落在你附近</li>
-                    <li>连续接住，最高 ×10</li>
-                    <li>漏接不扣分，随时能暂停</li>
-                  </ul>
+                  <p>拖动飞马接住物品；漏接不扣分。</p>
                 </div>
                 <div className="game-intro__actions">
                   <Button onClick={start}>开始接补给</Button>
                   <Link className="quiet-link" to="/home">
-                    今天先不玩
+                    稍后再说
                   </Link>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </section>

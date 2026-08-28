@@ -3,7 +3,7 @@ import { DIMENSIONS, dimensionLabels, getResultProfile } from "@wingedhorse/doma
 import { Button, Card } from "@wingedhorse/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { SunMedium } from "lucide-react";
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { createResultShareCard } from "../lib/resultShareCard";
 import { useAppStore } from "../store/useAppStore";
@@ -19,10 +19,10 @@ export function ResultPage() {
   const navigate = useNavigate();
   const result = useAppStore((state) => state.result);
   const reset = useAppStore((state) => state.resetAssessment);
-  const setIndex = useAppStore((state) => state.setAssessmentIndex);
-  const feedback = useAppStore((state) => state.resultFeedback);
-  const setFeedback = useAppStore((state) => state.setResultFeedback);
   const [shareMessage, setShareMessage] = useState("");
+
+  const [isSharing, setIsSharing] = useState(false);
+  const isSharingRef = useRef(false);
 
   if (!result) {
     return (
@@ -39,13 +39,20 @@ export function ResultPage() {
   const currentResult = result;
   const profile = getResultProfile(result.typeId);
   async function shareResultCard() {
+    if (isSharingRef.current) return;
+    isSharingRef.current = true;
+    setIsSharing(true);
     setShareMessage("正在生成分享卡…");
     try {
       const blob = await createResultShareCard(currentResult, profile);
-      const file = new File([blob], `我的牛马类型-${profile.name}.png`, { type: "image/png" });
+      const file = new File([blob], `我的飞升报告-${profile.name}.png`, { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "我的 WingedHorse 测评", files: [file] });
-        setShareMessage("分享卡已准备好。");
+        await navigator.share({
+          title: `我的飞升报告：${profile.name}`,
+          text: `我测出了${profile.name}。${profile.tagline}`,
+          files: [file]
+        });
+        setShareMessage("飞升海报已准备好。");
       } else {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -53,10 +60,13 @@ export function ResultPage() {
         link.download = file.name;
         link.click();
         URL.revokeObjectURL(url);
-        setShareMessage("分享卡已保存，可以发给朋友了。");
+        setShareMessage("飞升海报已保存，可以发给朋友了。");
       }
     } catch {
-      setShareMessage("暂时没能生成分享卡，请稍后再试。");
+      setShareMessage("暂时没能生成飞升海报，请稍后再试。");
+    } finally {
+      isSharingRef.current = false;
+      setIsSharing(false);
     }
   }
 
@@ -72,7 +82,7 @@ export function ResultPage() {
           alt={"代表" + profile.name + "的原创牛马角色"}
         />
         <div className="result-hero__copy">
-          <p className="eyebrow">今日判词 · 你已走完 17 幕</p>
+          <p className="eyebrow">测评完成 · 17/17</p>
           <h1>{profile.name}</h1>
           <p className="result-rarity">{profile.rarity}</p>
           <p className="result-tagline">{profile.tagline}</p>
@@ -81,7 +91,7 @@ export function ResultPage() {
 
       <div className="result-grid">
         <Card className="result-card" id="result-scores">
-          <h2>你的四维状态</h2>
+          <h2>此刻的状态</h2>
           <div className="score-list">
             {DIMENSIONS.map((dimension) => {
               const score = Math.round(result.normalizedScores[dimension]);
@@ -120,7 +130,7 @@ export function ResultPage() {
         </Card>
 
         <Card className="result-card bloodline-card">
-          <h2>你的牛马血统</h2>
+          <h2>类型构成</h2>
           <div className="bloodline-card__primary">
             <span>{profile.name}</span>
             <strong>{result.bloodline.purity}%</strong>
@@ -148,7 +158,7 @@ export function ResultPage() {
         </Card>
 
         <Card className="result-card" id="result-profile">
-          <h2>这很像你</h2>
+          <h2>你可能会这样</h2>
           <ul className="observation-list">
             {profile.observations.map((item) => (
               <li key={item}>{item}</li>
@@ -159,7 +169,7 @@ export function ResultPage() {
               <AppIcon icon={SunMedium} size={22} />
             </span>
             <div>
-              <strong>牛马护理小贴士</strong>
+              <strong>给今天的你</strong>
               <p>{profile.advice}</p>
             </div>
           </div>
@@ -173,7 +183,7 @@ export function ResultPage() {
       ))}
       <section className="evolution-callout" aria-labelledby="evolution-title">
         <div className="evolution-callout__copy">
-          <strong id="evolution-title">你的进化图鉴</strong>
+          <strong id="evolution-title">飞升路线</strong>
           <p>{profile.evolution}</p>
         </div>
         <div className="evolution-path" aria-label="从此刻的牛马通往未知的天马">
@@ -185,50 +195,25 @@ export function ResultPage() {
           <span>{profile.id === "chosen" ? "天马已现" : "天马 · 未解锁"}</span>
         </div>
       </section>
-      <Card className="result-card result-method" id="result-method">
-        <h2>为什么是这个结果</h2>
-        <p>
-          前 16
-          题会影响电量、发动机、疯感和导航仪；最后一题只触发彩蛋，不参与计分。前三个维度决定主类型，导航仪只影响方向建议。
-        </p>
-        <p>
-          分数接近中间位置，代表你更容易随情境变化，所以会出现隐藏血统。血统是帮助理解结果的娱乐表达，不是人群概率或心理学诊断。
-        </p>
+      <div className="result-actions">
         <button
           type="button"
-          className="result-method__edit"
-          onClick={() => {
-            setIndex(16);
-            void navigate({ to: "/assessment" });
-          }}
+          className="result-moyu-cta"
+          onClick={() => void navigate({ to: "/game", hash: "start" })}
+          aria-label="开始摸鱼：去接补给"
         >
-          修改最后一题
+          <span className="result-moyu-cta__swirl" aria-hidden="true" />
+          <span className="result-moyu-cta__ripple" aria-hidden="true" />
+          <span className="result-moyu-cta__ripple result-moyu-cta__ripple--late" aria-hidden="true" />
+          <span className="result-moyu-cta__glow" aria-hidden="true" />
+          <span className="result-moyu-cta__label">开始摸鱼</span>
         </button>
-      </Card>
-      <section className="result-feedback" aria-label="结果反馈">
-        <div>
-          <strong>这次像你吗？</strong>
-          <p>内测阶段，先把你的感受记在这台设备上。</p>
-        </div>
-        {feedback ? (
-          <span role="status">收到，谢谢你说真话。</span>
-        ) : (
-          <div>
-            <button onClick={() => setFeedback("accurate")}>挺像</button>
-            <button onClick={() => setFeedback("inaccurate")}>不太像</button>
-          </div>
-        )}
-      </section>
-      <div className="result-actions">
         <Button
-          className="parallel-world-button"
-          onClick={() => void navigate({ to: "/home" })}
-          aria-label="去看看平行世界里的你"
+          variant="secondary"
+          disabled={isSharing}
+          onClick={() => void shareResultCard()}
         >
-          去看看
-        </Button>
-        <Button variant="secondary" onClick={() => void shareResultCard()}>
-          保存或分享结果卡
+          {isSharing ? "正在生成海报…" : "生成我的飞升海报"}
         </Button>
         <Button
           variant="tertiary"

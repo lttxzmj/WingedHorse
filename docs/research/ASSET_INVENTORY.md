@@ -47,8 +47,11 @@
 | `apps/web/public/scene/private-photo-map.webp` | 旧版虚构草原地图底图（已停用）         | 2026-08-28 使用 OpenAI 内置 ImageGen 生成；保留作视觉来源记录，不再由运行时引用，避免与真实地区共同足迹混用。                                                                                                      |
 | `apps/web/public/scene/travel-atlas-bg.webp`   | 共同足迹内测旅行手账装饰底板           | 2026-08-28 使用 OpenAI 内置 ImageGen 生成并压缩为约 100 KB WebP；以旧版草原地图作风格参考，提示明确要求无国界、无国家轮廓、无省界、无地名。仅用于承载省级拍立得交互的内测视觉，公开发布前须替换带审图号标准地图并完成审核。 |
 | `apps/web/public/scene/prairie-home-v2.webp`   | 草原主页一体化生活场景                 | 2026-08-28 使用 OpenAI 内置 ImageGen，以现有草原和帐篷为风格参考生成；提示方向为 9:16 暖色 2D 草原、右侧中景帐篷、中央角色安全区、无角色/文字/UI，已压缩为 960×1707 WebP；仍需发布前人工相似性与商用复核 |
+| `apps/web/public/scene/prairie-home-bluebox-v1.webp` | 蓝盒子合作期草原主页场景 | 2026-08-28 使用 OpenAI 内置 ImageGen 编辑 `prairie-home-v2.webp`，仅把帐篷原挂牌替换为参考官方 Logo 的暖白缝制布标，并压缩为 WebP；需补齐蓝盒子对 Logo 变体、产品图和场景化商用的书面授权后才可公开发布 |
+| `apps/web/public/brands/bluebox/{logo,pillow-n2}.webp` | 合作来源识别与开盒产品图预留 | 由用户提供的蓝盒子 Logo 和枕头图片压缩导出；未包含企微二维码素材。当前仅作关闭状态的原型资源，公开活动前需确认品牌授权、产品名称、宣传表述和使用期限 |
 | `apps/web/public/game/item-icons/*.svg`        | 小游戏与背包物品图标                   | Lucide Static 1.34.0 官方 SVG，ISC License；与页面 Lucide React 图标保持同源，发布时保留依赖许可清单                                                                                                     |
 | `apps/web/public/game/characters/*.webp`       | 八类型小游戏接物姿态                   | 2026-08-28 由用户提供的“牛马飞升素材/二维图”透明 PNG 等比缩放并压缩为 17–29 KB WebP；编号映射为天选、节能、永动机、内耗、疲惫、金牌老黄、暴躁、发疯文学。保留原图，不以压缩导出文件替代权利证明。          |
 | `apps/web/public/game/ascended-horse.webp`     | 小游戏结算页飞升目标形象               | 2026-08-28 由用户提供的“进化天马.png”缩放压缩为 512×512 WebP。原图无透明通道且偏 3D 质感，因此仅作为结算目标卡展示，不与 2D 玩家角色混作同一运动层。                                                        |
+| `apps/web/public/ui/start-moyu.{webp,gif}` + `start-moyu-still.webp` | 结果页摸鱼入口候选素材（当前未挂载） | 2026-08-28 由用户提供的“开始摸鱼.GIF”处理导出；因与暖金草原主视觉冲突，当前圆形主按钮改用 CSS 品牌光环实现，素材保留供后续活动或替换方案。 |
 
 这些资产可以用于本地原型、交互和视觉验收，但不能替代正式资产交付包。正式转产时需要为每个文件补充：负责人、原始输入、生成/绘制工具、日期、版本、人工修改、相似性检查、商用授权结论和可追溯源文件；未补齐前不得对外声称“版权已完成”。

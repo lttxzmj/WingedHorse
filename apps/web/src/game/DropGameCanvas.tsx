@@ -2,7 +2,7 @@ import { ITEM_CATALOG, createSeededRandom, selectDrop, type ItemId } from "@wing
 import type { WingedHorseType } from "@wingedhorse/character-runtime";
 import { useEffect, useRef } from "react";
 import type PhaserType from "phaser";
-import { ITEM_ICON_ASSETS } from "../lib/itemIconAssets";
+import { ITEM_BRAND_IMAGE_ASSETS, ITEM_ICON_ASSETS } from "../lib/itemIconAssets";
 import { GAME_CHARACTER_ASSETS } from "./gameCharacterAssets";
 
 export interface GameStats {
@@ -97,13 +97,20 @@ export function DropGameCanvas({
         const Phaser = module.default ?? module;
         const hostWidth = hostRef.current.clientWidth || 390;
         const hostHeight = hostRef.current.clientHeight || 560;
-        const gameHeight = Phaser.Math.Clamp(Math.round((390 * hostHeight) / hostWidth), 520, 820);
+        const gameHeight = Math.max(480, Math.round((390 * hostHeight) / hostWidth));
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
+        const renderScale = pixelRatio * (hostWidth / 390);
+        const renderWidth = Math.round(390 * renderScale);
+        const renderHeight = Math.round(gameHeight * renderScale);
+        hostRef.current.dataset.logicalWidth = "390";
+        hostRef.current.dataset.logicalHeight = String(gameHeight);
         const seed = Array.from(sessionId).reduce(
           (value, character) => Math.imul(value ^ character.charCodeAt(0), 16777619),
           2166136261
         );
 
         class CatchScene extends Phaser.Scene {
+          private world!: PhaserType.GameObjects.Container;
           private catcher!: PhaserType.GameObjects.Container;
           private catcherSprite!: PhaserType.GameObjects.Image;
           private catcherShadow!: PhaserType.GameObjects.Ellipse;
@@ -133,28 +140,27 @@ export function DropGameCanvas({
           }
 
           preload() {
-            this.load.image("prairie-background", "/game/prairie-drop-bg.webp");
-            this.load.image("prairie-tent", "/scene/prairie-tent.webp");
+            this.load.image("prairie-background", "/scene/prairie-home-v2.webp");
             this.load.image("player-character", GAME_CHARACTER_ASSETS[characterType]);
             Object.entries(ITEM_ICON_ASSETS).forEach(([itemId, path]) => {
-              this.load.svg(`item-icon-${itemId}`, path, { width: 30, height: 30 });
+              // Item art is raster PNG for the game, not SVG source text.
+              this.load.image(`item-icon-${itemId}`, path);
+            });
+            Object.entries(ITEM_BRAND_IMAGE_ASSETS).forEach(([itemId, path]) => {
+              this.load.image(`item-brand-${itemId}`, path);
             });
           }
 
           create() {
-            const { width, height } = this.scale;
+            const width = 390;
+            const height = gameHeight;
             this.cameras.main.setBackgroundColor("#e7f5fb");
+            this.world = this.add.container(0, 0).setScale(renderScale);
             if (this.textures.exists("prairie-background")) {
-              this.add
-                .image(width / 2, height / 2, "prairie-background")
-                .setDisplaySize(width, height);
-            }
-
-            if (this.textures.exists("prairie-tent")) {
-              this.add
-                .image(width - 54, height - 98, "prairie-tent")
-                .setDisplaySize(116, 116)
-                .setAlpha(0.88);
+              const background = this.add.image(width / 2, height / 2, "prairie-background");
+              const coverScale = Math.max(width / background.width, height / background.height);
+              background.setScale(coverScale);
+              this.world.add(background);
             }
 
             this.catcherBaseY = height - 72;
@@ -163,6 +169,8 @@ export function DropGameCanvas({
               .setScale(1, 0.72);
             this.catcherSprite = this.add.image(0, 0, "player-character").setOrigin(0.5, 0.63);
             const displayHeight = 158;
+            if (hostRef.current)
+              hostRef.current.dataset.characterHeightRatio = String(displayHeight / height);
             this.catcherSprite.setDisplaySize(
               (this.catcherSprite.width / this.catcherSprite.height) * displayHeight,
               displayHeight
@@ -171,17 +179,18 @@ export function DropGameCanvas({
               this.catcherShadow,
               this.catcherSprite
             ]);
+            this.world.add(this.catcher);
             this.targetX = width / 2;
 
             const aim = (x: number) => {
-              this.targetX = Phaser.Math.Clamp(x, 44, this.scale.width - 44);
+              this.targetX = Phaser.Math.Clamp(x, 44, width - 44);
             };
             this.input.on("pointermove", (pointer: PhaserType.Input.Pointer) => {
-              if (pointer.isDown) aim(pointer.x);
+              if (pointer.isDown) aim(pointer.x / renderScale);
             });
             this.input.on("pointerdown", (pointer: PhaserType.Input.Pointer) => {
               this.pointerActive = true;
-              aim(pointer.x);
+              aim(pointer.x / renderScale);
             });
             this.input.on("pointerup", () => {
               this.pointerActive = false;
@@ -201,6 +210,7 @@ export function DropGameCanvas({
             });
 
             this.emitStats();
+            if (pausedRef.current) this.scene.pause();
             if (!settled) {
               settled = true;
               window.clearTimeout(startupTimeout);
@@ -220,29 +230,53 @@ export function DropGameCanvas({
           private spawnDrop(elapsed: number) {
             const drop = selectDrop(this.random);
             const isFirstDrop = this.spawnedCount === 0;
-            const x = isFirstDrop ? this.catcher.x : 72 + this.random() * (this.scale.width - 144);
+            const x = isFirstDrop ? this.catcher.x : 72 + this.random() * (390 - 144);
             this.spawnedCount += 1;
             const item = ITEM_CATALOG[drop.itemId];
+            const isSponsored = item.sponsored && Boolean(ITEM_BRAND_IMAGE_ASSETS[drop.itemId]);
             const label = this.add.container(x, 128);
-            const shadow = this.add.ellipse(2, 4, 56, 56, 0x3b2e24, 0.14);
+            const shadow = this.add.ellipse(2, 5, isSponsored ? 64 : 58, isSponsored ? 66 : 58, 0x3b2e24, 0.14);
             const card = this.add.graphics();
             const rare = item.rarity === "rare";
-            card.fillStyle(rare ? 0xffe8a8 : 0xfffdf3, 0.98);
-            card.fillRoundedRect(-29, -30, 58, 58, 18);
-            card.lineStyle(rare ? 3 : 2, rare ? 0xe2a91f : 0xffffff, 0.95);
-            card.strokeRoundedRect(-29, -30, 58, 58, 18);
-            const glyph = this.add.image(0, -4, `item-icon-${drop.itemId}`).setDisplaySize(31, 31);
+            const kindPalette = {
+              "energy-supply": { surface: 0xfff2c8, icon: 0xd88d20 },
+              "engine-tool": { surface: 0xe8f2d4, icon: 0x5f8338 },
+              "pressure-release": { surface: 0xffe4dc, icon: 0xc96655 },
+              navigation: { surface: 0xdfeefe, icon: 0x4d79a8 },
+              decoration: { surface: 0xeee7ff, icon: 0x7863a7 },
+              "sponsored-supply": { surface: 0xe5f2ff, icon: 0x1768b3 }
+            }[item.kind];
+            card.fillStyle(isSponsored ? 0xf5faff : rare ? 0xfff7dc : 0xfffdf5, 0.98);
+            card.fillRoundedRect(-32, -34, 64, 68, 19);
+            card.lineStyle(isSponsored ? 3 : rare ? 2.5 : 2, isSponsored ? 0x3b83c9 : rare ? 0xe2a91f : 0xffffff, 0.98);
+            card.strokeRoundedRect(-32, -34, 64, 68, 19);
+            const iconPlate = this.add.circle(0, -5, 20, kindPalette.surface, 1);
+            const glyph = this.add
+              .image(0, -5, isSponsored ? `item-brand-${drop.itemId}` : `item-icon-${drop.itemId}`)
+              .setTint(isSponsored ? 0xffffff : kindPalette.icon)
+              .setDisplaySize(isSponsored ? 44 : 31, isSponsored ? 32 : 31);
+            const partnerTag = isSponsored
+              ? this.add
+                  .text(0, -28, "品牌合作", {
+                    color: "#1768b3",
+                    fontFamily: "PingFang SC, system-ui",
+                    fontSize: "7px",
+                    fontStyle: "bold"
+                  })
+                  .setOrigin(0.5)
+              : null;
             const name = this.add
-              .text(0, 20, item.name.replace("补给", ""), {
+              .text(0, 24, isSponsored ? "蓝盒子" : item.name.replace("补给", ""), {
                 align: "center",
-                color: "#59483b",
+                color: isSponsored ? "#175b99" : "#59483b",
                 fontFamily: "PingFang SC, system-ui",
                 fontSize: "9px",
                 fontStyle: "bold",
-                wordWrap: { width: 58, useAdvancedWrap: true }
+                wordWrap: { width: 60, useAdvancedWrap: true }
               })
               .setOrigin(0.5);
-            label.add([shadow, card, glyph, name]);
+            label.add([shadow, card, iconPlate, glyph, ...(partnerTag ? [partnerTag] : []), name]);
+            this.world.add(label);
             label.setScale(0.72).setAlpha(0);
             this.tweens.add({
               targets: label,
@@ -283,6 +317,7 @@ export function DropGameCanvas({
               })
               .setOrigin(0.5);
             const feedback = this.add.container(x, y, [panel, label]);
+            this.world.add([glow, feedback]);
             feedback.setScale(0.76).setAlpha(0);
 
             if (reduceMotion) {
@@ -317,8 +352,7 @@ export function DropGameCanvas({
             this.tweens.add({
               targets: this.catcherSprite,
               y: -12,
-              scaleX: 1.07,
-              scaleY: 0.94,
+              angle: this.velocityX >= 0 ? 3 : -3,
               duration: 90,
               yoyo: true,
               ease: "Quad.Out"
@@ -326,7 +360,7 @@ export function DropGameCanvas({
 
             if (this.combo >= 2) {
               const comboText = this.add
-                .text(this.scale.width / 2, 174, `${this.combo} 连击  ×${Math.min(this.combo, 10)}`, {
+                .text(390 / 2, 174, `${this.combo} 连击  ×${Math.min(this.combo, 10)}`, {
                   color: "#fff8de",
                   fontFamily: "PingFang SC, system-ui",
                   fontSize: "24px",
@@ -336,6 +370,7 @@ export function DropGameCanvas({
                 })
                 .setOrigin(0.5)
                 .setScale(0.68);
+              this.world.add(comboText);
               this.tweens.add({
                 targets: comboText,
                 scale: 1,
@@ -374,7 +409,7 @@ export function DropGameCanvas({
             this.catcher.x = Phaser.Math.Clamp(
               this.catcher.x + this.velocityX * delta,
               44,
-              this.scale.width - 44
+              390 - 44
             );
             if (!this.pointerActive && keyboardDirection !== 0) this.targetX = this.catcher.x;
             const motionStrength = Math.min(1, Math.abs(this.velocityX) / 0.32);
@@ -386,6 +421,13 @@ export function DropGameCanvas({
             );
             this.catcherSprite.setFlipX(this.velocityX < -0.025);
             this.catcherShadow.setScale(1 - motionStrength * 0.08, 0.72);
+            if (hostRef.current) {
+              hostRef.current.dataset.characterHeightRatio = String(
+                this.catcherSprite.displayHeight / gameHeight
+              );
+            }
+
+            if (pausedRef.current) return;
 
             this.elapsedMs += delta;
             this.nextDropInMs -= delta;
@@ -401,7 +443,7 @@ export function DropGameCanvas({
               this.nextDropInMs = interval + this.random() * 180;
             }
             const catcherTop = this.catcher.y - 76;
-            const verticalScale = this.scale.height / 560;
+            const verticalScale = gameHeight / 560;
             this.drops = this.drops.filter((drop) => {
               drop.label.y += delta * 0.13 * drop.speed * verticalScale;
               drop.label.x += Math.sin(this.motionClock * 0.0024 + drop.phase) * drop.drift * (delta / 1000);
@@ -436,7 +478,7 @@ export function DropGameCanvas({
                 this.emitStats();
                 return false;
               }
-              if (drop.label.y > this.scale.height + 36) {
+              if (drop.label.y > gameHeight + 36) {
                 this.missed += 1;
                 this.combo = 0;
                 drop.label.destroy();
@@ -467,11 +509,17 @@ export function DropGameCanvas({
         game = new Phaser.Game({
           type: Phaser.CANVAS,
           parent: hostRef.current,
-          width: 390,
-          height: gameHeight,
+          width: renderWidth,
+          height: renderHeight,
+          render: { antialias: true, roundPixels: false, pixelArt: false },
           transparent: false,
           scene: CatchScene,
-          scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
+          // The renderer uses a DPR-sized backing store while the camera keeps
+          // gameplay in the stable 390-wide logical coordinate system.
+          scale: {
+            mode: Phaser.Scale.FIT,
+            autoCenter: Phaser.Scale.CENTER_BOTH
+          }
         });
         gameRef.current = game;
         if (pausedRef.current) game.scene.pause("catch");

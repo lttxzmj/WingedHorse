@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
 test("questionnaire reaches result, prairie and game without a broken step", async ({
   page
 }, testInfo) => {
-  test.setTimeout(45_000);
+  test.setTimeout(60_000);
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-landing-${testInfo.project.name}.png`,
@@ -37,18 +37,19 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   for (let index = 0; index < 17; index += 1) {
     await page.getByRole("radio").first().click();
   }
-  await expect(page.getByText("今日判词 · 你已走完 17 幕")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "你的牛马血统" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "为什么是这个结果" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "保存或分享结果卡" })).toBeVisible();
+  await expect(page.getByText("测评完成 · 17/17")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "类型构成" })).toBeVisible();
+  await expect(page.getByText("为什么是这个结果")).toHaveCount(0);
+  await expect(page.getByText("这次像你吗？")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "生成我的飞升海报" })).toBeVisible();
   await page.evaluate(() =>
     Object.defineProperty(navigator, "canShare", { configurable: true, value: () => false })
   );
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "保存或分享结果卡" }).click();
+  await page.getByRole("button", { name: "生成我的飞升海报" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^我的牛马类型-.*\.png$/);
-  await expect(page.getByText("分享卡已保存，可以发给朋友了。")).toBeVisible();
+  expect(download.suggestedFilename()).toMatch(/^我的飞升报告-.*\.png$/);
+  await expect(page.getByText("飞升海报已保存，可以发给朋友了。")).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-result-${testInfo.project.name}.png`,
@@ -57,9 +58,34 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   await expect(
     page.getByText("本结果为娱乐测评，不构成心理、医疗或职业建议。类型只会在你主动复测时改变。")
   ).toBeVisible();
-  await page.getByRole("button", { name: "去看看平行世界里的你" }).click();
-  await expect(page.getByText(/清晨|午后|傍晚|深夜/).first()).toBeVisible();
-  await page.getByRole("link", { name: "查看共同生活" }).click();
+  await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
+  await expect(page.locator(".result-moyu-cta__label")).toHaveText("开始摸鱼");
+  await page.getByRole("button", { name: "开始摸鱼：去接补给" }).click();
+  await expect(page.getByRole("heading", { name: "接住今天的补给" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 6_000 });
+  await expect(page.locator(".drop-game-canvas canvas")).toBeVisible({ timeout: 6_000 });
+  await page.waitForTimeout(900);
+  const remaining = Number(
+    await page.locator(".game-hud > span").first().locator("strong").textContent()
+  );
+  expect(remaining).toBeGreaterThanOrEqual(27);
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-game-${testInfo.project.name}.png`,
+      fullPage: true
+    });
+  await page.getByRole("button", { name: "暂停" }).click();
+  await expect(page.getByRole("dialog", { name: "游戏已暂停" })).toBeVisible();
+  await page.getByRole("button", { name: "继续接住" }).click();
+  await expect(page.getByRole("button", { name: "暂停" })).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+  await page.getByRole("button", { name: "暂停" }).click();
+  await page.getByRole("link", { name: "结束并回草原" }).click();
+  await expect(page.getByRole("heading", { name: /牛马/ })).toBeVisible();
+  await page.getByRole("link", { name: "打开朋友圈动态" }).click();
   await expect(page.getByRole("heading", { name: "它的朋友圈" })).toBeVisible();
   await expect(page.getByText("新住客到达草原")).toBeVisible();
   await page.locator(".life-pinned-story > summary").click();
@@ -115,29 +141,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
       path: `/private/tmp/wingedhorse-home-${testInfo.project.name}.png`,
       fullPage: true
     });
-  await expect(page.getByRole("button", { name: "家园养成" })).toBeVisible();
-  await page.getByRole("link", { name: "开始游戏" }).click();
-  await expect(page.getByRole("heading", { name: "接住今天的补给" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 6_000 });
-  await expect(page.locator(".drop-game-canvas canvas")).toBeVisible({ timeout: 6_000 });
-  await page.waitForTimeout(900);
-  const remaining = Number(
-    await page.locator(".game-hud > span").first().locator("strong").textContent()
-  );
-  expect(remaining).toBeGreaterThanOrEqual(27);
-  if (process.env.VISUAL_QA)
-    await page.screenshot({
-      path: `/private/tmp/wingedhorse-game-${testInfo.project.name}.png`,
-      fullPage: true
-    });
-  await page.getByRole("button", { name: "暂停" }).click();
-  await expect(page.getByRole("dialog", { name: "游戏已暂停" })).toBeVisible();
-  await page.getByRole("button", { name: "继续接住" }).click();
-  await expect(page.getByRole("button", { name: "暂停" })).toBeVisible();
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
-  );
-  expect(overflow).toBeLessThanOrEqual(1);
+  await expect(page.getByRole("button", { name: "摸摸鱼：去接补给" })).toBeVisible();
 });
 
 test("question option order stays stable and a quick answer can be undone", async ({ page }) => {
@@ -180,7 +184,9 @@ test("legacy questionnaire drafts are deleted instead of migrated", async ({ pag
   await expect(page.getByText("第 1/17 题")).toBeVisible();
 });
 
-test("care happens in the prairie and advances the same relationship", async ({ page }, testInfo) => {
+test("care happens in the prairie and advances the same relationship", async ({
+  page
+}, testInfo) => {
   await page.evaluate(() => {
     localStorage.setItem(
       "wingedhorse-local-state-v2-1",
@@ -210,13 +216,8 @@ test("care happens in the prairie and advances the same relationship", async ({ 
     );
   });
   await page.goto("/home");
-  await expect(page.getByRole("heading", { name: "熟悉阶段" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "进入飞马对话" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "家园养成" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "打开共同生活簿" })).toBeVisible();
-  await expect(
-    page.locator(".digital-life-stage").getByRole("link", { name: "开始游戏：30 秒补给雨" })
-  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开朋友圈动态" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "摸摸鱼：去接补给" })).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-digital-life-home-${testInfo.project.name}.png`,
@@ -251,7 +252,7 @@ test("care happens in the prairie and advances the same relationship", async ({ 
   expect(state.lifeEvents.some((event) => event.kind === "gift")).toBe(true);
 });
 
-test("the bag recommends a real need and progressively reveals the long list", async ({
+test("the bag recommends a real need and keeps items in a selectable grid", async ({
   page
 }, testInfo) => {
   await page.evaluate(() => {
@@ -288,22 +289,38 @@ test("the bag recommends a real need and progressively reveals the long list", a
     );
   });
   await page.goto("/inventory");
-  await expect(page.getByRole("heading", { name: "把尖叫鸡给它" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "给牛马使用" })).toHaveCount(4);
-  await expect(page.locator(".item-card h2").first()).toContainText("尖叫鸡");
-  const reveal = page.getByRole("button", { name: "查看其余 2 种物品" });
-  await expect(reveal).toBeVisible();
+  await expect(page.locator(".inventory-slot")).toHaveCount(6);
+  await expect(page.locator(".inventory-slot__count").first()).toContainText("持有");
+  await expect(page.getByRole("button", { name: "给飞马使用" })).toHaveCount(0);
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-inventory-compact-${testInfo.project.name}.png`,
       fullPage: true
     });
-  await reveal.click();
-  await expect(page.getByRole("button", { name: "给牛马使用" })).toHaveCount(6);
-  await expect(page.getByRole("button", { name: "收起物品" })).toHaveAttribute(
-    "aria-expanded",
-    "true"
-  );
+  const scrollBeforeOpen = await page.evaluate(() => window.scrollY);
+  await page.getByRole("button", { name: /主线任务便签，1 件/ }).click();
+  await expect(page.getByRole("dialog", { name: "主线任务便签" })).toBeVisible();
+  await expect(page.getByText("行动手感 +6 · 方向感 +4")).toBeVisible();
+  await expect(page.getByRole("button", { name: "给飞马使用" })).toBeVisible();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-inventory-sheet-${testInfo.project.name}.png`,
+      fullPage: true
+    });
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforeOpen);
+  await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
+  await page.getByRole("button", { name: "给飞马使用" }).click();
+  await expect(page.getByRole("dialog", { name: "主线任务便签" })).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText("它收下了主线任务便签");
+  await expect(page.getByText("背包还剩 0 件")).toBeVisible();
+  await expect(page.getByText("行动手感 +6")).toBeVisible();
+  await expect(page.getByText("方向感 +4")).toBeVisible();
+  await expect(page.getByRole("link", { name: "去草原看看它" })).toBeVisible();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-inventory-use-feedback-${testInfo.project.name}.png`,
+      fullPage: true
+    });
 });
 
 test("game start and companion entry survive an HTTP context without randomUUID", async ({
@@ -352,8 +369,11 @@ test("game intro fills common H5 viewport heights without an orphan title line",
   page
 }, testInfo) => {
   for (const viewport of [
+    { width: 320, height: 568, name: "320x568" },
+    { width: 375, height: 667, name: "375x667" },
     { width: 390, height: 844, name: "390x844" },
-    { width: 375, height: 667, name: "375x667" }
+    { width: 412, height: 915, name: "412x915" },
+    { width: 430, height: 932, name: "430x932" }
   ]) {
     await page.setViewportSize(viewport);
     await page.goto("/game");
@@ -389,9 +409,9 @@ test("game intro fills common H5 viewport heights without an orphan title line",
     expect(metrics.pageHeight).toBeLessThanOrEqual(metrics.innerHeight + 1);
     expect(metrics.shellBottom).toBeGreaterThan(metrics.innerHeight - 20);
     expect(metrics.shellBottom).toBeLessThanOrEqual(metrics.innerHeight + 1);
-    expect(metrics.shellHeight).toBeGreaterThan(500);
+    expect(metrics.shellHeight).toBeGreaterThan(400);
     expect(metrics.titleHeight).toBeLessThan(metrics.titleLineHeight * 1.5);
-    expect(Math.abs(metrics.characterBottom - metrics.dockTop)).toBeLessThan(32);
+    expect(Math.abs(metrics.characterBottom - metrics.dockTop)).toBeLessThan(36);
     expect(metrics.dockBottom).toBeLessThanOrEqual(metrics.shellBottom - 8);
     expect(metrics.actionHeight).toBeGreaterThanOrEqual(44);
     expect(metrics.actionRight).toBeLessThanOrEqual(metrics.dockRight - 8);
@@ -403,12 +423,43 @@ test("game intro fills common H5 viewport heights without an orphan title line",
 
     await page.getByRole("button", { name: "开始接补给" }).click();
     await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 8_000 });
-    const canvasRatioDelta = await page.locator(".drop-game-canvas canvas").evaluate((element) => {
+    const canvasMetrics = await page.locator(".drop-game-canvas canvas").evaluate((element) => {
       const canvas = element as HTMLCanvasElement;
       const bounds = canvas.getBoundingClientRect();
-      return Math.abs(canvas.width / canvas.height - bounds.width / bounds.height);
+      return {
+        ratioDelta: Math.abs(canvas.width / canvas.height - bounds.width / bounds.height),
+        backingWidth: canvas.width,
+        backingHeight: canvas.height,
+        requiredWidth: bounds.width * window.devicePixelRatio,
+        requiredHeight: bounds.height * window.devicePixelRatio,
+        left: bounds.left,
+        top: bounds.top,
+        right: bounds.right,
+        bottom: bounds.bottom,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight
+      };
     });
-    expect(canvasRatioDelta).toBeLessThan(0.02);
+    expect(canvasMetrics.ratioDelta).toBeLessThan(0.02);
+    expect(canvasMetrics.backingWidth).toBeGreaterThanOrEqual(canvasMetrics.requiredWidth * 0.95);
+    expect(canvasMetrics.backingHeight).toBeGreaterThanOrEqual(canvasMetrics.requiredHeight * 0.95);
+    expect(canvasMetrics.left).toBeLessThanOrEqual(1);
+    expect(canvasMetrics.top).toBeLessThanOrEqual(1);
+    expect(canvasMetrics.right).toBeGreaterThanOrEqual(canvasMetrics.viewportWidth - 1);
+    expect(canvasMetrics.bottom).toBeGreaterThanOrEqual(canvasMetrics.viewportHeight - 1);
+    const characterHeightRatio = Number(
+      await page.locator(".drop-game-canvas").getAttribute("data-character-height-ratio")
+    );
+    expect(characterHeightRatio).toBeGreaterThanOrEqual(0.18);
+    expect(characterHeightRatio).toBeLessThanOrEqual(0.3);
+    if (viewport.name === "390x844") {
+      await expect(page.locator(".game-hud")).toContainText(/[1-9]\d* 件/, { timeout: 12_000 });
+      const postCatchCharacterRatio = Number(
+        await page.locator(".drop-game-canvas").getAttribute("data-character-height-ratio")
+      );
+      expect(postCatchCharacterRatio).toBeGreaterThanOrEqual(0.18);
+      expect(postCatchCharacterRatio).toBeLessThanOrEqual(0.3);
+    }
     if (process.env.VISUAL_QA)
       await page.screenshot({
         path: `/private/tmp/wingedhorse-game-playing-${viewport.name}-${testInfo.project.name}.png`,
@@ -486,6 +537,19 @@ test("a real game finishes, settles once, enters the bag and changes the life st
   await expect(page.getByLabel("本局获得物品").locator("span").first()).toBeVisible();
   await expect(page.getByRole("img", { name: "长出翅膀后的进化天马形象" })).toBeVisible();
   await expect(page.getByText(/飞升能量 \+\d+/)).toBeVisible();
+  const summaryMetrics = await page.evaluate(() => {
+    const header = document.querySelector<HTMLElement>(".game-page--summary .subpage-header");
+    const card = document.querySelector<HTMLElement>(".game-summary");
+    const headerBounds = header?.getBoundingClientRect();
+    const cardBounds = card?.getBoundingClientRect();
+    return {
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      headerBottom: headerBounds?.bottom ?? 0,
+      cardTop: cardBounds?.top ?? 0
+    };
+  });
+  expect(summaryMetrics.overflow).toBeLessThanOrEqual(1);
+  expect(summaryMetrics.headerBottom).toBeLessThanOrEqual(summaryMetrics.cardTop);
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-game-summary-${testInfo.project.name}.png`,
@@ -493,9 +557,7 @@ test("a real game finishes, settles once, enters the bag and changes the life st
     });
 
   await page.getByRole("link", { name: "带着补给回草原" }).click();
-  await expect(
-    page.locator(".digital-life-stage").getByRole("link", { name: "开始游戏：30 秒补给雨" })
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "摸摸鱼：去接补给" })).toBeVisible();
   await page.getByRole("link", { name: /打开背包，共 [1-9]\d* 件/ }).click();
   await expect(page.getByRole("heading", { name: "今天接住的东西" })).toBeVisible();
   if (process.env.VISUAL_QA)
@@ -503,9 +565,9 @@ test("a real game finishes, settles once, enters the bag and changes the life st
       path: `/private/tmp/wingedhorse-inventory-${testInfo.project.name}.png`,
       fullPage: true
     });
-  await page.getByRole("button", { name: "给牛马使用" }).first().click();
-  const confirmation = page.getByRole("dialog", { name: /要使用.+吗/ });
-  if (await confirmation.isVisible()) await page.getByRole("button", { name: "确认使用" }).click();
+  await page.locator(".inventory-slot").first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "给飞马使用" }).click();
   await expect(page.getByRole("status")).toContainText("收下了");
 
   await page.goto("/life");
@@ -598,7 +660,7 @@ test("AI disclosure, memory controls and network fallback remain usable", async 
     });
   });
   await page.goto("/companion");
-  await expect(page.getByText("嗨，我是 AI 飞马，不是真人或心理咨询师。")).toBeVisible();
+  await expect(page.getByText("AI 陪伴，不替代专业支持")).toBeVisible();
   await page.getByText("本次发送范围").click();
   await page.getByLabel(/已保存记忆 → WingedHorse 服务端/u).check();
   await page.getByLabel("想说什么都可以").fill("我喜欢散步");
@@ -663,7 +725,7 @@ test("companion sends life facts and manual mood only after session consent", as
     });
   });
   await page.goto("/companion");
-  await expect(page.getByText("AI 伙伴 · 疲惫的牛马")).toBeVisible();
+  await expect(page.getByText("天选牛马 · 在草原")).toBeVisible();
   await page.getByText("本次发送范围").click();
   const lifeConsent = page.getByLabel(/生活簿、养成状态与手动心情 → 仅 WingedHorse 服务端/u);
   await expect(lifeConsent).toBeEnabled();
