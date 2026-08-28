@@ -24,7 +24,9 @@ export function AssessmentPage() {
   const ensureAssessmentVersion = useAppStore((state) => state.ensureAssessmentVersion);
   const [error, setError] = useState("");
   const [advancing, setAdvancing] = useState(false);
+  const [undoIndex, setUndoIndex] = useState<number | null>(null);
   const advanceTimer = useRef<number | null>(null);
+  const undoTimer = useRef<number | null>(null);
   const safeIndex = Math.min(index, currentQuestionSet.questions.length - 1);
   const question = currentQuestionSet.questions[safeIndex];
 
@@ -37,6 +39,7 @@ export function AssessmentPage() {
   useEffect(
     () => () => {
       if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
+      if (undoTimer.current !== null) window.clearTimeout(undoTimer.current);
     },
     []
   );
@@ -61,6 +64,8 @@ export function AssessmentPage() {
   }
   function chooseOption(optionId: string) {
     if (advancing) return;
+    if (undoTimer.current !== null) window.clearTimeout(undoTimer.current);
+    setUndoIndex(null);
     const nextAnswers = { ...answers, [questionId]: optionId };
     setAnswer(questionId, optionId);
     setError("");
@@ -72,8 +77,17 @@ export function AssessmentPage() {
       } else {
         setIndex(safeIndex + 1);
         setAdvancing(false);
+        setUndoIndex(safeIndex);
+        undoTimer.current = window.setTimeout(() => setUndoIndex(null), 4_000);
       }
-    }, 320);
+    }, 520);
+  }
+
+  function undoLastAnswer() {
+    if (undoIndex === null) return;
+    if (undoTimer.current !== null) window.clearTimeout(undoTimer.current);
+    setUndoIndex(null);
+    setIndex(undoIndex);
   }
 
   return (
@@ -141,6 +155,14 @@ export function AssessmentPage() {
             : "已选择，进入下一幕…"
           : "选择后自动进入下一题"}
       </p>
+      {undoIndex !== null ? (
+        <div className="answer-undo" role="status">
+          <span>上一题已记录</span>
+          <button type="button" onClick={undoLastAnswer}>
+            返回修改
+          </button>
+        </div>
+      ) : null}
     </main>
   );
 }

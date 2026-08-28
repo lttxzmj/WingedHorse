@@ -25,6 +25,16 @@ test("questionnaire reaches result, lawn and game without a broken step", async 
   }
   await expect(page.getByText("你的当前形态")).toBeVisible();
   await expect(page.getByRole("heading", { name: "你的牛马血统" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "为什么是这个结果" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "保存或分享结果卡" })).toBeVisible();
+  await page.evaluate(() =>
+    Object.defineProperty(navigator, "canShare", { configurable: true, value: () => false })
+  );
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "保存或分享结果卡" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^我的牛马类型-.*\.png$/);
+  await expect(page.getByText("分享卡已保存，可以发给朋友了。")).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-result-${testInfo.project.name}.png`,
@@ -49,16 +59,15 @@ test("questionnaire reaches result, lawn and game without a broken step", async 
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("question option order stays stable when navigating back within one assessment", async ({
-  page
-}) => {
+test("question option order stays stable and a quick answer can be undone", async ({ page }) => {
   await page.getByRole("button", { name: "开始 90 秒测评" }).click();
   const optionLabels = async () =>
     (await page.getByRole("radio").allTextContents()).map((text) => text.replace("✓", ""));
   const firstQuestionOptions = await optionLabels();
   await page.getByRole("radio").first().click();
   await expect(page.getByText("第 2/17 题")).toBeVisible();
-  await page.getByRole("button", { name: "返回上一页" }).click();
+  await page.getByRole("button", { name: "返回修改" }).click();
+  await expect(page.getByText("第 1/17 题")).toBeVisible();
   await expect(page.getByText("选最常发生的你，不是最理想的你")).toBeVisible();
   expect(await optionLabels()).toEqual(firstQuestionOptions);
 });
