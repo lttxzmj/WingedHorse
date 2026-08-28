@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test": "pnpm -r --if-present test",
     "test:e2e": "pnpm --filter @wingedhorse/web test:e2e",
+    "test:e2e:production-sw": "pnpm --filter @wingedhorse/web test:e2e:production-sw",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

@@ -2,21 +2,32 @@
 
 .home-page--immersive {
   width: min(100%, 52rem);
-  padding: max(1.1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
-    max(1.25rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  padding: max(0.85rem, env(safe-area-inset-top)) max(0.9rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(0.9rem, env(safe-area-inset-left));
   background: #fbf8f1;
 }
 
 .home-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .home-header h1 {
-  font-size: clamp(1.7rem, 6vw, 2.45rem);
+  margin-top: 0.12rem;
+  font-size: clamp(1.8rem, 5vw, 2.35rem);
   font-weight: 740;
   letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.home-header__subtitle {
+  margin: 0.28rem 0 0;
+  color: var(--color-ink-500);
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 .home-header__tools {
@@ -31,7 +42,8 @@
   padding: 0.65rem 0.8rem;
   border-radius: 999px;
   color: var(--color-ink-700);
-  background: rgb(255 255 255 / 70%);
+  border: 1px solid rgb(89 68 48 / 8%);
+  background: rgb(255 255 255 / 78%);
   font-size: 0.82rem;
   font-weight: 650;
   text-decoration: none;
@@ -80,27 +92,27 @@
 
 .lawn-stage,
 .lawn-stage--alive {
-  min-height: min(70svh, 41rem);
+  min-height: min(68svh, 39rem);
   border: 1px solid rgb(73 102 63 / 13%);
-  border-radius: 2rem;
-  background: #e7f5fb url("/game/prairie-drop-bg.webp") center / cover no-repeat;
-  box-shadow: 0 18px 48px rgb(57 67 45 / 12%);
+  border-radius: 1.75rem;
+  background: #dff3ff url("/scene/prairie-home-v2.webp") center / cover no-repeat;
+  box-shadow: 0 14px 38px rgb(57 67 45 / 11%);
 }
 
 .prairie-status {
   position: absolute;
   z-index: 5;
-  top: 1rem;
-  left: 1rem;
+  top: 0.75rem;
+  left: 0.75rem;
   display: flex;
   gap: 0.45rem;
   align-items: center;
-  padding: 0.5rem 0.72rem;
+  padding: 0.42rem 0.62rem;
   border: 1px solid rgb(255 255 255 / 75%);
   border-radius: 999px;
   color: #4e5e46;
-  background: rgb(255 255 255 / 66%);
-  font-size: 0.72rem;
+  background: rgb(255 255 255 / 74%);
+  font-size: 0.68rem;
   backdrop-filter: blur(10px);
 }
 
@@ -109,23 +121,26 @@
 }
 
 .lawn-stage__bubble {
-  top: 4.4rem;
+  top: 3.65rem;
   right: auto;
-  left: 1rem;
-  max-width: min(75%, 25rem);
-  padding: 0.9rem 1.05rem;
+  left: 0.75rem;
+  max-width: min(76%, 23rem);
+  padding: 0.72rem 0.86rem;
   border: 0;
-  border-radius: 1.3rem 1.3rem 1.3rem 0.35rem;
-  background: rgb(255 255 255 / 92%);
-  box-shadow: 0 10px 28px rgb(66 72 55 / 11%);
-  font-size: 0.95rem;
-  font-weight: 560;
-  line-height: 1.55;
+  border-radius: 1.05rem 1.05rem 1.05rem 0.3rem;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 8px 22px rgb(66 72 55 / 9%);
+  font-size: 0.82rem;
+  font-weight: 590;
+  line-height: 1.48;
+  backdrop-filter: blur(10px);
 }
 
 .character-hotspot {
-  bottom: 4.6rem;
-  width: min(68%, 22rem);
+  z-index: 3;
+  bottom: 4.75rem;
+  left: 42%;
+  width: min(59%, 19.5rem);
 }
 
 .character-hotspot .winged-horse {
@@ -133,14 +148,31 @@
 }
 
 .character-hotspot > span {
-  right: 8%;
-  bottom: 12%;
-  padding: 0.42rem 0.75rem;
-  border: 0;
+  right: auto;
+  bottom: 7%;
+  left: 4%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.4rem;
+  padding: 0.48rem 0.72rem;
+  border: 1px solid rgb(255 255 255 / 68%);
   color: #644d16;
-  background: rgb(255 222 126 / 94%);
+  background: rgb(255 222 126 / 92%);
   box-shadow: 0 5px 14px rgb(94 71 19 / 16%);
-  font-weight: 680;
+  font-size: 0.72rem;
+  font-weight: 720;
+  backdrop-filter: blur(8px);
+}
+
+.character-hotspot:focus-visible {
+  border-radius: 0;
+  outline: none;
+}
+
+.character-hotspot:focus-visible > span {
+  outline: 3px solid var(--color-focus-600);
+  outline-offset: 3px;
 }
 
 .scene-whisper {
@@ -152,14 +184,24 @@
 
 .prairie-tent {
   position: absolute;
-  z-index: 2;
-  right: 1.1rem;
-  bottom: 7.2rem;
-  width: min(31%, 12.5rem);
+  z-index: 4;
+  right: 0.75rem;
+  bottom: 9.3rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.62rem;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 999px;
   color: #594313;
+  background: rgb(255 250 232 / 88%);
+  box-shadow: 0 5px 14px rgb(74 57 18 / 13%);
+  font-size: 0.68rem;
+  font-weight: 700;
   text-decoration: none;
-  filter: drop-shadow(0 11px 10px rgb(65 63 34 / 15%));
   transition: transform 180ms ease;
+  backdrop-filter: blur(8px);
 }
 
 .prairie-tent:hover,
@@ -167,43 +209,26 @@
   transform: translateY(-3px);
 }
 
-.prairie-tent > img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.prairie-tent > span {
-  position: absolute;
-  right: 3%;
-  bottom: 2%;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  padding: 0.38rem 0.58rem;
-  border: 1px solid rgb(255 255 255 / 72%);
-  border-radius: 999px;
-  background: rgb(255 250 232 / 92%);
-  box-shadow: 0 5px 14px rgb(74 57 18 / 13%);
-  font-size: 0.7rem;
-  font-weight: 700;
+.prairie-tent:focus-visible {
+  outline: 3px solid var(--color-focus-600);
+  outline-offset: 3px;
 }
 
 .prairie-task-dock {
   position: absolute;
   z-index: 6;
-  right: 0.85rem;
-  bottom: 0.85rem;
-  left: 0.85rem;
+  right: 0.65rem;
+  bottom: 0.65rem;
+  left: 0.65rem;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.8rem 0.85rem 0.8rem 1rem;
+  padding: 0.65rem 0.68rem 0.65rem 0.85rem;
   border: 1px solid rgb(255 255 255 / 72%);
-  border-radius: 1.35rem;
-  background: rgb(255 255 255 / 86%);
-  box-shadow: 0 10px 28px rgb(55 73 43 / 13%);
+  border-radius: 1.1rem;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 8px 24px rgb(55 73 43 / 12%);
   backdrop-filter: blur(14px);
 }
 
@@ -225,9 +250,9 @@
 }
 
 .prairie-task-dock > a {
-  min-height: 2.7rem;
-  padding: 0.75rem 0.95rem;
-  border-radius: 0.95rem;
+  min-height: 2.5rem;
+  padding: 0.65rem 0.82rem;
+  border-radius: 0.82rem;
   color: #46350d;
   background: var(--color-brand-500);
   box-shadow: 0 3px 0 #d0a130;
@@ -798,32 +823,47 @@
   }
 
   .home-header h1 {
-    font-size: 1.7rem;
+    font-size: 1.9rem;
   }
 
   .home-tool-link {
-    padding-inline: 0.68rem;
+    width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .home-tool-link > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .home-tool-link small {
+    position: absolute;
+    top: -0.18rem;
+    right: -0.18rem;
+    margin: 0;
   }
 
   .lawn-stage__bubble {
     right: auto;
-    left: 1rem;
-    max-width: calc(100% - 2rem);
+    left: 0.75rem;
+    max-width: calc(100% - 3rem);
   }
 
   .character-hotspot {
-    width: 68%;
+    left: 41%;
+    width: 57%;
   }
 
   .prairie-tent {
-    right: -0.2rem;
-    bottom: 7rem;
-    width: 35%;
-  }
-
-  .prairie-tent > span {
-    right: 1%;
-    font-size: 0.62rem;
+    right: 0.55rem;
+    bottom: 9.1rem;
+    font-size: 0.64rem;
   }
 
   .game-play-guide {
@@ -832,7 +872,7 @@
   }
 
   .prairie-task-dock strong {
-    font-size: 0.86rem;
+    font-size: 0.82rem;
   }
 
   .home-footer span {

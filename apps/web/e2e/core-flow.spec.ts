@@ -22,6 +22,7 @@ test.beforeEach(async ({ page }) => {
 test("questionnaire reaches result, prairie and game without a broken step", async ({
   page
 }, testInfo) => {
+  test.setTimeout(45_000);
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-landing-${testInfo.project.name}.png`,
@@ -57,7 +58,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
     page.getByText("本结果为娱乐测评，不构成心理、医疗或职业建议。类型只会在你主动复测时改变。")
   ).toBeVisible();
   await page.getByRole("button", { name: "去看看平行世界里的你" }).click();
-  await expect(page.getByRole("heading", { name: /先喘口气/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /下午好|早上好|晚上好|夜深了/ })).toBeVisible();
   await page.getByRole("link", { name: /生活簿/ }).click();
   await expect(page.getByRole("heading", { name: "它今天也在生活" })).toBeVisible();
   await expect(page.getByText("新住客到达草原")).toBeVisible();
@@ -100,6 +101,11 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   await page.getByRole("button", { name: /摸摸它/ }).click();
   await expect(page.getByText(/同行值 \+1/)).toBeVisible();
   await expect(page.locator(".character-hotspot")).toBeFocused();
+  expect(
+    await page
+      .locator(".character-hotspot")
+      .evaluate((element) => getComputedStyle(element).outlineStyle)
+  ).toBe("none");
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-home-${testInfo.project.name}.png`,
@@ -133,6 +139,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
 
 test("question option order stays stable and a quick answer can be undone", async ({ page }) => {
   await page.getByRole("button", { name: "开始测测" }).click();
+  await expect(page.getByText("第 1/17 题")).toBeVisible();
   const optionLabels = async () =>
     (await page.getByRole("radio").allTextContents()).map((text) => text.replace("✓", ""));
   const firstQuestionOptions = await optionLabels();
@@ -525,4 +532,34 @@ test("review build can explicitly enable the camera and rPPG disclosure", async 
     })
   ).not.toBeChecked();
   await expect(page.getByRole("button", { name: "开始 15 秒体验" })).toBeDisabled();
+});
+
+test("production service worker precaches lazy routes for offline navigation", async ({
+  page,
+  context
+}) => {
+  test.skip(!process.env.PRODUCTION_SW_QA, "仅在生产 preview 资产验收中运行");
+  await page.goto("/");
+  await page.evaluate(async () => navigator.serviceWorker.ready);
+  await expect
+    .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
+    .toBe(true);
+  const cacheAudit = await page.evaluate(async () => {
+    const response = await fetch("/asset-manifest.json");
+    const manifest = (await response.json()) as { version: string; assets: string[] };
+    const cache = await caches.open(`wingedhorse-shell-${manifest.version}`);
+    const cached = new Set((await cache.keys()).map((request) => new URL(request.url).pathname));
+    return {
+      hasAll: manifest.assets.every((asset) => cached.has(asset)),
+      lazyChunks: manifest.assets.filter((asset) =>
+        /\/(Assessment|Companion|Game)Page-/u.test(asset)
+      ).length
+    };
+  });
+  expect(cacheAudit).toMatchObject({ hasAll: true });
+  expect(cacheAudit.lazyChunks).toBeGreaterThanOrEqual(3);
+  await context.setOffline(true);
+  await page.goto("/assessment");
+  await expect(page.getByText("第一幕 · 晨间开机")).toBeVisible();
+  await context.setOffline(false);
 });

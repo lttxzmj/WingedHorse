@@ -54,3 +54,5 @@ jobs:
           docker compose --env-file .env.production -f deploy/docker-compose.prod.yml config --quiet
       - run: pnpm --filter @wingedhorse/web exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      - name: Verify production offline route cache
+        run: pnpm test:e2e:production-sw

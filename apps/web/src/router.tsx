@@ -1,21 +1,91 @@
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from "@tanstack/react-router";
 import { Feather } from "lucide-react";
+import { Component, lazy, Suspense, type ReactNode } from "react";
 import { AppIcon } from "./components/AppIcon";
-import { AssessmentPage } from "./pages/AssessmentPage";
-import { HomePage } from "./pages/HomePage";
-import { GamePage } from "./pages/GamePage";
-import { InventoryPage } from "./pages/InventoryPage";
-import { CompanionPage } from "./pages/CompanionPage";
-import { SignalsPage } from "./pages/SignalsPage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { LegalPage } from "./pages/LegalPage";
-import { MemoriesPage } from "./pages/MemoriesPage";
 import { LandingPage } from "./pages/LandingPage";
-import { ResultPage } from "./pages/ResultPage";
-import { LifePage } from "./pages/LifePage";
+
+const AssessmentPage = lazy(() =>
+  import("./pages/AssessmentPage").then((module) => ({ default: module.AssessmentPage }))
+);
+const HomePage = lazy(() =>
+  import("./pages/HomePage").then((module) => ({ default: module.HomePage }))
+);
+const GamePage = lazy(() =>
+  import("./pages/GamePage").then((module) => ({ default: module.GamePage }))
+);
+const InventoryPage = lazy(() =>
+  import("./pages/InventoryPage").then((module) => ({ default: module.InventoryPage }))
+);
+const CompanionPage = lazy(() =>
+  import("./pages/CompanionPage").then((module) => ({ default: module.CompanionPage }))
+);
+const SignalsPage = lazy(() =>
+  import("./pages/SignalsPage").then((module) => ({ default: module.SignalsPage }))
+);
+const SettingsPage = lazy(() =>
+  import("./pages/SettingsPage").then((module) => ({ default: module.SettingsPage }))
+);
+const LegalPage = lazy(() =>
+  import("./pages/LegalPage").then((module) => ({ default: module.LegalPage }))
+);
+const MemoriesPage = lazy(() =>
+  import("./pages/MemoriesPage").then((module) => ({ default: module.MemoriesPage }))
+);
+const ResultPage = lazy(() =>
+  import("./pages/ResultPage").then((module) => ({ default: module.ResultPage }))
+);
+const LifePage = lazy(() =>
+  import("./pages/LifePage").then((module) => ({ default: module.LifePage }))
+);
+
+class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  override render() {
+    if (this.state.failed)
+      return (
+        <main className="centered-page">
+          <section className="empty-state" role="alert">
+            <h1>这一页暂时没有打开</h1>
+            <p>可能是网络刚刚中断了。你的本机记录没有被清除，可以重新加载后继续。</p>
+            <button className="ui-button ui-button--primary" onClick={() => location.reload()}>
+              重新加载
+            </button>
+            <a className="quiet-link" href="/">
+              回到首页
+            </a>
+          </section>
+        </main>
+      );
+    return this.props.children;
+  }
+}
+
+function RouteLoading() {
+  return (
+    <main className="centered-page" aria-busy="true">
+      <section className="empty-state" role="status">
+        <span className="typing-dots" aria-hidden="true">
+          •••
+        </span>
+        <p>草原正在延伸过来…</p>
+      </section>
+    </main>
+  );
+}
 
 function RootLayout() {
-  return <Outlet />;
+  return (
+    <RouteErrorBoundary>
+      <Suspense fallback={<RouteLoading />}>
+        <Outlet />
+      </Suspense>
+    </RouteErrorBoundary>
+  );
 }
 
 function NotFoundPage() {

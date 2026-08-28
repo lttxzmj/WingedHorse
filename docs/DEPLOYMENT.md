@@ -90,6 +90,8 @@ OpenRouter 密钥和模型策略只在服务器 600 权限的 `manual/.env.produ
 
 Agent 流式路由由 nginx 单独配置：关闭 `proxy_buffering` 与缓存，读取超时为 25 秒。若上层 CDN 或宿主反向代理仍启用响应缓冲，浏览器会等到整段完成才显示；部署验收需用 `/api/companion/messages/stream` 确认 `application/x-ndjson`、`X-Accel-Buffering: no` 和分段到达。
 
+Web 生产构建会生成 `asset-manifest.json`，Service Worker 按内容版本预缓存首页和页面分片，API 不进入 Cache Storage，Phaser 等超过 500 KB 的大型运行时只在首次使用后缓存。CI 在构建后执行 `pnpm test:e2e:production-sw`，用 Pixel 7 与桌面 Chromium 断网刷新 `/assessment`；发布前不得跳过该项。
+
 ## 5. 备份与恢复
 
 - 把 `deploy/backup-postgres.sh` 安装为服务器定时任务，每日执行并将副本同步到不同故障域。

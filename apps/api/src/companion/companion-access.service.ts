@@ -128,7 +128,8 @@ export class CompanionAccessService {
     const removeBefore = now - DAY_MS;
     for (const store of [this.ipWindows, this.sessionWindows, this.sessionBudgets]) {
       for (const [key, value] of store) {
-        if ("active" in value && value.active > 0) continue;
+        const active = "active" in value ? value.active : 0;
+        if (typeof active === "number" && active > 0) continue;
         if (value.lastSeenAt < removeBefore || store.size > MAX_TRACKED_CLIENTS) store.delete(key);
       }
     }

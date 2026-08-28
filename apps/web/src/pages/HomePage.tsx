@@ -2,7 +2,16 @@ import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Activity, BookHeart, Heart, MapPinned, MessageCircle, Package, X } from "lucide-react";
+import {
+  Activity,
+  BookHeart,
+  Hand,
+  Heart,
+  MapPinned,
+  MessageCircle,
+  Package,
+  X
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { useAppStore } from "../store/useAppStore";
@@ -83,12 +92,13 @@ export function HomePage() {
       <header className="home-header">
         <div>
           <p className="eyebrow">{profile.name} · 你的飞马草原</p>
-          <h1>{greeting}，先喘口气。</h1>
+          <h1>{greeting}。</h1>
+          <p className="home-header__subtitle">先喘口气，看看它在忙什么。</p>
         </div>
         <nav className="home-header__tools" aria-label="草原常用入口">
-          <Link className="home-tool-link" to="/life">
+          <Link className="home-tool-link" to="/life" aria-label="打开生活簿">
             <AppIcon icon={BookHeart} size={17} />
-            生活簿
+            <span>生活簿</span>
           </Link>
           <Link
             className="home-tool-link"
@@ -96,7 +106,8 @@ export function HomePage() {
             to="/inventory"
           >
             <AppIcon icon={Package} size={17} />
-            背包{inventoryCount > 0 ? <small>{inventoryCount}</small> : null}
+            <span>背包</span>
+            {inventoryCount > 0 ? <small>{inventoryCount}</small> : null}
           </Link>
         </nav>
       </header>
@@ -119,7 +130,10 @@ export function HomePage() {
           aria-label={`和${profile.name}互动`}
         >
           <WingedHorseCharacter mood={profile.mood} typeId={result.typeId} alt={profile.name} />
-          <span>点点我</span>
+          <span>
+            <AppIcon icon={Hand} size={15} />
+            互动
+          </span>
         </button>
         {latestStoryEvent?.kind === "visitor" ? (
           <Link className="scene-whisper" to="/life">
@@ -127,11 +141,8 @@ export function HomePage() {
           </Link>
         ) : null}
         <Link className="prairie-tent" to="/life" hash="map" aria-label="从帐篷打开共同草原地图">
-          <img src="/scene/prairie-tent.webp" alt="草原上的暖黄色帐篷" />
-          <span>
-            <AppIcon icon={MapPinned} size={15} />
-            共同地图
-          </span>
+          <AppIcon icon={MapPinned} size={15} />
+          <span>地图</span>
         </Link>
         <div className={`prairie-task-dock ${taskDone ? "is-complete" : ""}`}>
           <div>
