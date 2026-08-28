@@ -6,7 +6,11 @@ describe("parseEnvironment", () => {
     expect(parseEnvironment({})).toMatchObject({
       NODE_ENV: "development",
       API_PORT: 3100,
-      OPENROUTER_TIMEOUT_MS: 15_000
+      OPENROUTER_TIMEOUT_MS: 15_000,
+      COMPANION_IP_RATE_LIMIT_PER_MINUTE: 60,
+      COMPANION_SESSION_RATE_LIMIT_PER_MINUTE: 20,
+      COMPANION_SESSION_MODEL_BUDGET_PER_DAY: 40,
+      COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY: 1_000
     });
   });
 
@@ -35,11 +39,13 @@ describe("parseEnvironment", () => {
         API_PORT: "70000",
         DATABASE_URL: "https://database.example.com",
         OPENROUTER_TIMEOUT_MS: "200",
+        COMPANION_SESSION_RATE_LIMIT_PER_MINUTE: "0",
+        COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY: "100001",
         MQTT_URL: "https://broker.example.com",
         MQTT_USER: "device"
       })
     ).toThrow(
-      "Invalid server configuration: API_PORT, DATABASE_URL, OPENROUTER_TIMEOUT_MS, MQTT_URL, MQTT_PASSWORD"
+      "Invalid server configuration: API_PORT, DATABASE_URL, OPENROUTER_TIMEOUT_MS, COMPANION_SESSION_RATE_LIMIT_PER_MINUTE, COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY, MQTT_URL, MQTT_PASSWORD"
     );
   });
 

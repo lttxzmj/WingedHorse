@@ -5,6 +5,7 @@ import type {
   CompanionStreamEvent
 } from "@wingedhorse/contracts";
 import { getResultProfile, type HorseTypeId, type PlannedActivity } from "@wingedhorse/domain";
+import { CompanionAccessService, type ModelAccessDecision } from "./companion-access.service.js";
 import { OpenRouterProvider } from "./openrouter.provider.js";
 import { SafetyService } from "./safety.service.js";
 
@@ -52,7 +53,8 @@ const moodLabels = {
 export class CompanionService {
   constructor(
     @Inject(OpenRouterProvider) private readonly provider: OpenRouterProvider,
-    @Inject(SafetyService) private readonly safety: SafetyService
+    @Inject(SafetyService) private readonly safety: SafetyService,
+    @Inject(CompanionAccessService) private readonly access: CompanionAccessService
   ) {}
 
   async reply(request: CompanionMessageRequest): Promise<CompanionMessageResponse> {
@@ -78,6 +80,8 @@ export class CompanionService {
     const grounded = this.groundedReply(request);
     if (grounded) return grounded;
     if (!this.provider.available) return this.fallback(request.message, level);
+    const modelAccess = this.access.acquireModel(request.sessionId);
+    if (!modelAccess.granted) return this.capacityFallback(modelAccess.reason);
 
     const controller = new AbortController();
     const timeoutMs = Number(process.env.OPENROUTER_TIMEOUT_MS ?? 15000);
@@ -101,6 +105,7 @@ export class CompanionService {
     } catch {
       return this.fallback(request.message, level);
     } finally {
+      modelAccess.release();
       controller.abort();
       clearTimeout(timeout);
     }
@@ -137,6 +142,11 @@ export class CompanionService {
       yield* this.fixedStream(this.fallback(request.message, level));
       return;
     }
+    const modelAccess = this.access.acquireModel(request.sessionId);
+    if (!modelAccess.granted) {
+      yield* this.fixedStream(this.capacityFallback(modelAccess.reason));
+      return;
+    }
 
     const controller = new AbortController();
     const timeoutMs = Number(process.env.OPENROUTER_TIMEOUT_MS ?? 15000);
@@ -171,6 +181,7 @@ export class CompanionService {
       yield { type: "replace", content: fallback.reply };
       yield { type: "done", response: fallback };
     } finally {
+      modelAccess.release();
       controller.abort();
       clearTimeout(timeout);
     }
@@ -179,6 +190,22 @@ export class CompanionService {
   private *fixedStream(response: CompanionMessageResponse): Generator<CompanionStreamEvent> {
     yield { type: "delta", delta: response.reply };
     yield { type: "done", response };
+  }
+
+  private capacityFallback(
+    reason: Exclude<ModelAccessDecision, { granted: true }>["reason"]
+  ): CompanionMessageResponse {
+    const reply =
+      reason === "session-busy"
+        ? "上一条回复还在路上，先等它说完。你刚写下的话还留在这台设备上，可以稍后再发。"
+        : "远端 AI 的使用额度暂时到上限了。我不会悄悄换模型或超额调用；你仍可以回草原、查看生活簿和背包，稍后再来聊。";
+    return {
+      reply,
+      source: "local-fallback",
+      safetyLevel: "normal",
+      aiDisclosure: true,
+      memoryCandidate: null
+    };
   }
 
   private modelMessages(request: CompanionMessageRequest) {

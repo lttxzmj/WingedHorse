@@ -1,16 +1,32 @@
 import {
   companionStreamEventSchema,
+  companionRateLimitErrorSchema,
   type CompanionMessageRequest,
   type CompanionMessageResponse
 } from "@wingedhorse/contracts";
 
 const STREAM_BUFFER_LIMIT = 16_384;
 
+export class CompanionStreamError extends Error {
+  constructor(
+    readonly code: "COMPANION_RATE_LIMITED" | "COMPANION_STREAM_UNAVAILABLE",
+    readonly retryAfterSeconds?: number
+  ) {
+    super(code);
+  }
+}
+
 export async function readCompanionStream(
   response: Response,
   onPartial: (content: string) => void
 ): Promise<CompanionMessageResponse> {
-  if (!response.ok || !response.body) throw new Error("COMPANION_STREAM_UNAVAILABLE");
+  if (!response.ok) {
+    const parsed = companionRateLimitErrorSchema.safeParse(await response.json().catch(() => null));
+    if (parsed.success)
+      throw new CompanionStreamError(parsed.data.code, parsed.data.retryAfterSeconds);
+    throw new CompanionStreamError("COMPANION_STREAM_UNAVAILABLE");
+  }
+  if (!response.body) throw new CompanionStreamError("COMPANION_STREAM_UNAVAILABLE");
   if (!response.headers.get("content-type")?.includes("application/x-ndjson"))
     throw new Error("COMPANION_STREAM_CONTENT_TYPE");
 

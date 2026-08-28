@@ -278,6 +278,14 @@ export const companionStreamEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("done"), response: companionResponseSchema })
 ]);
 
+export const companionRateLimitErrorSchema = z
+  .object({
+    code: z.literal("COMPANION_RATE_LIMITED"),
+    message: z.string().max(120),
+    retryAfterSeconds: z.number().int().min(1).max(60)
+  })
+  .passthrough();
+
 export type CompanionMessageRequest = z.infer<typeof companionMessageSchema>;
 export type CompanionMessageResponse = z.infer<typeof companionResponseSchema>;
 export type CompanionStreamEvent = z.infer<typeof companionStreamEventSchema>;

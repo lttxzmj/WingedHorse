@@ -59,4 +59,19 @@ describe("readCompanionStream", () => {
       readCompanionStream(responseFrom(['{"type":"delta","delta":"半句"}\n']), () => undefined)
     ).rejects.toThrow("COMPANION_STREAM_INCOMPLETE");
   });
+
+  it("preserves a validated rate-limit response for the UI", async () => {
+    const response = new Response(
+      JSON.stringify({
+        code: "COMPANION_RATE_LIMITED",
+        message: "消息有点密，请稍后再试",
+        retryAfterSeconds: 37
+      }),
+      { status: 429, headers: { "Content-Type": "application/json" } }
+    );
+    await expect(readCompanionStream(response, () => undefined)).rejects.toMatchObject({
+      code: "COMPANION_RATE_LIMITED",
+      retryAfterSeconds: 37
+    });
+  });
 });

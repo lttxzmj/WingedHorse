@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { CompanionAccessService } from "./companion-access.service.js";
 import { CompanionService } from "./companion.service.js";
 import { SafetyService } from "./safety.service.js";
 
@@ -42,6 +43,10 @@ const lifeContext = {
   inventory: [{ name: "午睡眼罩", count: 1 }]
 };
 
+function createService(provider: object, access = new CompanionAccessService()) {
+  return new CompanionService(provider as never, new SafetyService(), access);
+}
+
 describe("CompanionService", () => {
   async function collectStream(service: CompanionService, input = request) {
     const events = [];
@@ -51,7 +56,7 @@ describe("CompanionService", () => {
 
   it("uses a transparent local fallback without configuration", async () => {
     const provider = { available: false, complete: vi.fn() };
-    const service = new CompanionService(provider as never, new SafetyService());
+    const service = createService(provider);
     const result = await service.reply(request);
     expect(result.source).toBe("local-fallback");
     expect(result.aiDisclosure).toBe(true);
@@ -60,7 +65,7 @@ describe("CompanionService", () => {
 
   it("never sends urgent messages to the model", async () => {
     const provider = { available: true, complete: vi.fn() };
-    const service = new CompanionService(provider as never, new SafetyService());
+    const service = createService(provider);
     const result = await service.reply({ ...request, message: "我想自杀" });
     expect(result.source).toBe("safety-flow");
     expect(result.safetyLevel).toBe("urgent");
@@ -69,7 +74,7 @@ describe("CompanionService", () => {
 
   it("keeps concern replies in the reviewed safety flow", async () => {
     const provider = { available: true, complete: vi.fn() };
-    const service = new CompanionService(provider as never, new SafetyService());
+    const service = createService(provider);
     const result = await service.reply({ ...request, message: "我很绝望，感觉没有意义" });
     expect(result.source).toBe("safety-flow");
     expect(result.safetyLevel).toBe("concern");
@@ -79,7 +84,7 @@ describe("CompanionService", () => {
 
   it("answers life questions from domain facts without sending them to OpenRouter", async () => {
     const provider = { available: true, complete: vi.fn() };
-    const service = new CompanionService(provider as never, new SafetyService());
+    const service = createService(provider);
     const result = await service.reply({
       ...request,
       message: "你今天做了什么？",
@@ -92,7 +97,7 @@ describe("CompanionService", () => {
 
   it("uses the selected character voice for grounded companionship", async () => {
     const provider = { available: true, complete: vi.fn() };
-    const service = new CompanionService(provider as never, new SafetyService());
+    const service = createService(provider);
     const result = await service.reply({
       ...request,
       message: "我脑子很乱，也有点累",
@@ -107,7 +112,7 @@ describe("CompanionService", () => {
 
   it("grounds manual mood and product state without claiming diagnosis", async () => {
     const provider = { available: true, complete: vi.fn() };
-    const service = new CompanionService(provider as never, new SafetyService());
+    const service = createService(provider);
     const result = await service.reply({
       ...request,
       message: "看看现在的状态",
@@ -123,7 +128,7 @@ describe("CompanionService", () => {
   it("marks saved memories as untrusted data before model use", async () => {
     const complete = vi.fn().mockResolvedValue("我在听。先从最小的一步说起。 ");
     const provider = { available: true, complete };
-    const service = new CompanionService(provider as never, new SafetyService());
+    const service = createService(provider);
     const result = await service.reply({
       ...request,
       message: "和我聊聊今天",
@@ -144,7 +149,7 @@ describe("CompanionService", () => {
       yield "一点。";
     });
     const provider = { available: true, completeStream };
-    const service = new CompanionService(provider as never, new SafetyService());
+    const service = createService(provider);
     const events = await collectStream(service, { ...request, message: "陪我聊聊" });
     expect(events).toEqual([
       { type: "delta", delta: "先慢" },
@@ -171,7 +176,7 @@ describe("CompanionService", () => {
         throw new Error("upstream closed");
       }
     };
-    const service = new CompanionService(provider as never, new SafetyService());
+    const service = createService(provider);
     const events = await collectStream(service, { ...request, message: "陪我聊聊" });
     expect(events[0]).toEqual({ type: "delta", delta: "没有说完的" });
     expect(events[1]).toMatchObject({ type: "replace" });
@@ -183,15 +188,35 @@ describe("CompanionService", () => {
 
   it("keeps urgent stream requests out of OpenRouter", async () => {
     const completeStream = vi.fn();
-    const service = new CompanionService(
-      { available: true, completeStream } as never,
-      new SafetyService()
-    );
+    const service = createService({ available: true, completeStream });
     const events = await collectStream(service, { ...request, message: "我想自杀" });
     expect(events.at(-1)).toMatchObject({
       type: "done",
       response: { source: "safety-flow", safetyLevel: "urgent" }
     });
     expect(completeStream).not.toHaveBeenCalled();
+  });
+
+  it("returns a transparent local reply when the model session budget is exhausted", async () => {
+    const access = {
+      acquireModel: vi.fn().mockReturnValue({ granted: false, reason: "session-budget" })
+    };
+    const complete = vi.fn();
+    const service = createService({ available: true, complete }, access as never);
+    const result = await service.reply({ ...request, message: "陪我聊聊" });
+    expect(result).toMatchObject({ source: "local-fallback", aiDisclosure: true });
+    expect(result.reply).toContain("额度");
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it("releases a model lease after a provider failure", async () => {
+    const release = vi.fn();
+    const access = { acquireModel: vi.fn().mockReturnValue({ granted: true, release }) };
+    const service = createService(
+      { available: true, complete: vi.fn().mockRejectedValue(new Error("upstream")) },
+      access as never
+    );
+    await service.reply({ ...request, message: "陪我聊聊" });
+    expect(release).toHaveBeenCalledOnce();
   });
 });

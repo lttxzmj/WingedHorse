@@ -435,6 +435,30 @@ test("companion exposes a recoverable local reply for malformed API responses", 
   await expect(page.getByRole("button", { name: "发送" })).toBeEnabled();
 });
 
+test("companion explains an application rate limit without retrying the model", async ({
+  page
+}) => {
+  let requests = 0;
+  await page.route("**/api/companion/messages/stream", async (route) => {
+    requests += 1;
+    await route.fulfill({
+      status: 429,
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: "COMPANION_RATE_LIMITED",
+        message: "消息有点密，请稍后再试",
+        retryAfterSeconds: 23
+      })
+    });
+  });
+  await page.goto("/companion");
+  await page.getByLabel("想说什么都可以").fill("再说一句");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(page.getByText(/消息来得有点密/u)).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("约 23 秒后可以再试");
+  expect(requests).toBe(1);
+});
+
 test("camera experiment is optional and manual mood works without permission", async ({
   page
 }, testInfo) => {

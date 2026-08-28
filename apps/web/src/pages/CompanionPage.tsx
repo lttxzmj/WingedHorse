@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { BackLink } from "../components/BackLink";
 import { createClientId } from "../lib/clientId";
-import { streamCompanionMessage } from "../lib/companionStream";
+import { CompanionStreamError, streamCompanionMessage } from "../lib/companionStream";
 import { useAppStore } from "../store/useAppStore";
 import { useDigitalLife } from "../hooks/useDigitalLife";
 
@@ -119,18 +119,26 @@ export function CompanionPage() {
       if (data.source === "local-fallback") {
         setDeliveryNotice("远端回复暂时不可用，已切换为本地陪伴回复。");
       }
-    } catch {
+    } catch (error) {
+      const rateLimited =
+        error instanceof CompanionStreamError && error.code === "COMPANION_RATE_LIMITED";
       setMessages((current) => [
         ...current,
         {
           id: createClientId(),
           role: "assistant",
-          content: LOCAL_REPLY,
+          content: rateLimited
+            ? "消息来得有点密，我们先停一小会儿。你刚才写下的话还在这里，不需要反复发送。"
+            : LOCAL_REPLY,
           safety: "normal",
           source: "local-fallback"
         }
       ]);
-      setDeliveryNotice("网络繁忙或回复异常，已切换为本地陪伴回复。你可以继续说。");
+      setDeliveryNotice(
+        rateLimited
+          ? `为避免重复调用，暂时没有发送到模型。约 ${error.retryAfterSeconds ?? 60} 秒后可以再试。`
+          : "网络繁忙或回复异常，已切换为本地陪伴回复。你可以继续说。"
+      );
     } finally {
       window.clearTimeout(timeout);
       if (abortRef.current === controller) {
