@@ -22,25 +22,56 @@ input,
 textarea {
   font: inherit;
 }
-.app-shell {
+.quiz-landing {
   min-height: 100vh;
   padding: max(var(--space-6), env(safe-area-inset-top))
     max(var(--space-5), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom))
     max(var(--space-5), env(safe-area-inset-left));
-  background:
-    radial-gradient(circle at 85% 10%, rgb(255 227 162 / 60%), transparent 28rem),
-    linear-gradient(180deg, var(--color-surface-50), var(--color-brand-50));
+  background: #fff7ec;
 }
-.welcome {
-  width: min(100%, 68rem);
+.quiz-landing__content {
+  width: min(100%, 30rem);
   min-height: calc(100vh - var(--space-12));
   margin: 0 auto;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-8);
+  justify-content: center;
+  text-align: center;
 }
-.welcome__copy {
-  max-width: 36rem;
+.quiz-landing__teaser {
+  width: 100%;
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid #f3d9b8;
+  border-radius: var(--radius-sm);
+  color: #9d651f;
+  background: linear-gradient(90deg, #fff3df, #ffe9ef);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  box-shadow: 0 4px 14px rgb(255 180 100 / 18%);
+}
+.quiz-landing__character {
+  display: grid;
+  width: 9.5rem;
+  height: 9.5rem;
+  overflow: hidden;
+  place-items: center;
+  border: 5px solid white;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffe8d2, #fff3e3);
+  box-shadow: 0 10px 30px rgb(255 138 61 / 20%);
+}
+.quiz-landing__character .winged-horse {
+  width: 9rem !important;
+  transform: translateY(0.8rem);
+}
+.quiz-landing__copy {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+.quiz-landing__copy h1 {
+  font-size: clamp(2rem, 9vw, 2.5rem);
 }
 .eyebrow {
   margin: 0 0 var(--space-3);
@@ -55,52 +86,29 @@ h1 {
   line-height: 1.08;
   letter-spacing: -0.045em;
 }
-.welcome__description {
-  max-width: 32rem;
-  margin: var(--space-5) 0 var(--space-6);
+.quiz-landing__description {
+  margin: var(--space-3) 0 var(--space-4);
   color: var(--color-ink-700);
-  font-size: var(--font-title);
+  font-size: var(--font-body);
   line-height: 1.6;
+}
+.quiz-landing__tag {
+  display: inline-flex;
+  margin: 0 0 var(--space-6);
+  padding: var(--space-2) var(--space-4);
+  border-radius: 999px;
+  color: #9d4f19;
+  background: #ffe8d2;
+  font-size: var(--font-small);
+}
+.quiz-landing__copy > .ui-button {
+  width: 100%;
 }
 .disclaimer {
   margin: var(--space-4) 0 0;
   color: var(--color-ink-500);
   font-size: var(--font-micro);
 }
-.character-stage {
-  position: relative;
-  min-height: 23rem;
-  overflow: hidden;
-  display: grid;
-  place-items: end center;
-  background: linear-gradient(180deg, #dff3ff 0 52%, #b8df95 52% 100%);
-}
-.character-stage::after {
-  content: "";
-  position: absolute;
-  right: -15%;
-  bottom: 40%;
-  width: 55%;
-  height: 18%;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 45%);
-  filter: blur(1px);
-}
-.character-stage__bubble {
-  position: absolute;
-  z-index: 2;
-  top: var(--space-5);
-  left: var(--space-5);
-  max-width: 13rem;
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  border: 2px solid var(--color-ink-900);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-0);
-  font-weight: 700;
-  box-shadow: 0 4px 0 var(--color-ink-900);
-}
-
 .inline-link-button {
   display: inline-flex;
   align-items: center;
@@ -149,7 +157,7 @@ h1 {
 .assessment-page {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  width: min(100%, 44rem);
+  width: min(100%, 30rem);
   margin: 0 auto;
 }
 
@@ -314,14 +322,19 @@ h1 {
   font-weight: 700;
 }
 
-.assessment-actions {
-  display: grid;
-  grid-template-columns: auto minmax(10rem, 1fr);
-  gap: var(--space-3);
-  padding-top: var(--space-4);
+.assessment-auto-hint {
+  min-height: 1.5rem;
+  margin: 0;
+  color: var(--color-ink-500);
+  font-size: var(--font-micro);
+  text-align: center;
 }
 
-.result-page,
+.result-page {
+  width: min(100%, 30rem);
+  margin: 0 auto;
+}
+
 .home-page {
   width: min(100%, 62rem);
   margin: 0 auto;
@@ -329,33 +342,37 @@ h1 {
 
 .result-hero {
   position: relative;
-  min-height: 23rem;
+  min-height: auto;
   overflow: hidden;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-8);
-  border: 2px solid var(--color-ink-900);
+  padding: var(--space-6);
+  border: 1px solid var(--color-line-100);
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at 80% 16%, var(--result-accent), transparent 13rem),
-    var(--color-brand-50);
-  box-shadow: 0 7px 0 var(--color-ink-900);
+  background: var(--color-surface-0);
+  box-shadow: 0 6px 24px rgb(90 60 20 / 8%);
 }
 
 .result-hero__copy {
   position: relative;
   z-index: 2;
+  text-align: center;
 }
 
 .result-hero h1 {
-  font-size: clamp(2.4rem, 10vw, 4.8rem);
+  font-size: clamp(2rem, 9vw, 2.8rem);
 }
 
 .result-tagline {
   max-width: 24rem;
   color: var(--color-ink-700);
-  font-size: var(--font-title);
+  margin-inline: auto;
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-brand-50);
+  font-size: var(--font-body);
   font-weight: 700;
   line-height: 1.55;
 }
@@ -372,17 +389,19 @@ h1 {
 }
 
 .result-hero .winged-horse {
-  justify-self: center;
+  width: min(48%, 9.5rem) !important;
 }
 
 .result-grid {
   display: grid;
   gap: var(--space-4);
-  margin-top: var(--space-8);
+  margin-top: var(--space-4);
 }
 
 .result-card {
   padding: var(--space-6);
+  border-color: var(--color-line-100);
+  box-shadow: 0 6px 24px rgb(90 60 20 / 8%);
 }
 
 .result-card h2 {
@@ -1296,21 +1315,12 @@ h1 {
   font-size: var(--font-small);
 }
 @media (min-width: 768px) {
-  .welcome {
-    grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.8fr);
-  }
-
   .result-hero {
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
+    flex-direction: column;
   }
 
-  .result-grid,
   .home-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .result-grid > .result-card:last-child {
-    grid-column: 1 / -1;
   }
 
   .action-card {

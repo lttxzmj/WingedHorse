@@ -1,5 +1,4 @@
-import { questionSetV1, scoreAssessment } from "@wingedhorse/domain";
-import { Button } from "@wingedhorse/ui";
+import { currentQuestionSet, scoreAssessment } from "@wingedhorse/domain";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
@@ -24,20 +23,29 @@ export function AssessmentPage() {
   const assessmentOptionSeed = useAppStore((state) => state.assessmentOptionSeed);
   const ensureAssessmentVersion = useAppStore((state) => state.ensureAssessmentVersion);
   const [error, setError] = useState("");
-  const safeIndex = Math.min(index, questionSetV1.questions.length - 1);
-  const question = questionSetV1.questions[safeIndex];
+  const [advancing, setAdvancing] = useState(false);
+  const advanceTimer = useRef<number | null>(null);
+  const safeIndex = Math.min(index, currentQuestionSet.questions.length - 1);
+  const question = currentQuestionSet.questions[safeIndex];
 
   useEffect(() => {
     headingRef.current?.focus();
   }, [safeIndex]);
   useEffect(() => {
-    ensureAssessmentVersion(questionSetV1.version);
+    ensureAssessmentVersion(currentQuestionSet.version);
   }, [ensureAssessmentVersion]);
+  useEffect(
+    () => () => {
+      if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
+    },
+    []
+  );
   if (!question) return null;
+  const questionId = question.id;
 
   const selected = answers[question.id];
-  const isLast = safeIndex === questionSetV1.questions.length - 1;
-  const progress = ((safeIndex + 1) / questionSetV1.questions.length) * 100;
+  const isLast = safeIndex === currentQuestionSet.questions.length - 1;
+  const progress = ((safeIndex + 1) / currentQuestionSet.questions.length) * 100;
   const options = [...question.options].sort(
     (left, right) =>
       stableHash(`${assessmentOptionSeed}:${question.id}:${left.id}`) -
@@ -45,22 +53,27 @@ export function AssessmentPage() {
   );
 
   function goBack() {
+    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
+    setAdvancing(false);
     setError("");
     if (safeIndex === 0) void navigate({ to: "/" });
     else setIndex(safeIndex - 1);
   }
-  function goNext() {
-    if (!selected) {
-      setError("先选一个最像你的答案吧。");
-      return;
-    }
+  function chooseOption(optionId: string) {
+    if (advancing) return;
+    const nextAnswers = { ...answers, [questionId]: optionId };
+    setAnswer(questionId, optionId);
     setError("");
-    if (!isLast) {
-      setIndex(safeIndex + 1);
-      return;
-    }
-    setResult(scoreAssessment(questionSetV1, answers));
-    void navigate({ to: "/result" });
+    setAdvancing(true);
+    advanceTimer.current = window.setTimeout(() => {
+      if (isLast) {
+        setResult(scoreAssessment(currentQuestionSet, nextAnswers));
+        void navigate({ to: "/result" });
+      } else {
+        setIndex(safeIndex + 1);
+        setAdvancing(false);
+      }
+    }, 320);
   }
 
   return (
@@ -73,7 +86,7 @@ export function AssessmentPage() {
           <div className="progress-label">
             <span>{question.scene}</span>
             <span>
-              第 {safeIndex + 1}/{questionSetV1.questions.length} 题
+              第 {safeIndex + 1}/{currentQuestionSet.questions.length} 题
             </span>
           </div>
           <div
@@ -103,10 +116,8 @@ export function AssessmentPage() {
                 className={"question-option" + (active ? " question-option--selected" : "")}
                 role="radio"
                 aria-checked={active}
-                onClick={() => {
-                  setAnswer(question.id, option.id);
-                  setError("");
-                }}
+                disabled={advancing}
+                onClick={() => chooseOption(option.id)}
               >
                 <span className="question-option__key" aria-hidden="true">
                   {String.fromCharCode(65 + optionIndex)}
@@ -123,14 +134,13 @@ export function AssessmentPage() {
           {error}
         </p>
       </section>
-      <footer className="assessment-actions">
-        <Button variant="secondary" onClick={goBack}>
-          {safeIndex === 0 ? "暂时退出" : "上一题"}
-        </Button>
-        <Button onClick={goNext} disabled={!selected}>
-          {isLast ? "看看我是哪种牛马" : "下一题"}
-        </Button>
-      </footer>
+      <p className="assessment-auto-hint" aria-live="polite">
+        {advancing
+          ? isLast
+            ? "正在生成你的牛马图鉴…"
+            : "已选择，进入下一幕…"
+          : "选择后自动进入下一题"}
+      </p>
     </main>
   );
 }

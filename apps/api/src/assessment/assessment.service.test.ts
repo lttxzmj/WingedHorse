@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getExtremeAnswers, questionSetV1 } from "@wingedhorse/domain";
+import { currentQuestionSet, getExtremeAnswers } from "@wingedhorse/domain";
 import { AssessmentService } from "./assessment.service.js";
 
 describe("AssessmentService", () => {
@@ -16,9 +16,9 @@ describe("AssessmentService", () => {
   it("stores and retrieves a deterministic result", () => {
     const service = new AssessmentService();
     const created = service.submit({
-      questionSetId: questionSetV1.id,
-      questionSetVersion: questionSetV1.version,
-      answers: getExtremeAnswers(questionSetV1, "energy", "max")
+      questionSetId: currentQuestionSet.id,
+      questionSetVersion: currentQuestionSet.version,
+      answers: getExtremeAnswers(currentQuestionSet, "energy", "max")
     });
     expect(service.getResult(created.id)).toEqual(created);
     expect(created.normalizedScores.energy).toBe(100);

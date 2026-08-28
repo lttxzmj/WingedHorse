@@ -1,7 +1,7 @@
 export const PRODUCT_NAME = "WingedHorse";
 
 export * from "./assessment/types.js";
-export * from "./assessment/question-set-v1.js";
+export * from "./assessment/question-set-v2-1.js";
 export * from "./assessment/result-profiles.js";
 export * from "./assessment/scoring.js";
 export * from "./game/items.js";

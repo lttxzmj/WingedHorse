@@ -9,10 +9,19 @@ test.beforeEach(async ({ page }) => {
 test("questionnaire reaches result, lawn and game without a broken step", async ({
   page
 }, testInfo) => {
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-landing-${testInfo.project.name}.png`,
+      fullPage: true
+    });
   await page.getByRole("button", { name: "开始 90 秒测评" }).click();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-assessment-${testInfo.project.name}.png`,
+      fullPage: true
+    });
   for (let index = 0; index < 17; index += 1) {
     await page.getByRole("radio").first().click();
-    await page.getByRole("button", { name: index === 16 ? "看看我是哪种牛马" : "下一题" }).click();
   }
   await expect(page.getByText("你的当前形态")).toBeVisible();
   await expect(page.getByRole("heading", { name: "你的牛马血统" })).toBeVisible();
@@ -24,7 +33,7 @@ test("questionnaire reaches result, lawn and game without a broken step", async 
   await expect(
     page.getByText("本结果为娱乐测评，不构成心理、医疗或职业建议。类型只会在你主动复测时改变。")
   ).toBeVisible();
-  await page.getByRole("button", { name: "去草坪见见它" }).click();
+  await page.getByRole("button", { name: "开始进化" }).click();
   await expect(page.getByRole("heading", { name: /今天辛苦了/ })).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
@@ -48,10 +57,23 @@ test("question option order stays stable when navigating back within one assessm
     (await page.getByRole("radio").allTextContents()).map((text) => text.replace("✓", ""));
   const firstQuestionOptions = await optionLabels();
   await page.getByRole("radio").first().click();
-  await page.getByRole("button", { name: "下一题" }).click();
-  await page.getByRole("button", { name: "上一题" }).click();
+  await expect(page.getByText("第 2/17 题")).toBeVisible();
+  await page.getByRole("button", { name: "返回上一页" }).click();
   await expect(page.getByText("选最常发生的你，不是最理想的你")).toBeVisible();
   expect(await optionLabels()).toEqual(firstQuestionOptions);
+});
+
+test("legacy questionnaire drafts are deleted instead of migrated", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "wingedhorse-local-state",
+      JSON.stringify({ state: { answers: { q1: "a" }, assessmentIndex: 9 }, version: 2 })
+    );
+  });
+  await page.reload();
+  expect(await page.evaluate(() => localStorage.getItem("wingedhorse-local-state"))).toBeNull();
+  await page.getByRole("button", { name: "开始 90 秒测评" }).click();
+  await expect(page.getByText("第 1/17 题")).toBeVisible();
 });
 
 test("AI disclosure, memory controls and network fallback remain usable", async ({

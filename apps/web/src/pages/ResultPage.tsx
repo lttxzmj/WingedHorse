@@ -17,9 +17,6 @@ export function ResultPage() {
     return (
       <main className="centered-page">
         <section className="empty-state">
-          <span className="empty-state__icon" aria-hidden="true">
-            🪽
-          </span>
           <h1>还没有测评结果</h1>
           <p>先走完这一天，再来看看你的飞马形态。</p>
           <Button onClick={() => void navigate({ to: "/assessment" })}>开始测评</Button>
@@ -48,16 +45,16 @@ export function ResultPage() {
         className="result-hero"
         style={{ "--result-accent": profile.accent } as CSSProperties}
       >
+        <WingedHorseCharacter
+          mood={profile.mood}
+          aria-label={"代表" + profile.name + "的原创小飞马"}
+        />
         <div className="result-hero__copy">
           <p className="eyebrow">你的当前形态</p>
           <h1>{profile.name}</h1>
           <p className="result-rarity">{profile.rarity}</p>
           <p className="result-tagline">{profile.tagline}</p>
         </div>
-        <WingedHorseCharacter
-          mood={profile.mood}
-          aria-label={"代表" + profile.name + "的原创小飞马"}
-        />
       </section>
 
       <div className="result-grid">
@@ -124,7 +121,7 @@ export function ResultPage() {
         </Card>
 
         <Card className="result-card">
-          <h2>有点像你的地方</h2>
+          <h2>你的牛马白描</h2>
           <ul className="observation-list">
             {profile.observations.map((item) => (
               <li key={item}>{item}</li>
@@ -146,11 +143,8 @@ export function ResultPage() {
         </p>
       ))}
       <section className="evolution-callout">
-        <span className="evolution-callout__wing" aria-hidden="true">
-          🪽
-        </span>
         <div>
-          <strong>进化图鉴已打开</strong>
+          <strong>你的进化图鉴</strong>
           <p>{profile.evolution}</p>
         </div>
       </section>
@@ -160,16 +154,16 @@ export function ResultPage() {
           <p>只记录在当前浏览器，帮助你自己回看。</p>
         </div>
         {feedback ? (
-          <span role="status">收到：{feedback === "accurate" ? "挺像我的" : "不太像我"}</span>
+          <span role="status">收到：{feedback === "accurate" ? "是我本人" : "不太准"}</span>
         ) : (
           <div>
-            <button onClick={() => setFeedback("accurate")}>挺像我的</button>
-            <button onClick={() => setFeedback("inaccurate")}>不太像我</button>
+            <button onClick={() => setFeedback("accurate")}>是我本人</button>
+            <button onClick={() => setFeedback("inaccurate")}>不太准</button>
           </div>
         )}
       </section>
       <div className="result-actions">
-        <Button onClick={() => void navigate({ to: "/home" })}>去草坪见见它</Button>
+        <Button onClick={() => void navigate({ to: "/home" })}>开始进化</Button>
         <Button variant="secondary" onClick={() => void shareResult()}>
           分享这个结果
         </Button>

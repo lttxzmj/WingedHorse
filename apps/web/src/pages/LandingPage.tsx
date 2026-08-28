@@ -1,5 +1,5 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { Button, Card } from "@wingedhorse/ui";
+import { Button } from "@wingedhorse/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { useAppStore } from "../store/useAppStore";
 
@@ -7,21 +7,25 @@ export function LandingPage() {
   const navigate = useNavigate();
   const answered = useAppStore((state) => Object.keys(state.answers).length);
   return (
-    <main className="app-shell">
-      <section className="welcome" aria-labelledby="welcome-title">
-        <div className="welcome__copy">
-          <p className="eyebrow">WINGEDHORSE · 牛马飞升</p>
-          <h1 id="welcome-title">先看看今天的自己，再慢慢长出翅膀。</h1>
-          <p className="welcome__description">一个轻松的娱乐问卷，和一只不会催你上进的飞马伙伴。</p>
+    <main className="quiz-landing">
+      <section className="quiz-landing__content" aria-labelledby="welcome-title">
+        <p className="quiz-landing__teaser">传说有一只牛马，长出了翅膀</p>
+        <div className="quiz-landing__character">
+          <WingedHorseCharacter mood="happy" aria-label="一只准备长出翅膀的原创小牛马" />
+        </div>
+        <div className="quiz-landing__copy">
+          <h1 id="welcome-title">你是什么牛马</h1>
+          <p className="quiz-landing__description">
+            16 幕打工日常 + 1 场坦白局
+            <br />
+            测测你是哪种牛马
+          </p>
+          <p className="quiz-landing__tag">约 90 秒 · 17 题 · 仅供娱乐</p>
           <Button onClick={() => void navigate({ to: "/assessment" })}>
             {answered > 0 ? "继续上次测评" : "开始 90 秒测评"}
           </Button>
-          <p className="disclaimer">娱乐测评，不构成心理、医疗或职业建议。</p>
+          <p className="disclaimer">测评结果仅供娱乐，牛马终究会自由的</p>
         </div>
-        <Card className="character-stage">
-          <p className="character-stage__bubble">今天也可以先喘口气。</p>
-          <WingedHorseCharacter mood="happy" aria-label="一只开心挥动翅膀的原创小飞马" />
-        </Card>
       </section>
     </main>
   );

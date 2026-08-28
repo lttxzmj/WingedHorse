@@ -12,6 +12,13 @@ import {
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export const LEGACY_APP_STATE_KEY = "wingedhorse-local-state";
+export const CURRENT_APP_STATE_KEY = "wingedhorse-local-state-v2-1";
+
+if (typeof window !== "undefined" && window.localStorage) {
+  window.localStorage.removeItem(LEGACY_APP_STATE_KEY);
+}
+
 interface AppState {
   answers: Record<string, string>;
   assessmentIndex: number;
@@ -150,7 +157,7 @@ export const useAppStore = create<AppState>()(
       getAnswers: () => get().answers
     }),
     {
-      name: "wingedhorse-local-state",
+      name: CURRENT_APP_STATE_KEY,
       version: 3,
       partialize: (state) => ({
         answers: state.answers,

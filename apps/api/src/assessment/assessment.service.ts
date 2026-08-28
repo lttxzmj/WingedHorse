@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { questionSetV1, scoreAssessment, type AssessmentResult } from "@wingedhorse/domain";
+import { currentQuestionSet, scoreAssessment, type AssessmentResult } from "@wingedhorse/domain";
 import type { AssessmentResultResponse, AssessmentSubmission } from "@wingedhorse/contracts";
 import { randomUUID } from "node:crypto";
 
@@ -9,8 +9,8 @@ export class AssessmentService {
 
   getQuestionSet() {
     return {
-      ...questionSetV1,
-      questions: questionSetV1.questions.map((question) => ({
+      ...currentQuestionSet,
+      questions: currentQuestionSet.questions.map((question) => ({
         id: question.id,
         scene: question.scene,
         prompt: question.prompt,
@@ -22,15 +22,15 @@ export class AssessmentService {
 
   submit(submission: AssessmentSubmission): AssessmentResultResponse {
     if (
-      submission.questionSetId !== questionSetV1.id ||
-      submission.questionSetVersion !== questionSetV1.version
+      submission.questionSetId !== currentQuestionSet.id ||
+      submission.questionSetVersion !== currentQuestionSet.version
     ) {
       throw new NotFoundException({
         code: "QUESTION_SET_NOT_FOUND",
         message: "题目版本已更新，请重新开始测评"
       });
     }
-    const result: AssessmentResult = scoreAssessment(questionSetV1, submission.answers);
+    const result: AssessmentResult = scoreAssessment(currentQuestionSet, submission.answers);
     const response: AssessmentResultResponse = { id: randomUUID(), ...result };
     this.results.set(response.id, response);
     return response;

@@ -1,6 +1,6 @@
 import type { QuestionSet } from "./types.js";
 
-export const questionSetV1: QuestionSet = {
+export const currentQuestionSet: QuestionSet = {
   id: "workday-bqm",
   version: "2.1.0",
   title: "你是什么牛马？",

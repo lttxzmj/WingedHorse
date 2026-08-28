@@ -7,10 +7,8 @@ describe("App", () => {
     window.history.replaceState({}, "", "/");
     render(<App />);
 
-    expect(
-      await screen.findByRole("heading", { name: "先看看今天的自己，再慢慢长出翅膀。" })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "你是什么牛马" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "开始 90 秒测评" })).toBeEnabled();
-    expect(screen.getByText("娱乐测评，不构成心理、医疗或职业建议。")).toBeVisible();
+    expect(screen.getByText("测评结果仅供娱乐，牛马终究会自由的")).toBeVisible();
   });
 });
