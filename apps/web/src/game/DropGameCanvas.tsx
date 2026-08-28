@@ -118,24 +118,26 @@ export function DropGameCanvas({
           }
 
           preload() {
+            this.load.image("prairie-background", "/game/prairie-drop-bg.webp");
             this.load.image("player-character", `/characters/types/${characterType}.webp`);
           }
 
           create() {
             const { width, height } = this.scale;
-            this.cameras.main.setBackgroundColor("#fff8de");
-            this.add.circle(width - 50, 50, 27, 0xffd057, 0.92);
-            this.add.circle(52, 78, 28, 0xffffff, 0.72);
-            this.add.circle(82, 78, 35, 0xffffff, 0.72);
-            this.add.rectangle(width / 2, height - 30, width, 60, 0x9dce7e);
+            this.cameras.main.setBackgroundColor("#e7f5fb");
+            if (this.textures.exists("prairie-background")) {
+              this.add
+                .image(width / 2, height / 2, "prairie-background")
+                .setDisplaySize(width, height);
+            }
 
             const catcherSprite = this.textures.exists("player-character")
               ? this.add
                   .image(0, 0, "player-character")
-                  .setDisplaySize(132, 132)
+                  .setDisplaySize(158, 158)
                   .setOrigin(0.5, 0.56)
               : this.add.circle(0, 0, 42, 0xffd057).setStrokeStyle(4, 0x3b2e24);
-            this.catcher = this.add.container(width / 2, height - 72, [catcherSprite]);
+            this.catcher = this.add.container(width / 2, height - 82, [catcherSprite]);
 
             const move = (x: number) => {
               this.catcher.x = Phaser.Math.Clamp(x, 48, this.scale.width - 48);
@@ -173,26 +175,26 @@ export function DropGameCanvas({
             const item = ITEM_CATALOG[drop.itemId];
             const label = this.add.container(x, -40);
             const card = this.add.graphics();
+            card.fillStyle(0x526442, 0.14);
+            card.fillCircle(2, 4, 34);
             card.fillStyle(item.rarity === "rare" ? 0xffe3a2 : 0xffffff, 0.96);
-            card.lineStyle(item.rarity === "rare" ? 3 : 2, 0x3b2e24, 1);
-            card.fillRoundedRect(-43, -31, 86, 62, 14);
-            card.strokeRoundedRect(-43, -31, 86, 62, 14);
+            card.fillCircle(0, 0, 34);
             const glyph = this.add
-              .text(-27, 0, item.icon, {
-                color: "#3B2E24",
+              .text(0, -6, item.icon, {
+                color: item.rarity === "rare" ? "#7B5510" : "#4F443C",
                 fontFamily: "PingFang SC, system-ui",
-                fontSize: "22px",
+                fontSize: "24px",
                 fontStyle: "bold"
               })
               .setOrigin(0.5);
             const name = this.add
-              .text(10, 0, item.name, {
+              .text(0, 17, item.name.replace("补给", ""), {
                 align: "center",
-                color: "#3B2E24",
+                color: "#665548",
                 fontFamily: "PingFang SC, system-ui",
-                fontSize: "10px",
+                fontSize: "9px",
                 fontStyle: "bold",
-                wordWrap: { width: 54, useAdvancedWrap: true }
+                wordWrap: { width: 58, useAdvancedWrap: true }
               })
               .setOrigin(0.5);
             label.add([card, glyph, name]);
@@ -241,13 +243,13 @@ export function DropGameCanvas({
               const interval = Math.max(360, 760 - elapsed * 0.012);
               this.nextDropInMs = interval + this.random() * 180;
             }
-            const catcherTop = this.catcher.y - 55;
+            const catcherTop = this.catcher.y - 64;
             this.drops = this.drops.filter((drop) => {
               drop.label.y += delta * 0.13 * drop.speed;
               const isCaught =
                 drop.label.y >= catcherTop &&
                 drop.label.y <= catcherTop + 70 &&
-                Math.abs(drop.label.x - this.catcher.x) < 54;
+                Math.abs(drop.label.x - this.catcher.x) < 60;
               if (isCaught) {
                 this.combo += 1;
                 this.maxCombo = Math.max(this.maxCombo, this.combo);

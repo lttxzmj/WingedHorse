@@ -1,8 +1,8 @@
+import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { DropGameCanvas, type GameStats, type GameSummary } from "../game/DropGameCanvas";
 import { createClientId } from "../lib/clientId";
 import { useAppStore } from "../store/useAppStore";

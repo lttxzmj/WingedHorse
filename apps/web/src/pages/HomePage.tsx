@@ -84,8 +84,14 @@ export function HomePage() {
           <h1>{greeting}，先喘口气。</h1>
         </div>
         <nav className="home-header__tools" aria-label="草原常用入口">
-          <Link className="home-tool-link" to="/life">生活簿</Link>
-          <Link className="home-tool-link" aria-label={`打开背包，共 ${inventoryCount} 件`} to="/inventory">
+          <Link className="home-tool-link" to="/life">
+            生活簿
+          </Link>
+          <Link
+            className="home-tool-link"
+            aria-label={`打开背包，共 ${inventoryCount} 件`}
+            to="/inventory"
+          >
             背包{inventoryCount > 0 ? <small>{inventoryCount}</small> : null}
           </Link>
         </nav>
@@ -119,16 +125,16 @@ export function HomePage() {
         <div className={`prairie-task-dock ${taskDone ? "is-complete" : ""}`}>
           <div>
             <p>{taskDone ? "今天已经接住" : "今天的一件小事"}</p>
-            <strong>{taskDone ? "补给已安全到家" : "陪我接一场 30 秒补给雨"}</strong>
+            <strong>{taskDone ? "补给已经安全到家" : "陪我接一场 30 秒补给雨"}</strong>
           </div>
-          <Link to={taskDone ? "/inventory" : "/game"}>
-            {taskDone ? "查看补给" : "一起去接"}
-          </Link>
+          <Link to={taskDone ? "/inventory" : "/game"}>{taskDone ? "查看补给" : "一起去接"}</Link>
         </div>
       </section>
 
       <footer className="home-footer">
-        <Link to="/life" hash="journey">远行计划 {journey.completedCount}/{journey.totalCount}</Link>
+        <Link to="/life" hash="journey">
+          远行计划 {journey.completedCount}/{journey.totalCount}
+        </Link>
         <span>漏接不扣状态，也不要求连续打卡</span>
         <Link to="/settings">设置与隐私</Link>
       </footer>
