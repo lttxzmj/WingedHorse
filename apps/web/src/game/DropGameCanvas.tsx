@@ -1,7 +1,9 @@
 import { ITEM_CATALOG, createSeededRandom, selectDrop, type ItemId } from "@wingedhorse/domain";
 import type { WingedHorseType } from "@wingedhorse/character-runtime";
-import { useEffect, useRef } from "react";
+import { createElement, useEffect, useRef } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import type PhaserType from "phaser";
+import { ITEM_ICON_COMPONENTS } from "../components/ItemIcon";
 
 export interface GameStats {
   score: number;
@@ -120,6 +122,21 @@ export function DropGameCanvas({
           preload() {
             this.load.image("prairie-background", "/game/prairie-drop-bg.webp");
             this.load.image("player-character", `/characters/types/${characterType}.webp`);
+            Object.entries(ITEM_ICON_COMPONENTS).forEach(([itemId, Icon]) => {
+              const markup = renderToStaticMarkup(
+                createElement(Icon, {
+                  color: "#5a481d",
+                  fill: "none",
+                  size: 30,
+                  strokeWidth: 2.25
+                })
+              );
+              this.load.svg(
+                `item-icon-${itemId}`,
+                `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`,
+                { width: 30, height: 30 }
+              );
+            });
           }
 
           create() {
@@ -179,14 +196,7 @@ export function DropGameCanvas({
             card.fillCircle(2, 4, 34);
             card.fillStyle(item.rarity === "rare" ? 0xffe3a2 : 0xffffff, 0.96);
             card.fillCircle(0, 0, 34);
-            const glyph = this.add
-              .text(0, -6, item.icon, {
-                color: item.rarity === "rare" ? "#7B5510" : "#4F443C",
-                fontFamily: "PingFang SC, system-ui",
-                fontSize: "24px",
-                fontStyle: "bold"
-              })
-              .setOrigin(0.5);
+            const glyph = this.add.image(0, -7, `item-icon-${drop.itemId}`).setDisplaySize(28, 28);
             const name = this.add
               .text(0, 17, item.name.replace("补给", ""), {
                 align: "center",

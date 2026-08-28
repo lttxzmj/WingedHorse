@@ -37,6 +37,23 @@
   text-decoration: none;
 }
 
+.home-tool-link,
+.subpage-header__tool,
+.life-view-switch button,
+.life-post footer button,
+.life-post footer a,
+.photo-map__add,
+.photo-detail .ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+}
+
+.lucide {
+  flex: 0 0 auto;
+}
+
 .home-tool-link:hover {
   color: var(--color-ink-900);
   background: #fff;
@@ -127,6 +144,45 @@
   font-weight: 620;
 }
 
+.prairie-tent {
+  position: absolute;
+  z-index: 2;
+  right: 1.1rem;
+  bottom: 7.2rem;
+  width: min(31%, 12.5rem);
+  color: #594313;
+  text-decoration: none;
+  filter: drop-shadow(0 11px 10px rgb(65 63 34 / 15%));
+  transition: transform 180ms ease;
+}
+
+.prairie-tent:hover,
+.prairie-tent:focus-visible {
+  transform: translateY(-3px);
+}
+
+.prairie-tent > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.prairie-tent > span {
+  position: absolute;
+  right: 3%;
+  bottom: 2%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.38rem 0.58rem;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 999px;
+  background: rgb(255 250 232 / 92%);
+  box-shadow: 0 5px 14px rgb(74 57 18 / 13%);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 .prairie-task-dock {
   position: absolute;
   z-index: 6;
@@ -204,8 +260,21 @@
 
 .interaction-options > button,
 .interaction-options > a {
+  grid-template-columns: 1.75rem minmax(0, 1fr);
   border: 1px solid rgb(90 69 50 / 10%);
   background: #fffaf0;
+}
+
+.interaction-options > button .lucide,
+.interaction-options > a .lucide {
+  grid-row: 1 / 3;
+}
+
+.interaction-options > button strong,
+.interaction-options > button span,
+.interaction-options > a strong,
+.interaction-options > a span {
+  grid-column: 2;
 }
 
 .game-page {
@@ -258,6 +327,10 @@
 }
 
 .game-hud button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
   min-width: 3.2rem;
   min-height: 2.45rem;
   border: 0;
@@ -265,6 +338,24 @@
   background: var(--color-brand-500);
   font-size: 0.78rem;
   font-weight: 720;
+}
+
+.game-hud .game-time-progress {
+  display: block;
+  grid-column: 1 / -1;
+  height: 0.28rem;
+  margin: 0.1rem 0.1rem 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(130 111 72 / 14%);
+}
+
+.game-time-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #dfad2c, var(--color-brand-500));
+  transition: width 220ms linear;
 }
 
 .drop-game-canvas {
@@ -297,6 +388,236 @@
   border: 0;
   box-shadow: 0 8px 20px rgb(70 51 35 / 12%);
   font-weight: 720;
+}
+
+.game-play-guide {
+  position: absolute;
+  z-index: 8;
+  right: 50%;
+  bottom: 5.25rem;
+  width: max-content;
+  max-width: calc(100% - 8rem);
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  transform: translateX(50%);
+  border: 1px solid rgb(255 255 255 / 76%);
+  border-radius: 999px;
+  color: #4c493e;
+  background: rgb(255 255 255 / 84%);
+  box-shadow: 0 7px 20px rgb(70 51 35 / 9%);
+  font-size: 0.72rem;
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+}
+
+.life-view-switch {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.3rem;
+  margin: 0 0 1rem;
+  padding: 0.3rem;
+  border: 1px solid rgb(90 69 50 / 10%);
+  border-radius: 1rem;
+  background: #f3ecde;
+}
+
+.life-view-switch button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  color: var(--color-ink-500);
+  background: transparent;
+  font-weight: 680;
+}
+
+.life-view-switch button.is-active {
+  color: #604a16;
+  background: #fffdf8;
+  box-shadow: 0 4px 14px rgb(79 60 36 / 9%);
+}
+
+.photo-map {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.photo-map__heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.photo-map__heading h2 {
+  margin: 0.18rem 0 0;
+  font-size: clamp(1.25rem, 5vw, 1.65rem);
+}
+
+.photo-map__add {
+  min-height: 2.6rem;
+  padding: 0.65rem 0.85rem;
+  border: 0;
+  border-radius: 0.85rem;
+  color: #4f3d13;
+  background: var(--color-brand-500);
+  box-shadow: 0 3px 0 #d0a130;
+  font-weight: 720;
+}
+
+.photo-map__intro {
+  margin: 0;
+  color: var(--color-ink-500);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.photo-map__canvas {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border: 1px solid rgb(93 104 64 / 14%);
+  border-radius: 1.8rem;
+  background: #e8f0cd;
+  box-shadow: 0 16px 42px rgb(64 74 45 / 14%);
+}
+
+.photo-map__canvas > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-map__pin {
+  position: absolute;
+  display: grid;
+  width: 2.85rem;
+  height: 2.85rem;
+  padding: 0;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgb(255 255 255 / 94%);
+  border-radius: 50%;
+  color: #7a5b13;
+  background: #ffdf76;
+  box-shadow: 0 7px 17px rgb(53 65 36 / 22%);
+}
+
+.photo-map__pin.has-photo {
+  overflow: visible;
+  background: #fff;
+}
+
+.photo-map__pin > img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.photo-map__pin > span {
+  position: absolute;
+  top: calc(100% + 0.28rem);
+  left: 50%;
+  width: max-content;
+  max-width: 6rem;
+  padding: 0.22rem 0.42rem;
+  transform: translateX(-50%);
+  border: 1px solid rgb(255 255 255 / 75%);
+  border-radius: 999px;
+  color: #4e4d3d;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 4px 10px rgb(53 65 36 / 10%);
+  font-size: 0.63rem;
+  font-weight: 680;
+  white-space: nowrap;
+}
+
+.photo-map__empty {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: 1rem;
+  color: #53604a;
+  background: #edf4e2;
+}
+
+.photo-map__empty p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.photo-composer,
+.photo-detail {
+  position: relative;
+  width: min(calc(100% - 2rem), 30rem);
+  max-height: calc(100svh - 2rem);
+  padding: 1.35rem;
+  overflow: auto;
+  border: 1px solid rgb(90 69 50 / 12%);
+  border-radius: 1.8rem;
+  background: #fffaf0;
+  box-shadow: 0 24px 70px rgb(46 37 28 / 25%);
+}
+
+.photo-composer {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.photo-composer h2,
+.photo-detail h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.photo-composer label {
+  display: grid;
+  gap: 0.38rem;
+  font-size: 0.78rem;
+  font-weight: 680;
+}
+
+.photo-composer input,
+.photo-composer select,
+.photo-composer textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.7rem 0.78rem;
+  border: 1px solid rgb(90 69 50 / 17%);
+  border-radius: 0.8rem;
+  color: var(--color-ink-900);
+  background: #fff;
+  font: inherit;
+}
+
+.photo-composer textarea {
+  min-height: 5.2rem;
+  resize: vertical;
+}
+
+.photo-composer__privacy {
+  margin: 0;
+  color: var(--color-ink-500);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.photo-detail > img {
+  display: block;
+  width: 100%;
+  max-height: 55svh;
+  margin-bottom: 0.9rem;
+  border-radius: 1.2rem;
+  object-fit: contain;
+  background: #efe9db;
+}
+
+.photo-detail .ui-button {
+  margin-top: 1rem;
 }
 
 .game-intro {
@@ -474,7 +795,23 @@
   }
 
   .character-hotspot {
-    width: 72%;
+    width: 68%;
+  }
+
+  .prairie-tent {
+    right: -0.2rem;
+    bottom: 7rem;
+    width: 35%;
+  }
+
+  .prairie-tent > span {
+    right: 1%;
+    font-size: 0.62rem;
+  }
+
+  .game-play-guide {
+    max-width: calc(100% - 7.5rem);
+    font-size: 0.66rem;
   }
 
   .prairie-task-dock strong {

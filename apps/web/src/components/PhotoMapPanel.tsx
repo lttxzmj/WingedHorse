@@ -1,6 +1,6 @@
 import { Button } from "@wingedhorse/ui";
 import { Camera, MapPin, Navigation, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   addPhotoMoment,
   deletePhotoMoment,
@@ -58,7 +58,7 @@ export function PhotoMapPanel() {
     };
   }, [refresh]);
 
-  async function save(event: React.FormEvent<HTMLFormElement>) {
+  async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
       setError("先选择一张照片，再把它放进地图。");
@@ -79,7 +79,7 @@ export function PhotoMapPanel() {
         message === "PHOTO_TOO_LARGE"
           ? "照片不能超过 10 MB。"
           : message === "PHOTO_TYPE_UNSUPPORTED"
-            ? "请选择 JPG、PNG、HEIC 或 WebP 等图片。"
+            ? "请选择浏览器可读取的 JPG、PNG 或 WebP 图片。"
             : "这张照片暂时没有放进去，请换一张再试。"
       );
     } finally {

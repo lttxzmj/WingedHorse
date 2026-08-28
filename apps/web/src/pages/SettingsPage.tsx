@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BackLink } from "../components/BackLink";
 import { createUserDataExport, downloadUserDataExport } from "../lib/dataExport";
 import { deleteRemoteLifeData, hasVisitorToken } from "../lib/lifeApi";
+import { clearPhotoMoments } from "../lib/photoMap";
 import { useAppStore } from "../store/useAppStore";
 
 export function SettingsPage() {
@@ -139,7 +140,7 @@ export function SettingsPage() {
         <div>
           <h2>清除本机数据</h2>
           <p>
-            删除问卷草稿、结果、背包、养成状态和手动心情；如存在任何 WingedHorse
+            删除问卷草稿、结果、背包、养成状态、手动心情和本机地图照片；如存在任何 WingedHorse
             服务端副本，也会先删除生活簿、游戏会话和玩家状态。本操作无法撤销。
           </p>
         </div>
@@ -151,7 +152,10 @@ export function SettingsPage() {
               onClick={() => {
                 setDeleting(true);
                 setDeleteError("");
-                void (hasVisitorToken() ? deleteRemoteLifeData() : Promise.resolve())
+                void Promise.all([
+                  hasVisitorToken() ? deleteRemoteLifeData() : Promise.resolve(),
+                  clearPhotoMoments()
+                ])
                   .then(() => {
                     resetAll();
                     void navigate({ to: "/" });

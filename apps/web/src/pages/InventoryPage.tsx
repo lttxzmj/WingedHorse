@@ -102,7 +102,9 @@ export function InventoryPage() {
           })
         ) : (
           <section className="empty-state inventory-empty">
-            <span className="empty-state__icon"><AppIcon icon={PackageOpen} size={42} /></span>
+            <span className="empty-state__icon">
+              <AppIcon icon={PackageOpen} size={42} />
+            </span>
             <h2>背包还是空的</h2>
             <p>去接一局掉落，第一份礼物也许正在路上。</p>
             <Link className="ui-button ui-button--primary inline-link-button" to="/game">

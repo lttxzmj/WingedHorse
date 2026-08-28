@@ -3,9 +3,10 @@ import { ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Package, Pause, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
+import { ItemIcon } from "../components/ItemIcon";
 import { DropGameCanvas, type GameStats, type GameSummary } from "../game/DropGameCanvas";
 import { createClientId } from "../lib/clientId";
 import { useAppStore } from "../store/useAppStore";
@@ -65,11 +66,11 @@ export function GamePage() {
   };
 
   const playing = phase === "playing";
-  const beginMove = (direction: -1 | 1) => (event: React.PointerEvent<HTMLButtonElement>) => {
+  const beginMove = (direction: -1 | 1) => (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     setControlDirection(direction);
   };
-  const endMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+  const endMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -220,6 +221,7 @@ export function GamePage() {
                   {Object.entries(summary.caught).length ? (
                     Object.entries(summary.caught).map(([id, count]) => (
                       <span key={id}>
+                        <ItemIcon itemId={id as ItemId} size={17} />
                         {ITEM_CATALOG[id as ItemId].name} × {count}
                       </span>
                     ))

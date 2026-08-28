@@ -1,6 +1,8 @@
 import { currentQuestionSet, scoreAssessment } from "@wingedhorse/domain";
 import { useNavigate } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AppIcon } from "../components/AppIcon";
 import { useAppStore } from "../store/useAppStore";
 
 const journeyChapters = [
@@ -109,7 +111,7 @@ export function AssessmentPage() {
     <main className="assessment-page">
       <header className="assessment-header">
         <button className="icon-button" onClick={goBack} aria-label="返回上一页">
-          ←
+          <AppIcon icon={ArrowLeft} size={22} />
         </button>
         <div className="progress-block">
           <div className="progress-label">

@@ -1,5 +1,7 @@
 import { Button } from "@wingedhorse/ui";
 import { useNavigate } from "@tanstack/react-router";
+import { CircleHelp, Sparkles } from "lucide-react";
+import { AppIcon } from "../components/AppIcon";
 import { useAppStore } from "../store/useAppStore";
 
 export function LandingPage() {
@@ -9,12 +11,12 @@ export function LandingPage() {
     <main className="quiz-landing">
       <section className="quiz-landing__content" aria-labelledby="welcome-title">
         <p className="quiz-landing__teaser">
-          <span aria-hidden="true">✦</span>
+          <AppIcon icon={Sparkles} size={16} />
           传说有一头牛马，长出了翅膀
-          <span aria-hidden="true">✦</span>
+          <AppIcon icon={Sparkles} size={16} />
         </p>
         <div className="quiz-landing__mystery" aria-hidden="true">
-          <span>?</span>
+          <AppIcon icon={CircleHelp} size={58} />
         </div>
         <div className="quiz-landing__copy">
           <h1 id="welcome-title">你是什么牛马</h1>

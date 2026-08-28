@@ -2,7 +2,9 @@ import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { DIMENSIONS, dimensionLabels, getResultProfile } from "@wingedhorse/domain";
 import { Button, Card } from "@wingedhorse/ui";
 import { useNavigate } from "@tanstack/react-router";
+import { SunMedium } from "lucide-react";
 import { useState, type CSSProperties } from "react";
+import { AppIcon } from "../components/AppIcon";
 import { createResultShareCard } from "../lib/resultShareCard";
 import { useAppStore } from "../store/useAppStore";
 
@@ -153,7 +155,9 @@ export function ResultPage() {
             ))}
           </ul>
           <div className="advice-box">
-            <span aria-hidden="true">☀</span>
+            <span aria-hidden="true">
+              <AppIcon icon={SunMedium} size={22} />
+            </span>
             <div>
               <strong>牛马护理小贴士</strong>
               <p>{profile.advice}</p>

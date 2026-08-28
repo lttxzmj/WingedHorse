@@ -70,6 +70,20 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
       path: `/private/tmp/wingedhorse-life-${testInfo.project.name}.png`,
       fullPage: true
     });
+  await page.getByRole("tab", { name: "草原地图" }).click();
+  await expect(page.getByRole("heading", { name: "把一张今天放进草原" })).toBeVisible();
+  await expect(page.getByRole("img", { name: /共同草原地图/ })).toBeVisible();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-photo-map-${testInfo.project.name}.png`,
+      fullPage: true
+    });
+  await page.getByRole("button", { name: "在帐篷营地放一张照片" }).click();
+  await expect(page.getByRole("dialog", { name: "把一张生活放进草原" })).toContainText(
+    "不会读取真实位置"
+  );
+  await page.getByRole("button", { name: "关闭照片编辑" }).click();
+  await page.getByRole("tab", { name: "生活动态" }).click();
   await page.getByRole("button", { name: "接住这刻" }).first().click();
   await expect(page.getByRole("button", { name: "已接住" }).first()).toHaveAttribute(
     "aria-pressed",

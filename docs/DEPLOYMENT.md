@@ -86,6 +86,8 @@ OpenRouter 密钥和模型策略只在服务器 600 权限的 `manual/.env.produ
 
 `.github/workflows/deploy.yml` 只有 `workflow_dispatch`，不会因推送代码自动改动生产。工作流使用 `git archive` 只上传受版本控制的文件，解压到 SHA 版本目录；OpenRouter 密钥只从服务器 golden copy 复制到候选版本，不落日志、不进镜像。首次人工部署、备份恢复演练和域名确认完成后，再单独评审是否开放自动部署。
 
+Agent 流式路由由 nginx 单独配置：关闭 `proxy_buffering` 与缓存，读取超时为 25 秒。若上层 CDN 或宿主反向代理仍启用响应缓冲，浏览器会等到整段完成才显示；部署验收需用 `/api/companion/messages/stream` 确认 `application/x-ndjson`、`X-Accel-Buffering: no` 和分段到达。
+
 ## 5. 备份与恢复
 
 - 把 `deploy/backup-postgres.sh` 安装为服务器定时任务，每日执行并将副本同步到不同故障域。

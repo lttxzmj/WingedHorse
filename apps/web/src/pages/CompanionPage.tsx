@@ -2,7 +2,6 @@ import type { CompanionMessageRequest, CompanionMessageResponse } from "@wingedh
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { getResultProfile, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
-import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { BackLink } from "../components/BackLink";

@@ -135,3 +135,14 @@ export async function deletePhotoMoment(id: string) {
     database.close();
   }
 }
+
+export async function clearPhotoMoments() {
+  const database = await openDatabase();
+  try {
+    const transaction = database.transaction(STORE_NAME, "readwrite");
+    transaction.objectStore(STORE_NAME).clear();
+    await waitForTransaction(transaction);
+  } finally {
+    database.close();
+  }
+}

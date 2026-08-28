@@ -70,7 +70,8 @@ export function LifePage() {
         </div>
       </header>
       <aside className="life-boundary">
-        系统事件可以按设置备份；地图照片只保存在这台设备，不读取真实位置，也不会发送给 AI。
+        这不是公开朋友圈。系统事件可以按设置备份；地图照片只保存在这台设备，不读取真实位置，也不会发送给
+        AI。
         <span role="status">
           {lifeSyncEnabled
             ? syncState === "synced"

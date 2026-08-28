@@ -73,7 +73,9 @@ export function MemoriesPage() {
         ))
       ) : (
         <section className="empty-state">
-          <span className="empty-state__icon"><AppIcon icon={Archive} size={42} /></span>
+          <span className="empty-state__icon">
+            <AppIcon icon={Archive} size={42} />
+          </span>
           <h2>还没有保存任何记忆</h2>
           <p>空着也很好。你不需要为了让 AI 懂你而交出更多信息。</p>
           <Link className="ui-button ui-button--primary inline-link-button" to="/companion">

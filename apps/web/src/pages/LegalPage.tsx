@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { BackLink } from "../components/BackLink";
 
 type LegalKind = "privacy" | "terms" | "ai";
