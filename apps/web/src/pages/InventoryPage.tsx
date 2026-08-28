@@ -5,6 +5,7 @@ import { PackageOpen } from "lucide-react";
 import { useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
+import { ItemIcon } from "../components/ItemIcon";
 import { useAppStore } from "../store/useAppStore";
 
 const EFFECT_LABELS = {
@@ -67,7 +68,7 @@ export function InventoryPage() {
             return (
               <Card className="item-card" key={id}>
                 <span className="item-card__emoji" aria-hidden="true">
-                  {item.icon}
+                  <ItemIcon itemId={id} size={28} />
                 </span>
                 <div>
                   <h2>

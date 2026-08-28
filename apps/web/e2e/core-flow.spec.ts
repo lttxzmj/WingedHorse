@@ -411,6 +411,9 @@ test("companion sends life facts and manual mood only after session consent", as
   await expect(lifeConsent).toBeEnabled();
   await lifeConsent.check();
   await page.getByRole("button", { name: "我们接下来做什么？" }).click();
+  await expect(page.locator(".companion-header .winged-horse")).toHaveClass(
+    /winged-horse--listening/
+  );
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText(/依据你本次允许使用的生活事实/u)).toBeVisible();
   expect(requests[0]).toHaveProperty("moodHint", "anxious");

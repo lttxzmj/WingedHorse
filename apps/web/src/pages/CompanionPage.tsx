@@ -148,7 +148,12 @@ export function CompanionPage() {
       >
         <BackLink to="/home" label="回到草原" />
         {result && profile ? (
-          <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt="" />
+          <WingedHorseCharacter
+            typeId={result.typeId}
+            mood={profile.mood}
+            activity={sending && partialReply ? "talking" : draft.trim() ? "listening" : "idle"}
+            alt=""
+          />
         ) : null}
         <div>
           <p className="eyebrow">AI 伙伴 · {companionName}</p>

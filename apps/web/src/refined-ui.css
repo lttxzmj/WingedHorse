@@ -50,6 +50,12 @@
   gap: 0.38rem;
 }
 
+.settings-card > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
 .lucide {
   flex: 0 0 auto;
 }
@@ -637,6 +643,17 @@
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 12px 10px rgb(56 75 44 / 15%));
+}
+
+.loot-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.item-card__emoji {
+  display: inline-grid;
+  place-items: center;
 }
 
 .game-intro__tag {

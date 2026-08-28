@@ -15,6 +15,7 @@ export interface WingedHorseCharacterProps extends Omit<
   "src"
 > {
   mood?: "neutral" | "happy" | "tired" | "resting";
+  activity?: "idle" | "listening" | "talking";
   typeId?: WingedHorseType;
 }
 
@@ -22,6 +23,7 @@ const fallbackType: WingedHorseType = "chosen";
 
 export function WingedHorseCharacter({
   mood = "neutral",
+  activity = "idle",
   typeId = fallbackType,
   className = "",
   onError,
@@ -39,7 +41,7 @@ export function WingedHorseCharacter({
     <img
       src={`/characters/types/${typeId}.webp`}
       alt={alt}
-      className={("winged-horse winged-horse--" + mood + " " + className).trim()}
+      className={`winged-horse winged-horse--${mood} winged-horse--${activity} ${className}`.trim()}
       onError={handleError}
       draggable={false}
       decoding="async"

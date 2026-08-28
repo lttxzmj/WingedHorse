@@ -810,6 +810,11 @@ h1 {
   .parallel-world-button:hover:not(:disabled) {
     background: #3b2e24;
   }
+
+  .companion-header > .winged-horse--listening,
+  .companion-header > .winged-horse--talking {
+    animation: none;
+  }
 }
 
 .home-header {
@@ -1218,6 +1223,35 @@ h1 {
   width: 3rem;
   height: 3rem;
   object-fit: contain;
+  transform-origin: 50% 82%;
+}
+
+.companion-header > .winged-horse--listening {
+  animation: companion-listen 1.8s ease-in-out infinite;
+}
+
+.companion-header > .winged-horse--talking {
+  animation: companion-talk 520ms ease-in-out infinite alternate;
+}
+
+@keyframes companion-listen {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  45%,
+  65% {
+    transform: rotate(-2deg) translateY(0.08rem);
+  }
+}
+
+@keyframes companion-talk {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(-0.08rem) scale(1.025, 0.985);
+  }
 }
 
 .ai-pill {

@@ -1,6 +1,8 @@
 import { Button, Card } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
 import { createUserDataExport, downloadUserDataExport } from "../lib/dataExport";
 import { deleteRemoteLifeData, hasVisitorToken } from "../lib/lifeApi";
@@ -97,7 +99,9 @@ export function SettingsPage() {
             只在你主动授权的单次体验中使用。原始帧不上传、不落盘；关闭页面或点击停止会立即停止轨道。
           </p>
         </div>
-        <Link to="/signals">管理与体验 →</Link>
+        <Link to="/signals">
+          管理与体验 <AppIcon icon={ArrowRight} size={16} />
+        </Link>
       </Card>
       <Card className="settings-card">
         <div>

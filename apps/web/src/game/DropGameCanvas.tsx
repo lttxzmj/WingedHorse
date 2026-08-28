@@ -1,9 +1,8 @@
 import { ITEM_CATALOG, createSeededRandom, selectDrop, type ItemId } from "@wingedhorse/domain";
 import type { WingedHorseType } from "@wingedhorse/character-runtime";
-import { createElement, useEffect, useRef } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { useEffect, useRef } from "react";
 import type PhaserType from "phaser";
-import { ITEM_ICON_COMPONENTS } from "../components/ItemIcon";
+import { ITEM_ICON_ASSETS } from "../lib/itemIconAssets";
 
 export interface GameStats {
   score: number;
@@ -122,20 +121,8 @@ export function DropGameCanvas({
           preload() {
             this.load.image("prairie-background", "/game/prairie-drop-bg.webp");
             this.load.image("player-character", `/characters/types/${characterType}.webp`);
-            Object.entries(ITEM_ICON_COMPONENTS).forEach(([itemId, Icon]) => {
-              const markup = renderToStaticMarkup(
-                createElement(Icon, {
-                  color: "#5a481d",
-                  fill: "none",
-                  size: 30,
-                  strokeWidth: 2.25
-                })
-              );
-              this.load.svg(
-                `item-icon-${itemId}`,
-                `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`,
-                { width: 30, height: 30 }
-              );
+            Object.entries(ITEM_ICON_ASSETS).forEach(([itemId, path]) => {
+              this.load.svg(`item-icon-${itemId}`, path, { width: 30, height: 30 });
             });
           }
 
