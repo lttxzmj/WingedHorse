@@ -2,8 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [master, "codex/**"]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
