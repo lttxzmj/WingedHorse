@@ -59,7 +59,7 @@ interface AppState {
   applyCloudGameSettlement: (sessionId: string, player: PlayerStateResponse) => void;
   applyCloudItemConsumption: (itemId: ItemId, player: PlayerStateResponse) => void;
   applyCloudPlayerState: (player: PlayerStateResponse) => void;
-  comfortPet: () => void;
+  comfortPet: () => boolean;
   toggleLifeEventLike: (id: string) => void;
   toggleLifeEventSaved: (id: string) => void;
   mergeLifeEvents: (events: LifeEvent[]) => void;
@@ -248,21 +248,25 @@ export const useAppStore = create<AppState>()(
               )
             : state.lifeEvents
         })),
-      comfortPet: () =>
-        set((state) => ({
+      comfortPet: () => {
+        const state = get();
+        if (!state.result) return false;
+        const eventKey = `quiet-moment:${new Date().toISOString().slice(0, 10)}`;
+        if (state.lifeEvents.some((event) => event.eventKey === eventKey)) return false;
+        set({
           relationshipXp: Math.min(999, state.relationshipXp + 1),
-          lifeEvents: state.result
-            ? appendLifeEvent(
-                state.lifeEvents,
-                createLifeEvent({
-                  eventKey: `quiet-moment:${new Date().toISOString().slice(0, 10)}`,
-                  kind: "quiet-moment",
-                  occurredAt: new Date().toISOString(),
-                  typeId: state.result.typeId
-                })
-              )
-            : state.lifeEvents
-        })),
+          lifeEvents: appendLifeEvent(
+            state.lifeEvents,
+            createLifeEvent({
+              eventKey,
+              kind: "quiet-moment",
+              occurredAt: new Date().toISOString(),
+              typeId: state.result.typeId
+            })
+          )
+        });
+        return true;
+      },
       toggleLifeEventLike: (id) =>
         set((state) => ({
           lifeEvents: state.lifeEvents.map((event) =>

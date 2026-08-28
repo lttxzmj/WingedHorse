@@ -59,7 +59,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   ).toBeVisible();
   await page.getByRole("button", { name: "去看看平行世界里的你" }).click();
   await expect(page.getByText(/清晨|午后|傍晚|深夜/).first()).toBeVisible();
-  await page.getByRole("link", { name: "看看它今天还做了什么" }).click();
+  await page.getByRole("link", { name: "查看共同生活" }).click();
   await expect(page.getByRole("heading", { name: "它今天也在生活" })).toBeVisible();
   await expect(page.getByText("新住客到达草原")).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "共同远行进展" })).toHaveAttribute(
@@ -113,8 +113,8 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
     });
   await page.getByRole("link", { name: "开始游戏" }).click();
   await expect(page.getByRole("heading", { name: "接住今天的补给" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "准备开始" })).toBeVisible();
-  await page.getByRole("button", { name: "准备开始" }).click();
+  await expect(page.getByRole("button", { name: "开始接补给" })).toBeVisible();
+  await page.getByRole("button", { name: "开始接补给" }).click();
   await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 6_000 });
   await expect(page.locator(".drop-game-canvas canvas")).toBeVisible({ timeout: 6_000 });
   await page.waitForTimeout(900);
@@ -177,6 +177,57 @@ test("legacy questionnaire drafts are deleted instead of migrated", async ({ pag
   await expect(page.getByText("第 1/17 题")).toBeVisible();
 });
 
+test("care happens in the prairie and advances the same relationship", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "wingedhorse-local-state-v2-1",
+      JSON.stringify({
+        version: 5,
+        state: {
+          assessmentOptionSeed: "care-loop-e2e",
+          result: {
+            questionSetId: "wingedhorse-v2-1",
+            questionSetVersion: "2.1.0",
+            rawScores: { energy: 0, engine: 0, chaos: 0, direction: 0 },
+            normalizedScores: { energy: 50, engine: 50, chaos: 50, direction: 50 },
+            typeId: "chosen",
+            edgeDimensions: [],
+            easterEggs: [],
+            bloodline: { purity: 100, hidden: [] },
+            directionHint: "clear-direction"
+          },
+          inventory: { "iced-americano": 2 },
+          petVitals: { energy: 40, engine: 50, chaos: 50, direction: 50 },
+          gamesPlayed: 1,
+          relationshipXp: 10,
+          lifeEvents: [],
+          settledGameIds: []
+        }
+      })
+    );
+  });
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { name: "熟悉阶段" })).toBeVisible();
+  await expect(page.getByText("背包里有新东西")).toBeVisible();
+  await page.locator(".character-hotspot").click();
+  await page.getByRole("button", { name: /给它冰美式补给/ }).click();
+  await expect(page.getByText(/它收下了冰美式补给/)).toBeVisible();
+  const state = await page.evaluate(() => {
+    const raw = localStorage.getItem("wingedhorse-local-state-v2-1") ?? "{}";
+    const persisted = JSON.parse(raw) as {
+      state: {
+        inventory: Record<string, number>;
+        relationshipXp: number;
+        lifeEvents: Array<{ kind: string }>;
+      };
+    };
+    return persisted.state;
+  });
+  expect(state.inventory["iced-americano"]).toBe(1);
+  expect(state.relationshipXp).toBe(12);
+  expect(state.lifeEvents.some((event) => event.kind === "gift")).toBe(true);
+});
+
 test("game start and companion entry survive an HTTP context without randomUUID", async ({
   page
 }) => {
@@ -191,15 +242,87 @@ test("game start and companion entry survive an HTTP context without randomUUID"
     "src",
     "/game/characters/chosen.webp"
   );
-  await page.getByRole("button", { name: "准备开始" }).click();
+  await page.getByRole("button", { name: "开始接补给" }).click();
   await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 8_000 });
   await page.goto("/companion");
   await expect(page.getByRole("heading", { name: "说两句也好" })).toBeVisible();
 });
 
+test("game intro and countdown stay inside the same prairie scene", async ({ page }, testInfo) => {
+  await page.goto("/game");
+  await expect(page.locator(".game-intro")).toBeVisible();
+  await expect(page.locator(".game-intro__character img")).toBeVisible();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-game-intro-${testInfo.project.name}.png`,
+      fullPage: true
+    });
+
+  await page.getByRole("button", { name: "开始接补给" }).click();
+  await expect(page.locator(".game-countdown")).toBeVisible();
+  await expect(page.locator(".game-countdown__character")).toBeVisible();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-game-countdown-${testInfo.project.name}.png`,
+      fullPage: true
+    });
+
+  await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 8_000 });
+});
+
+test("game intro fills common H5 viewport heights without an orphan title line", async ({
+  page
+}, testInfo) => {
+  for (const viewport of [
+    { width: 390, height: 844, name: "390x844" },
+    { width: 375, height: 667, name: "375x667" }
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/game");
+    await expect(page.locator(".game-shell")).toBeVisible();
+    const metrics = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>(".game-shell")?.getBoundingClientRect();
+      const title = document.querySelector<HTMLElement>(".game-intro__brief h2");
+      const titleStyle = title ? getComputedStyle(title) : null;
+      return {
+        innerHeight,
+        pageHeight: document.documentElement.scrollHeight,
+        shellBottom: shell?.bottom ?? 0,
+        shellHeight: shell?.height ?? 0,
+        titleHeight: title?.getBoundingClientRect().height ?? 0,
+        titleLineHeight: titleStyle ? Number.parseFloat(titleStyle.lineHeight) : 0
+      };
+    });
+    expect(metrics.pageHeight).toBeLessThanOrEqual(metrics.innerHeight + 1);
+    expect(metrics.shellBottom).toBeGreaterThan(metrics.innerHeight - 20);
+    expect(metrics.shellBottom).toBeLessThanOrEqual(metrics.innerHeight + 1);
+    expect(metrics.shellHeight).toBeGreaterThan(500);
+    expect(metrics.titleHeight).toBeLessThan(metrics.titleLineHeight * 1.5);
+    if (process.env.VISUAL_QA)
+      await page.screenshot({
+        path: `/private/tmp/wingedhorse-game-intro-${viewport.name}-${testInfo.project.name}.png`,
+        fullPage: true
+      });
+
+    await page.getByRole("button", { name: "开始接补给" }).click();
+    await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 8_000 });
+    const canvasRatioDelta = await page.locator(".drop-game-canvas canvas").evaluate((element) => {
+      const canvas = element as HTMLCanvasElement;
+      const bounds = canvas.getBoundingClientRect();
+      return Math.abs(canvas.width / canvas.height - bounds.width / bounds.height);
+    });
+    expect(canvasRatioDelta).toBeLessThan(0.02);
+    if (process.env.VISUAL_QA)
+      await page.screenshot({
+        path: `/private/tmp/wingedhorse-game-playing-${viewport.name}-${testInfo.project.name}.png`,
+        fullPage: true
+      });
+  }
+});
+
 test("leaving an unfinished game does not grant rewards", async ({ page }) => {
   await page.goto("/game");
-  await page.getByRole("button", { name: "准备开始" }).click();
+  await page.getByRole("button", { name: "开始接补给" }).click();
   await expect(page.getByRole("button", { name: "向右移动" })).toBeVisible({ timeout: 8_000 });
   await page.goto("/home");
   const persistedJson = await page.evaluate(
@@ -215,7 +338,7 @@ test("leaving an unfinished game does not grant rewards", async ({ page }) => {
 test("game loading failure offers a usable retry path", async ({ page }) => {
   await page.route(/phaser/i, (route) => route.abort());
   await page.goto("/game");
-  await page.getByRole("button", { name: "准备开始" }).click();
+  await page.getByRole("button", { name: "开始接补给" }).click();
   await expect(page.getByRole("alert")).toContainText("补给雨还没打开", { timeout: 10_000 });
   await expect(page.getByRole("button", { name: "再试一次" })).toBeEnabled();
   await expect(page.locator(".game-recovery a", { hasText: "回到草原" })).toBeVisible();
@@ -258,7 +381,7 @@ test("a real game finishes, settles once, enters the bag and changes the life st
     });
   });
   await page.goto("/game");
-  await page.getByRole("button", { name: "准备开始" }).click();
+  await page.getByRole("button", { name: "开始接补给" }).click();
   await expect(page.getByRole("button", { name: "向左移动" })).toBeVisible({ timeout: 8_000 });
   await expect(page.locator(".game-hud")).toContainText(/[1-9]\d* 件/, { timeout: 12_000 });
   await expect(page.getByText("本局得分")).toBeVisible({ timeout: 35_000 });
@@ -273,14 +396,18 @@ test("a real game finishes, settles once, enters the bag and changes the life st
     });
 
   await page.getByRole("link", { name: "带着补给回草原" }).click();
-  await expect(page.getByText("想玩时，再接一场")).toBeVisible();
-  await expect(page.getByRole("link", { name: "再玩一局" })).toBeVisible();
+  await expect(page.getByText("背包里有新东西")).toBeVisible();
   await page.getByRole("link", { name: /打开背包，共 [1-9]\d* 件/ }).click();
   await expect(page.getByRole("heading", { name: "今天接住的东西" })).toBeVisible();
+  if (process.env.VISUAL_QA)
+    await page.screenshot({
+      path: `/private/tmp/wingedhorse-inventory-${testInfo.project.name}.png`,
+      fullPage: true
+    });
   await page.getByRole("button", { name: "给牛马使用" }).first().click();
   const confirmation = page.getByRole("dialog", { name: /要使用.+吗/ });
   if (await confirmation.isVisible()) await page.getByRole("button", { name: "确认使用" }).click();
-  await expect(page.getByRole("status")).toContainText("飞马收下了");
+  await expect(page.getByRole("status")).toContainText("收下了");
 
   await page.goto("/life");
   await expect(page.getByText("补给雨顺利收工")).toBeVisible();
@@ -350,7 +477,7 @@ test("returning after a week reveals the private story arc without a check-in st
   await expect(page.getByText("帐篷里多了一盏小灯")).toBeVisible();
   await expect(page.getByText("你们写下第一张远行手账")).toBeVisible();
   await expect(page.getByText("翅膀第一次留下完整影子")).toBeVisible();
-  await expect(page.getByText("不是公开朋友圈")).toBeVisible();
+  await expect(page.getByText("只属于你们")).toBeVisible();
 });
 
 test("AI disclosure, memory controls and network fallback remain usable", async ({

@@ -1,7 +1,16 @@
 import { ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Package, Pause, Play } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  MoveHorizontal,
+  Package,
+  Pause,
+  Play,
+  Sparkles
+} from "lucide-react";
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
@@ -31,16 +40,23 @@ export function GamePage() {
   const [showGuide, setShowGuide] = useState(true);
   const settleGame = useAppStore((state) => state.settleGame);
   const result = useAppStore((state) => state.result);
+  const playing = phase === "playing";
 
   useEffect(() => {
     if (phase !== "countdown") return;
     if (countdown === 0) {
-      setPhase("playing");
-      return;
+      const launchTimer = window.setTimeout(() => setPhase("playing"), 480);
+      return () => window.clearTimeout(launchTimer);
     }
-    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 700);
+    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 860);
     return () => window.clearTimeout(timer);
   }, [countdown, phase]);
+
+  useEffect(() => {
+    if (!playing || gameLoadState !== "ready" || !showGuide) return;
+    const guideTimer = window.setTimeout(() => setShowGuide(false), 3_800);
+    return () => window.clearTimeout(guideTimer);
+  }, [gameLoadState, playing, showGuide]);
 
   const start = () => {
     setSummary(null);
@@ -66,7 +82,6 @@ export function GamePage() {
     setPhase("summary");
   };
 
-  const playing = phase === "playing";
   const beginMove = (direction: -1 | 1) => (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     setControlDirection(direction);
@@ -79,7 +94,7 @@ export function GamePage() {
   };
 
   return (
-    <main className="game-page">
+    <main className={`game-page game-page--${phase}`}>
       <header className="subpage-header">
         <BackLink to="/home" label="回到草原" />
         <div>
@@ -91,13 +106,14 @@ export function GamePage() {
           背包
         </Link>
       </header>
-      <section className="game-shell">
+      <section className={`game-shell game-shell--${phase}`}>
         {playing ? (
           <>
             <div className="game-hud" aria-label="本局状态">
-              <span>
-                <small>时间</small>
+              <span className="game-hud__time">
+                <AppIcon icon={Clock3} size={15} />
                 <strong>{stats.remainingSeconds}</strong>
+                <small>秒</small>
               </span>
               <span>
                 <small>得分 · {stats.caughtCount} 件</small>
@@ -116,7 +132,7 @@ export function GamePage() {
                 aria-pressed={paused}
               >
                 <AppIcon icon={paused ? Play : Pause} size={16} />
-                {paused ? "继续" : "暂停"}
+                <span>{paused ? "继续" : "暂停"}</span>
               </button>
               <span className="game-time-progress">
                 <i style={{ width: `${(stats.remainingSeconds / 30) * 100}%` }} />
@@ -168,7 +184,10 @@ export function GamePage() {
                     >
                       <AppIcon icon={ChevronLeft} size={32} strokeWidth={2.5} />
                     </button>
-                    <p id="game-control-help">按住移动，也可以直接拖动飞马</p>
+                    <p id="game-control-help">
+                      <AppIcon icon={MoveHorizontal} size={15} />
+                      按住或拖动
+                    </p>
                     <button
                       type="button"
                       aria-label="向右移动"
@@ -183,11 +202,11 @@ export function GamePage() {
                 ) : null}
                 {gameLoadState === "ready" && showGuide ? (
                   <p className="game-play-guide" role="status">
-                    按住两侧移动，或直接拖动飞马去接补给
+                    手指贴着飞马左右拖动，接住第一份补给
                   </p>
                 ) : null}
                 {catchNotice ? (
-                  <p className="game-catch-notice" role="status">
+                  <p className="game-catch-notice sr-only" role="status">
                     接住了 · {catchNotice}
                   </p>
                 ) : null}
@@ -204,20 +223,25 @@ export function GamePage() {
           </>
         ) : phase === "countdown" ? (
           <div className="game-countdown" aria-live="assertive">
-            <span>{countdown || "GO"}</span>
-            <p>拖动屏幕，或使用方向键 / A D</p>
+            <img className="game-scene__tent" src="/scene/prairie-tent.webp" alt="" />
+            <img
+              className="game-countdown__character"
+              src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]}
+              alt=""
+            />
+            <div className="game-countdown__veil" />
+            <div className="game-countdown__content" key={countdown}>
+              <small>{countdown ? "补给雨马上到" : "去接住它"}</small>
+              <strong>{countdown || "开始"}</strong>
+              <p>{countdown > 1 ? "稳住，先看落点" : "手指左右拖动飞马"}</p>
+            </div>
           </div>
         ) : (
-          <div className="game-intro">
+          <div className={`game-intro${summary ? " game-intro--summary" : ""}`}>
+            <img className="game-scene__tent" src="/scene/prairie-tent.webp" alt="" />
             <div className="game-intro__character" aria-hidden="true">
-              <img
-                src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]}
-                alt=""
-                width="640"
-                height="640"
-              />
+              <img src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]} alt="" />
             </div>
-            <span className="game-intro__tag">30 秒 · 漏接不扣分</span>
             {summary ? (
               <div className="game-summary">
                 <p className="eyebrow">本局得分</p>
@@ -253,12 +277,23 @@ export function GamePage() {
                 </figure>
               </div>
             ) : (
-              <>
-                <h2>30 秒，把补给带回草原</h2>
-                <p>第一件补给会落在你附近。按住左右键或拖动飞马；漏接不扣分，随时可以暂停。</p>
-              </>
+              <div className="game-intro__brief">
+                <span className="game-intro__tag">
+                  <AppIcon icon={Sparkles} size={14} />
+                  今日补给雨
+                </span>
+                <h2>30 秒，把补给接回草原</h2>
+                <ul>
+                  <li>第一件会落在你附近</li>
+                  <li>连续接住，得分最高 ×10</li>
+                  <li>漏接不扣分，随时能暂停</li>
+                </ul>
+              </div>
             )}
-            <Button onClick={start}>{summary ? "再接一局" : "准备开始"}</Button>
+            <Button onClick={start}>
+              <AppIcon icon={summary ? Play : Sparkles} size={17} />
+              {summary ? "再接一局" : "开始接补给"}
+            </Button>
             {summary ? (
               <Link className="quiet-link" to="/home">
                 带着补给回草原

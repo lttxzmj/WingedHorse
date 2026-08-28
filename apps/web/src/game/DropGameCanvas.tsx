@@ -37,6 +37,9 @@ interface FallingItem {
   label: PhaserType.GameObjects.Container;
   speed: number;
   points: number;
+  drift: number;
+  phase: number;
+  rotationSpeed: number;
 }
 
 export function DropGameCanvas({
@@ -92,6 +95,9 @@ export function DropGameCanvas({
       .then((module) => {
         if (disposed || !hostRef.current) return;
         const Phaser = module.default ?? module;
+        const hostWidth = hostRef.current.clientWidth || 390;
+        const hostHeight = hostRef.current.clientHeight || 560;
+        const gameHeight = Phaser.Math.Clamp(Math.round((390 * hostHeight) / hostWidth), 520, 820);
         const seed = Array.from(sessionId).reduce(
           (value, character) => Math.imul(value ^ character.charCodeAt(0), 16777619),
           2166136261
@@ -99,6 +105,8 @@ export function DropGameCanvas({
 
         class CatchScene extends Phaser.Scene {
           private catcher!: PhaserType.GameObjects.Container;
+          private catcherSprite!: PhaserType.GameObjects.Image;
+          private catcherShadow!: PhaserType.GameObjects.Ellipse;
           private drops: FallingItem[] = [];
           private score = 0;
           private combo = 0;
@@ -112,6 +120,11 @@ export function DropGameCanvas({
           private cursors: PhaserType.Types.Input.Keyboard.CursorKeys | undefined;
           private leftKey: PhaserType.Input.Keyboard.Key | undefined;
           private rightKey: PhaserType.Input.Keyboard.Key | undefined;
+          private targetX = 195;
+          private velocityX = 0;
+          private pointerActive = false;
+          private catcherBaseY = 486;
+          private motionClock = 0;
           private readonly random = createSeededRandom(seed);
           private readonly caught: Partial<Record<ItemId, number>> = {};
 
@@ -121,6 +134,7 @@ export function DropGameCanvas({
 
           preload() {
             this.load.image("prairie-background", "/game/prairie-drop-bg.webp");
+            this.load.image("prairie-tent", "/scene/prairie-tent.webp");
             this.load.image("player-character", GAME_CHARACTER_ASSETS[characterType]);
             Object.entries(ITEM_ICON_ASSETS).forEach(([itemId, path]) => {
               this.load.svg(`item-icon-${itemId}`, path, { width: 30, height: 30 });
@@ -136,25 +150,42 @@ export function DropGameCanvas({
                 .setDisplaySize(width, height);
             }
 
-            const catcherSprite = this.textures.exists("player-character")
-              ? this.add.image(0, 0, "player-character").setOrigin(0.5, 0.58)
-              : this.add.circle(0, 0, 42, 0xffd057).setStrokeStyle(4, 0x3b2e24);
-            if (catcherSprite instanceof Phaser.GameObjects.Image) {
-              const displayHeight = 190;
-              catcherSprite.setDisplaySize(
-                (catcherSprite.width / catcherSprite.height) * displayHeight,
-                displayHeight
-              );
+            if (this.textures.exists("prairie-tent")) {
+              this.add
+                .image(width - 54, height - 98, "prairie-tent")
+                .setDisplaySize(116, 116)
+                .setAlpha(0.88);
             }
-            this.catcher = this.add.container(width / 2, height - 94, [catcherSprite]);
 
-            const move = (x: number) => {
-              this.catcher.x = Phaser.Math.Clamp(x, 48, this.scale.width - 48);
+            this.catcherBaseY = height - 72;
+            this.catcherShadow = this.add
+              .ellipse(0, 52, 96, 18, 0x496530, 0.2)
+              .setScale(1, 0.72);
+            this.catcherSprite = this.add.image(0, 0, "player-character").setOrigin(0.5, 0.63);
+            const displayHeight = 158;
+            this.catcherSprite.setDisplaySize(
+              (this.catcherSprite.width / this.catcherSprite.height) * displayHeight,
+              displayHeight
+            );
+            this.catcher = this.add.container(width / 2, this.catcherBaseY, [
+              this.catcherShadow,
+              this.catcherSprite
+            ]);
+            this.targetX = width / 2;
+
+            const aim = (x: number) => {
+              this.targetX = Phaser.Math.Clamp(x, 44, this.scale.width - 44);
             };
             this.input.on("pointermove", (pointer: PhaserType.Input.Pointer) => {
-              if (pointer.isDown) move(pointer.x);
+              if (pointer.isDown) aim(pointer.x);
             });
-            this.input.on("pointerdown", (pointer: PhaserType.Input.Pointer) => move(pointer.x));
+            this.input.on("pointerdown", (pointer: PhaserType.Input.Pointer) => {
+              this.pointerActive = true;
+              aim(pointer.x);
+            });
+            this.input.on("pointerup", () => {
+              this.pointerActive = false;
+            });
             this.cursors = this.input.keyboard?.createCursorKeys();
             this.leftKey = this.input.keyboard?.addKey("A");
             this.rightKey = this.input.keyboard?.addKey("D");
@@ -182,35 +213,134 @@ export function DropGameCanvas({
             const x = isFirstDrop ? this.catcher.x : 72 + this.random() * (this.scale.width - 144);
             this.spawnedCount += 1;
             const item = ITEM_CATALOG[drop.itemId];
-            const label = this.add.container(x, 86);
+            const label = this.add.container(x, 128);
+            const shadow = this.add.ellipse(2, 4, 56, 56, 0x3b2e24, 0.14);
             const card = this.add.graphics();
-            card.fillStyle(0x526442, 0.14);
-            card.fillCircle(2, 4, 34);
-            card.fillStyle(item.rarity === "rare" ? 0xffe3a2 : 0xffffff, 0.96);
-            card.fillCircle(0, 0, 34);
-            const glyph = this.add.image(0, -7, `item-icon-${drop.itemId}`).setDisplaySize(28, 28);
+            const rare = item.rarity === "rare";
+            card.fillStyle(rare ? 0xffe8a8 : 0xfffdf3, 0.98);
+            card.fillRoundedRect(-29, -30, 58, 58, 18);
+            card.lineStyle(rare ? 3 : 2, rare ? 0xe2a91f : 0xffffff, 0.95);
+            card.strokeRoundedRect(-29, -30, 58, 58, 18);
+            const glyph = this.add.image(0, -4, `item-icon-${drop.itemId}`).setDisplaySize(31, 31);
             const name = this.add
-              .text(0, 17, item.name.replace("补给", ""), {
+              .text(0, 20, item.name.replace("补给", ""), {
                 align: "center",
-                color: "#665548",
+                color: "#59483b",
                 fontFamily: "PingFang SC, system-ui",
                 fontSize: "9px",
                 fontStyle: "bold",
                 wordWrap: { width: 58, useAdvancedWrap: true }
               })
               .setOrigin(0.5);
-            label.add([card, glyph, name]);
+            label.add([shadow, card, glyph, name]);
+            label.setScale(0.72).setAlpha(0);
+            this.tweens.add({
+              targets: label,
+              scale: 1,
+              alpha: 1,
+              duration: 180,
+              ease: "Back.Out"
+            });
             const difficulty = isFirstDrop ? 0.82 : Math.min(1.65, 1 + elapsed / 42_000);
             this.drops.push({
               itemId: drop.itemId,
               label,
               points: drop.points,
-              speed: drop.speed * difficulty
+              speed: drop.speed * difficulty,
+              drift: 8 + this.random() * 13,
+              phase: this.random() * Math.PI * 2,
+              rotationSpeed: (this.random() - 0.5) * 0.0016
             });
+          }
+
+          private showCatchFeedback(itemId: ItemId, earnedPoints: number) {
+            const item = ITEM_CATALOG[itemId];
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            const x = this.catcher.x;
+            const y = this.catcher.y - 102;
+            const glow = this.add.circle(x, this.catcher.y - 28, 36, 0xffd058, 0.22);
+            const panel = this.add.graphics();
+            panel.fillStyle(0xfffdf5, 0.96);
+            panel.fillRoundedRect(-66, -18, 132, 36, 18);
+            panel.lineStyle(2, 0xffd057, 0.9);
+            panel.strokeRoundedRect(-66, -18, 132, 36, 18);
+            const label = this.add
+              .text(0, 0, `${item.name}  +${earnedPoints}`, {
+                color: "#4b3b2e",
+                fontFamily: "PingFang SC, system-ui",
+                fontSize: "13px",
+                fontStyle: "bold"
+              })
+              .setOrigin(0.5);
+            const feedback = this.add.container(x, y, [panel, label]);
+            feedback.setScale(0.76).setAlpha(0);
+
+            if (reduceMotion) {
+              feedback.setScale(1).setAlpha(1);
+              this.time.delayedCall(520, () => {
+                glow.destroy();
+                feedback.destroy();
+              });
+              return;
+            }
+
+            this.tweens.add({
+              targets: glow,
+              scale: 2.15,
+              alpha: 0,
+              duration: 360,
+              ease: "Cubic.Out",
+              onComplete: () => glow.destroy()
+            });
+            this.tweens.add({
+              targets: feedback,
+              scale: 1,
+              alpha: 1,
+              y: y - 8,
+              duration: 190,
+              ease: "Back.Out",
+              yoyo: true,
+              hold: 320,
+              onComplete: () => feedback.destroy()
+            });
+            this.tweens.killTweensOf(this.catcherSprite);
+            this.tweens.add({
+              targets: this.catcherSprite,
+              y: -12,
+              scaleX: 1.07,
+              scaleY: 0.94,
+              duration: 90,
+              yoyo: true,
+              ease: "Quad.Out"
+            });
+
+            if (this.combo >= 2) {
+              const comboText = this.add
+                .text(this.scale.width / 2, 174, `${this.combo} 连击  ×${Math.min(this.combo, 10)}`, {
+                  color: "#fff8de",
+                  fontFamily: "PingFang SC, system-ui",
+                  fontSize: "24px",
+                  fontStyle: "bold",
+                  stroke: "#9b6913",
+                  strokeThickness: 5
+                })
+                .setOrigin(0.5)
+                .setScale(0.68);
+              this.tweens.add({
+                targets: comboText,
+                scale: 1,
+                y: 160,
+                alpha: 0,
+                duration: 620,
+                ease: "Back.Out",
+                onComplete: () => comboText.destroy()
+              });
+            }
           }
 
           override update(_time: number, delta: number) {
             if (this.finished) return;
+            this.motionClock += delta;
             const movingLeft =
               controlDirectionRef.current === -1 ||
               this.cursors?.left.isDown ||
@@ -219,18 +349,33 @@ export function DropGameCanvas({
               controlDirectionRef.current === 1 ||
               this.cursors?.right.isDown ||
               this.rightKey?.isDown;
-            if (movingLeft)
-              this.catcher.x = Phaser.Math.Clamp(
-                this.catcher.x - delta * 0.31,
-                48,
-                this.scale.width - 48
-              );
-            if (movingRight)
-              this.catcher.x = Phaser.Math.Clamp(
-                this.catcher.x + delta * 0.31,
-                48,
-                this.scale.width - 48
-              );
+            const keyboardDirection = Number(movingRight) - Number(movingLeft);
+            if (keyboardDirection !== 0) {
+              this.pointerActive = false;
+              this.velocityX += keyboardDirection * delta * 0.0042;
+            } else {
+              this.velocityX *= Math.pow(0.84, delta / 16.67);
+            }
+            this.velocityX = Phaser.Math.Clamp(this.velocityX, -0.42, 0.42);
+            if (this.pointerActive) {
+              const distance = this.targetX - this.catcher.x;
+              this.velocityX = Phaser.Math.Linear(this.velocityX, distance * 0.014, 0.24);
+            }
+            this.catcher.x = Phaser.Math.Clamp(
+              this.catcher.x + this.velocityX * delta,
+              44,
+              this.scale.width - 44
+            );
+            if (!this.pointerActive && keyboardDirection !== 0) this.targetX = this.catcher.x;
+            const motionStrength = Math.min(1, Math.abs(this.velocityX) / 0.32);
+            this.catcher.y = this.catcherBaseY + Math.sin(this.motionClock * 0.006) * (2 + motionStrength * 2);
+            this.catcherSprite.rotation = Phaser.Math.Linear(
+              this.catcherSprite.rotation,
+              this.velocityX * 0.12,
+              0.12
+            );
+            this.catcherSprite.setFlipX(this.velocityX < -0.025);
+            this.catcherShadow.setScale(1 - motionStrength * 0.08, 0.72);
 
             this.elapsedMs += delta;
             this.nextDropInMs -= delta;
@@ -245,41 +390,38 @@ export function DropGameCanvas({
               const interval = Math.max(360, 760 - elapsed * 0.012);
               this.nextDropInMs = interval + this.random() * 180;
             }
-            const catcherTop = this.catcher.y - 72;
+            const catcherTop = this.catcher.y - 76;
+            const verticalScale = this.scale.height / 560;
             this.drops = this.drops.filter((drop) => {
-              drop.label.y += delta * 0.13 * drop.speed;
+              drop.label.y += delta * 0.13 * drop.speed * verticalScale;
+              drop.label.x += Math.sin(this.motionClock * 0.0024 + drop.phase) * drop.drift * (delta / 1000);
+              drop.label.rotation += drop.rotationSpeed * delta;
               const isCaught =
                 drop.label.y >= catcherTop &&
-                drop.label.y <= catcherTop + 70 &&
-                Math.abs(drop.label.x - this.catcher.x) < 68;
+                drop.label.y <= catcherTop + 74 &&
+                Math.abs(drop.label.x - this.catcher.x) < 62;
               if (isCaught) {
                 this.combo += 1;
                 this.maxCombo = Math.max(this.maxCombo, this.combo);
                 this.score += drop.points * Math.min(this.combo, 10);
                 this.caught[drop.itemId] = (this.caught[drop.itemId] ?? 0) + 1;
                 const earnedPoints = drop.points * Math.min(this.combo, 10);
-                drop.label.destroy();
                 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-                if (!reduceMotion) this.cameras.main.flash(90, 255, 227, 162, false);
-                const feedback = this.add
-                  .text(this.catcher.x, this.catcher.y - 86, `接住 +${earnedPoints}`, {
-                    color: "#3B2E24",
-                    fontFamily: "PingFang SC, system-ui",
-                    fontSize: "18px",
-                    fontStyle: "bold"
-                  })
-                  .setOrigin(0.5);
                 if (reduceMotion) {
-                  this.time.delayedCall(420, () => feedback.destroy());
+                  drop.label.destroy();
                 } else {
                   this.tweens.add({
-                    targets: feedback,
-                    y: feedback.y - 30,
+                    targets: drop.label,
+                    x: this.catcher.x,
+                    y: this.catcher.y - 34,
+                    scale: 0.42,
                     alpha: 0,
-                    duration: 560,
-                    onComplete: () => feedback.destroy()
+                    duration: 150,
+                    ease: "Cubic.In",
+                    onComplete: () => drop.label.destroy()
                   });
                 }
+                this.showCatchFeedback(drop.itemId, earnedPoints);
                 catchRef.current(drop.itemId, earnedPoints);
                 this.emitStats();
                 return false;
@@ -316,7 +458,7 @@ export function DropGameCanvas({
           type: Phaser.CANVAS,
           parent: hostRef.current,
           width: 390,
-          height: 560,
+          height: gameHeight,
           transparent: false,
           scene: CatchScene,
           scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }

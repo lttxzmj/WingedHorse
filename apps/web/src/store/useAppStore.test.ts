@@ -46,6 +46,14 @@ describe("game settlement and cultivation state", () => {
     });
   });
 
+  it("rewards a quiet moment only once per day, including after a reload", () => {
+    useAppStore.getState().setResult(result);
+    expect(useAppStore.getState().comfortPet()).toBe(true);
+    expect(useAppStore.getState().comfortPet()).toBe(false);
+    expect(useAppStore.getState().relationshipXp).toBe(1);
+    expect(useAppStore.getState().lifeEvents.filter((event) => event.kind === "quiet-moment")).toHaveLength(1);
+  });
+
   it("persists explicit life-event interactions", () => {
     useAppStore.getState().setResult(result);
     const [event] = useAppStore.getState().lifeEvents;

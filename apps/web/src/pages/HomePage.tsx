@@ -1,5 +1,11 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { getResultProfile } from "@wingedhorse/domain";
+import {
+  ITEM_CATALOG,
+  ITEM_IDS,
+  deriveCompanionGrowth,
+  deriveJourneyGoal,
+  getResultProfile
+} from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -17,13 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { useAppStore } from "../store/useAppStore";
 import { useDigitalLife } from "../hooks/useDigitalLife";
-
-function relationshipLabel(value: number) {
-  if (value >= 60) return "并肩老友";
-  if (value >= 25) return "默契搭子";
-  if (value >= 10) return "熟悉伙伴";
-  return "刚刚同行";
-}
+import "../cultivation.css";
 
 function momentTime(value: string | undefined) {
   if (!value) return "现在";
@@ -36,7 +36,6 @@ export function HomePage() {
   const navigate = useNavigate();
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [reaction, setReaction] = useState("");
-  const [comforted, setComforted] = useState(false);
   const characterButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const wasInteractionOpen = useRef(false);
@@ -47,6 +46,8 @@ export function HomePage() {
   const gamesPlayed = useAppStore((state) => state.gamesPlayed);
   const relationshipXp = useAppStore((state) => state.relationshipXp);
   const lifeEvents = useAppStore((state) => state.lifeEvents);
+  const inventory = useAppStore((state) => state.inventory);
+  const useItem = useAppStore((state) => state.useItem);
   const worldContext = useAppStore((state) => state.worldContext);
   useDigitalLife();
   const comfortPet = useAppStore((state) => state.comfortPet);
@@ -81,7 +82,30 @@ export function HomePage() {
   }
 
   const profile = getResultProfile(result.typeId);
-  const taskDone = gamesPlayed > 0;
+  const growth = deriveCompanionGrowth(relationshipXp);
+  const journey = deriveJourneyGoal({ events: lifeEvents, gamesPlayed, relationshipXp });
+  const nextMilestone = journey.milestones.find((milestone) => !milestone.completed)?.id;
+  const recommendedItemId = ITEM_IDS.find(
+    (id) =>
+      (inventory[id] ?? 0) > 0 &&
+      ITEM_CATALOG[id].consumable &&
+      ITEM_CATALOG[id].rarity !== "rare"
+  );
+  const comfortedToday = lifeEvents.some(
+    (event) => event.eventKey === `quiet-moment:${new Date().toISOString().slice(0, 10)}`
+  );
+  const nextAction =
+    nextMilestone === "first-haul"
+      ? { eyebrow: "一起动一动", title: "接一场 30 秒补给雨", label: "开始游戏", to: "/game" as const }
+      : nextMilestone === "shared-supply"
+        ? inventoryCount > 0
+          ? { eyebrow: "背包里有新东西", title: "选一份补给给它", label: "打开背包", to: "/inventory" as const }
+          : { eyebrow: "先带点东西回来", title: "接一场轻松的补给雨", label: "开始游戏", to: "/game" as const }
+        : nextMilestone === "saved-memory"
+          ? { eyebrow: "留下一段共同生活", title: "把喜欢的动态存进记忆", label: "看看动态", to: "/life" as const }
+          : nextMilestone === "trusted-pair"
+            ? { eyebrow: "关系正在慢慢长大", title: "写张纸条，或只是陪它坐会儿", label: "写小纸条", to: "/companion" as const }
+            : { eyebrow: "第一段航线已经画好", title: "看看它今天又做了什么", label: "打开生活簿", to: "/life" as const };
   const latestAutonomousEvent = lifeEvents.find((event) => event.source === "daily-plan");
   const latestStoryEvent = lifeEvents.find(
     (event) => event.kind === "story" || event.kind === "visitor"
@@ -141,7 +165,7 @@ export function HomePage() {
         </p>
         <button
           ref={characterButtonRef}
-          className="character-hotspot"
+          className={`character-hotspot ${reaction ? "is-cared-for" : ""}`.trim()}
           onClick={() => setInteractionOpen(true)}
           aria-label={`和${profile.name}互动`}
         >
@@ -162,17 +186,34 @@ export function HomePage() {
         </Link>
         <div className="prairie-task-dock prairie-game-gate">
           <div>
-            <p>{taskDone ? "补给雨仍在继续" : "今天的一件小事"}</p>
-            <strong>{taskDone ? "想玩时，再接一场" : "陪我接一场 30 秒补给雨"}</strong>
+            <p>{nextAction.eyebrow}</p>
+            <strong>{nextAction.title}</strong>
           </div>
-          <Link to="/game">{taskDone ? "再玩一局" : "开始游戏"}</Link>
+          <Link to={nextAction.to}>{nextAction.label}</Link>
         </div>
       </section>
 
-      <div className="home-continuity">
-        <Link to="/life">看看它今天还做了什么</Link>
-        <span>{relationshipLabel(relationshipXp)} · 同行值 {relationshipXp}</span>
-      </div>
+      <section className="companion-growth-card" aria-labelledby="growth-title">
+        <div className="companion-growth-card__copy">
+          <p className="eyebrow">关系成长 · {growth.relationshipLabel}</p>
+          <h2 id="growth-title">{growth.name}阶段</h2>
+          <span>{growth.description}</span>
+        </div>
+        <div
+          className="companion-growth-card__meter"
+          role="progressbar"
+          aria-label={`${growth.name}阶段成长进展`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={growth.progressPercent}
+        >
+          <i style={{ width: `${growth.progressPercent}%` }} />
+        </div>
+        <div className="companion-growth-card__footer">
+          <small>{growth.unlockHint}</small>
+          <Link to="/life">查看共同生活</Link>
+        </div>
+      </section>
 
       {interactionOpen ? (
         <div className="interaction-backdrop" onPointerDown={() => setInteractionOpen(false)}>
@@ -191,33 +232,47 @@ export function HomePage() {
             >
               <AppIcon icon={X} size={22} />
             </button>
-            <p className="eyebrow">{relationshipLabel(relationshipXp)} · AI 飞马</p>
+            <p className="eyebrow">{growth.relationshipLabel} · AI 飞马</p>
             <h2 id="interaction-title">陪它做一件小事</h2>
             <p>不用打卡，也不会因为离开而扣分。</p>
             <div className="interaction-options">
               <button
-                disabled={comforted}
+                disabled={comfortedToday}
                 onClick={() => {
-                  comfortPet();
-                  setComforted(true);
-                  setReaction("收到摸摸了。今天不用表现得很厉害。同行值 +1");
+                  if (comfortPet())
+                    setReaction("收到摸摸了。今天不用表现得很厉害。同行值 +1");
                   setInteractionOpen(false);
                 }}
               >
                 <AppIcon icon={Heart} size={21} />
-                <strong>{comforted ? "已经摸过啦" : "摸摸它"}</strong>
-                <span>给一个安静回应</span>
+                <strong>{comfortedToday ? "今天已经摸过啦" : "摸摸它"}</strong>
+                <span>{comfortedToday ? "它记得这个安静时刻" : "给一个安静回应"}</span>
               </button>
               <Link to="/companion">
                 <AppIcon icon={MessageCircle} size={21} />
                 <strong>写张小纸条</strong>
                 <span>进入有边界的 AI 对话</span>
               </Link>
-              <Link to="/inventory">
-                <AppIcon icon={Package} size={21} />
-                <strong>给它一份补给</strong>
-                <span>先查看效果，再决定使用</span>
-              </Link>
+              {recommendedItemId ? (
+                <button
+                  onClick={() => {
+                    const item = ITEM_CATALOG[recommendedItemId];
+                    if (useItem(recommendedItemId))
+                      setReaction(`它收下了${item.name}。不是数字涨了，是今天真的被照顾到了一点。`);
+                    setInteractionOpen(false);
+                  }}
+                >
+                  <AppIcon icon={Package} size={21} />
+                  <strong>给它{ITEM_CATALOG[recommendedItemId].name}</strong>
+                  <span>背包还有 {inventory[recommendedItemId]} 件 · 使用后会留下共同记录</span>
+                </button>
+              ) : (
+                <Link to="/game">
+                  <AppIcon icon={Package} size={21} />
+                  <strong>去接一份补给</strong>
+                  <span>玩一局，再带礼物回草原</span>
+                </Link>
+              )}
               <Link to="/life" hash="map">
                 <AppIcon icon={Camera} size={21} />
                 <strong>贴张生活照片</strong>
