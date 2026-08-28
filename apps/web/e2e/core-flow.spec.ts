@@ -318,10 +318,12 @@ test("AI disclosure, memory controls and network fallback remain usable", async 
   });
   await page.goto("/companion");
   await expect(page.getByText("嗨，我是 AI 飞马，不是真人或心理咨询师。")).toBeVisible();
-  await page.getByLabel("本次允许带入已保存记忆").check();
+  await page.getByText("本次发送范围").click();
+  await page.getByLabel(/已保存记忆 → WingedHorse 服务端/u).check();
   await page.getByLabel("想说什么都可以").fill("我喜欢散步");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText("我听见了，我们先把今天拆小一点。")).toBeVisible();
+  await expect(page.getByText("WingedHorse 本地降级回复")).toBeVisible();
   expect(companionRequests[0]).not.toHaveProperty("lifeContext");
   if (process.env.VISUAL_QA)
     await page.screenshot({
@@ -333,6 +335,63 @@ test("AI disclosure, memory controls and network fallback remain usable", async 
   await expect(page.getByText("我喜欢散步")).toBeVisible();
   await page.getByRole("button", { name: "删除" }).click();
   await expect(page.getByText("还没有保存任何记忆")).toBeVisible();
+});
+
+test("companion sends life facts and manual mood only after session consent", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "wingedhorse-local-state-v2-1",
+      JSON.stringify({
+        version: 5,
+        state: {
+          assessmentOptionSeed: "companion-grounding-e2e",
+          result: {
+            questionSetId: "wingedhorse-v2-1",
+            questionSetVersion: "2.1.0",
+            rawScores: { energy: 0, engine: 0, chaos: 0, direction: 0 },
+            normalizedScores: { energy: 30, engine: 50, chaos: 40, direction: 60 },
+            typeId: "tired",
+            edgeDimensions: [],
+            easterEggs: [],
+            bloodline: { purity: 100, hidden: [] },
+            directionHint: "clear-direction"
+          },
+          inventory: { "nap-mask": 1 },
+          petVitals: { energy: 30, engine: 50, chaos: 40, direction: 60 },
+          relationshipXp: 12,
+          manualMood: "anxious",
+          lifeEvents: [],
+          settledGameIds: []
+        }
+      })
+    );
+  });
+  const requests: Array<Record<string, unknown>> = [];
+  await page.route("**/api/companion/messages", async (route) => {
+    requests.push(route.request().postDataJSON() as Record<string, unknown>);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        reply: "今天先不催自己满电。我们只选一件小事。",
+        source: "domain-grounded",
+        safetyLevel: "normal",
+        aiDisclosure: true,
+        memoryCandidate: null
+      })
+    });
+  });
+  await page.goto("/companion");
+  await expect(page.getByText("AI 伙伴 · 疲惫的牛马")).toBeVisible();
+  await page.getByText("本次发送范围").click();
+  const lifeConsent = page.getByLabel(/生活簿、养成状态与手动心情 → 仅 WingedHorse 服务端/u);
+  await expect(lifeConsent).toBeEnabled();
+  await lifeConsent.check();
+  await page.getByRole("button", { name: "我们接下来做什么？" }).click();
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(page.getByText(/依据你本次允许使用的生活事实/u)).toBeVisible();
+  expect(requests[0]).toHaveProperty("moodHint", "anxious");
+  expect(requests[0]).toHaveProperty("lifeContext");
 });
 
 test("companion exposes a recoverable local reply for malformed API responses", async ({

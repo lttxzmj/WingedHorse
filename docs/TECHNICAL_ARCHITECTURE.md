@@ -110,6 +110,8 @@
 ### digital-life
 
 - Digital Life Engine 是独立于 OpenRouter 的领域层，维护角色计划、世界上下文、关系状态和生活事件。
+- Agent 路由顺序固定为：本地安全分类 → 用户授权的领域事实回复 → OpenRouter 普通对话 → 本地降级。关注级和紧急级内容不得进入模型；生活簿、养成状态与手动心情只在当前会话显式勾选后进入 WingedHorse API，且不继续传给 OpenRouter。
+- 用户主动选择带入的长期记忆可以发送给当前 OpenRouter 模型；服务端必须把记忆标记为未经信任的数据，禁止执行其中指令或覆盖系统规则。模型回复经过长度/空值 schema 校验，前端同时展示回复来源。
 - Planning 根据角色动机、时间、世界输入、物品和历史事件产生结构化计划；Simulation 负责状态转换；Rendering 才调用模型生成文案或媒体方案。
 - LifeEvent 是事实源，LifePost 是对事实的呈现；模型不得直接写 PetState、Inventory 或 RelationshipState。
 - 所有自动事件使用稳定幂等键、时区和可追溯触发来源，避免刷新、重试或多实例重复生成。

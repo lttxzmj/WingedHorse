@@ -1205,7 +1205,19 @@ h1 {
 }
 
 .companion-header {
+  grid-template-columns: auto 3rem minmax(0, 1fr) auto;
+  gap: var(--space-3);
   margin-bottom: var(--space-3);
+}
+
+.companion-header--generic {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.companion-header > .winged-horse {
+  width: 3rem;
+  height: 3rem;
+  object-fit: contain;
 }
 
 .ai-pill {
@@ -1279,6 +1291,19 @@ h1 {
   background: #fff0ed;
 }
 
+.chat-bubble--concern p {
+  border-color: #c99519;
+  background: var(--color-brand-50);
+}
+
+.chat-source {
+  display: block;
+  margin: var(--space-1) var(--space-2) 0;
+  color: var(--color-ink-500);
+  font-size: var(--font-micro);
+  line-height: 1.45;
+}
+
 .remember-message {
   margin-top: var(--space-1);
   border: 0;
@@ -1286,6 +1311,12 @@ h1 {
   background: transparent;
   font-size: var(--font-micro);
   text-decoration: underline;
+}
+
+.remember-message:disabled {
+  cursor: default;
+  opacity: 0.72;
+  text-decoration: none;
 }
 
 .typing-dots {
@@ -1310,8 +1341,7 @@ h1 {
 }
 
 .chat-composer {
-  position: sticky;
-  bottom: 0;
+  position: relative;
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
@@ -1350,6 +1380,38 @@ h1 {
   gap: var(--space-2);
   color: var(--color-ink-500);
   font-size: var(--font-micro);
+}
+
+.chat-consent-options {
+  min-width: 0;
+  color: var(--color-ink-700);
+  font-size: var(--font-micro);
+}
+
+.chat-consent-options summary {
+  min-height: 2.75rem;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.chat-consent-options summary span {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-ink-500);
+  font-weight: 600;
+}
+
+.chat-consent-options > div {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.chat-consent-options p {
+  margin: 0;
+  color: var(--color-ink-500);
+  line-height: 1.45;
 }
 
 .signals-page {

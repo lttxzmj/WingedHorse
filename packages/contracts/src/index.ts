@@ -265,7 +265,7 @@ export const companionMessageSchema = z.object({
 });
 
 export const companionResponseSchema = z.object({
-  reply: z.string(),
+  reply: z.string().trim().min(1).max(1200),
   source: z.enum(["openrouter", "local-fallback", "safety-flow", "domain-grounded"]),
   safetyLevel: z.enum(["normal", "concern", "urgent"]),
   aiDisclosure: z.literal(true),

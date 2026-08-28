@@ -3,7 +3,8 @@ import {
   type CompanionMessageRequest,
   type CompanionMessageResponse
 } from "@wingedhorse/contracts";
-import { ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
+import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
+import { getResultProfile, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -17,6 +18,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   safety?: "normal" | "concern" | "urgent";
+  source?: CompanionMessageResponse["source"];
 }
 
 const LOCAL_REPLY =
@@ -50,7 +52,11 @@ export function CompanionPage() {
   const relationshipXp = useAppStore((state) => state.relationshipXp);
   const lifeEvents = useAppStore((state) => state.lifeEvents);
   const inventory = useAppStore((state) => state.inventory);
+  const manualMood = useAppStore((state) => state.manualMood);
   const addMemory = useAppStore((state) => state.addMemory);
+  const profile = result ? getResultProfile(result.typeId) : null;
+  const companionName = profile?.name ?? "飞马";
+  const lifeContextAvailable = Boolean(result && dailyPlan && worldContext);
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView?.({ block: "end", behavior: "smooth" });
@@ -93,7 +99,8 @@ export function CompanionPage() {
                 .map(([id, count]) => ({ name: ITEM_CATALOG[id].name, count }))
             }
           }
-        : {})
+        : {}),
+      ...(lifeContextEnabled && manualMood ? { moodHint: manualMood } : {})
     };
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), COMPANION_TIMEOUT_MS);
@@ -116,7 +123,8 @@ export function CompanionPage() {
           id: createClientId(),
           role: "assistant",
           content: data.reply,
-          safety: data.safetyLevel
+          safety: data.safetyLevel,
+          source: data.source
         }
       ]);
       if (data.source === "local-fallback") {
@@ -125,7 +133,13 @@ export function CompanionPage() {
     } catch {
       setMessages((current) => [
         ...current,
-        { id: createClientId(), role: "assistant", content: LOCAL_REPLY, safety: "normal" }
+        {
+          id: createClientId(),
+          role: "assistant",
+          content: LOCAL_REPLY,
+          safety: "normal",
+          source: "local-fallback"
+        }
       ]);
       setDeliveryNotice("网络繁忙或回复异常，已切换为本地陪伴回复。你可以继续说。");
     } finally {
@@ -139,10 +153,15 @@ export function CompanionPage() {
 
   return (
     <main className="companion-page">
-      <header className="subpage-header companion-header">
+      <header
+        className={`subpage-header companion-header ${result ? "" : "companion-header--generic"}`}
+      >
         <Link to="/home">←</Link>
+        {result && profile ? (
+          <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt="" />
+        ) : null}
         <div>
-          <p className="eyebrow">AI 伙伴 · 飞马</p>
+          <p className="eyebrow">AI 伙伴 · {companionName}</p>
           <h1>说两句也好</h1>
         </div>
         <span className="ai-pill">AI</span>
@@ -153,21 +172,43 @@ export function CompanionPage() {
       <section className="chat-list" aria-live="polite" aria-label="与 AI 飞马的对话">
         {messages.map((message) => (
           <article
-            className={`chat-bubble chat-bubble--${message.role} ${message.safety === "urgent" ? "chat-bubble--urgent" : ""}`}
+            className={`chat-bubble chat-bubble--${message.role} ${message.safety && message.safety !== "normal" ? `chat-bubble--${message.safety}` : ""}`}
             key={message.id}
           >
-            <span>{message.role === "assistant" ? "AI 飞马" : "你"}</span>
+            <span>{message.role === "assistant" ? `AI · ${companionName}` : "你"}</span>
             <p>{message.content}</p>
-            {message.role === "user" && memoryEnabled ? (
-              <button className="remember-message" onClick={() => addMemory(message.content)}>
-                把这句话记在本机
+            {message.role === "assistant" && message.source ? (
+              <small className="chat-source">
+                {message.source === "domain-grounded"
+                  ? "依据你本次允许使用的生活事实 · 未发送给 OpenRouter"
+                  : message.source === "safety-flow"
+                    ? "WingedHorse 安全流程 · 未调用模型"
+                    : message.source === "openrouter"
+                      ? "由当前 OpenRouter 模型生成"
+                      : "WingedHorse 本地降级回复"}
+              </small>
+            ) : null}
+            {message.role === "user" ? (
+              <button
+                className="remember-message"
+                disabled={
+                  memories.some((memory) => memory.content === message.content) ||
+                  memories.length >= 20
+                }
+                onClick={() => addMemory(message.content)}
+              >
+                {memories.some((memory) => memory.content === message.content)
+                  ? "已记在本机"
+                  : memories.length >= 20
+                    ? "本机记忆已满"
+                    : "把这句话记在本机"}
               </button>
             ) : null}
           </article>
         ))}
         {sending ? (
           <article className="chat-bubble chat-bubble--assistant">
-            <span>AI 飞马</span>
+            <span>AI · {companionName}</span>
             <p className="typing-dots" aria-label="正在回复">
               •••
             </p>
@@ -182,9 +223,9 @@ export function CompanionPage() {
       ) : null}
       <div className="prompt-chips" aria-label="快捷开场">
         {[
-          "今天有点累",
-          "我脑子很乱",
+          "我们接下来做什么？",
           "陪我安静一下",
+          ...(Object.values(inventory).some(Boolean) ? ["背包里有什么？"] : []),
           ...(latestLifeEvent ? [`聊聊刚才的「${latestLifeEvent.title}」`] : [])
         ].map((prompt) => (
           <button key={prompt} onClick={() => setDraft(prompt)}>
@@ -203,24 +244,38 @@ export function CompanionPage() {
           placeholder="不用组织得很完整……"
         />
         <div className="chat-composer__footer">
-          <div className="chat-consent-options">
-            <label className="memory-toggle">
-              <input
-                type="checkbox"
-                checked={memoryEnabled}
-                onChange={(event) => setMemoryEnabled(event.target.checked)}
-              />
-              本次允许带入已保存记忆
-            </label>
-            <label className="memory-toggle">
-              <input
-                type="checkbox"
-                checked={lifeContextEnabled}
-                onChange={(event) => setLifeContextEnabled(event.target.checked)}
-              />
-              本次允许把生活簿与养成状态发送给 WingedHorse 服务端（不会发送给 OpenRouter）
-            </label>
-          </div>
+          <details className="chat-consent-options">
+            <summary>
+              本次发送范围
+              <span>
+                {memoryEnabled || lifeContextEnabled
+                  ? `已选择 ${Number(memoryEnabled) + Number(lifeContextEnabled)} 项`
+                  : "默认不带入额外资料"}
+              </span>
+            </summary>
+            <div>
+              <p>每次进入对话都默认关闭；勾选只对当前页面会话生效。</p>
+              <label className="memory-toggle">
+                <input
+                  type="checkbox"
+                  checked={memoryEnabled}
+                  onChange={(event) => setMemoryEnabled(event.target.checked)}
+                />
+                已保存记忆 → WingedHorse 服务端与当前 OpenRouter 模型
+              </label>
+              <label className="memory-toggle">
+                <input
+                  type="checkbox"
+                  checked={lifeContextEnabled}
+                  onChange={(event) => setLifeContextEnabled(event.target.checked)}
+                  disabled={!lifeContextAvailable}
+                />
+                {lifeContextAvailable
+                  ? "生活簿、养成状态与手动心情 → 仅 WingedHorse 服务端"
+                  : "生活状态正在准备 → 暂不可选择"}
+              </label>
+            </div>
+          </details>
           <Button type="submit" loading={sending} disabled={!draft.trim()}>
             发送
           </Button>

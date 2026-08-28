@@ -13,7 +13,7 @@ interface ProviderMessage {
 export type ModelTask = "chat" | "summary" | "vision";
 
 const responseSchema = z.object({
-  choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1)
+  choices: z.array(z.object({ message: z.object({ content: z.string().max(4_000) }) })).min(1)
 });
 
 /** 按任务解析模型 ID；summary 缺省回退 chat，vision 不跨任务回退（需视觉能力）。 */
@@ -70,6 +70,8 @@ export class OpenRouterProvider {
     if (!response.ok) throw new Error(`OPENROUTER_HTTP_${response.status}`);
     const parsed = responseSchema.safeParse(await response.json());
     if (!parsed.success) throw new Error("OPENROUTER_INVALID_RESPONSE");
-    return parsed.data.choices[0]!.message.content.trim();
+    const content = parsed.data.choices[0]!.message.content.trim();
+    if (!content) throw new Error("OPENROUTER_EMPTY_RESPONSE");
+    return content.slice(0, 1_200);
   }
 }
