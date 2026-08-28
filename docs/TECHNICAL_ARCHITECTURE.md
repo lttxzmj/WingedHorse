@@ -45,7 +45,7 @@
   - 服务端环境变量：`OPENROUTER_CHAT_MODEL`（对话，`deepseek/deepseek-chat`）、`OPENROUTER_SUMMARY_MODEL`（摘要，回退 chat）、`OPENROUTER_VISION_MODEL`（视觉，`qwen/qwen3-vl-30b-a3b-thinking`）。
   - 高风险分类不走模型，由本地规则化流程（SafetyService）处理，fail-safe、零成本零延迟。
 - 模型 ID、超时、预算、隐私路由和降级策略只存在服务端配置。
-- `CompanionAccessService` 在应用层执行双维分钟限流（IP、会话）、同会话单模型并发和 UTC 自然日模型预算（会话、API 实例）。客户端地址只以进程随机盐 SHA-256 指纹暂存在内存，不写日志；危机安全流程绕过普通聊天限流且不调用模型。当前生产为单 API 实例；水平扩容前迁移到 Redis 原子计数，并保留 nginx 与模型账号费用上限作为外层防线。
+- `CompanionAccessService` 在应用层执行双维分钟限流（IP、会话）、同会话单模型并发和 UTC 自然日模型预算（会话、全实例）。生产使用 Redis Lua 原子操作，全部 API 实例共享同一 HMAC 指纹密钥；原始 IP/会话标识不入 Redis、不写日志。Redis 故障时普通请求回退到进程内限流，远端模型调用则关闭，避免多实例失控消费；危机安全流程仍绕过普通限流且不调用模型。nginx 与 OpenRouter 账号费用上限继续作为外层防线。
 - 所有模型输出先经过结构校验、安全后处理和产品文案边界。
 
 ### 端侧感知

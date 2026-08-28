@@ -4,6 +4,7 @@ import { AssessmentController } from "./assessment/assessment.controller.js";
 import { AssessmentService } from "./assessment/assessment.service.js";
 import { CompanionController } from "./companion/companion.controller.js";
 import { CompanionAccessService } from "./companion/companion-access.service.js";
+import { CompanionRedisStore } from "./companion/companion-redis.store.js";
 import { CompanionService } from "./companion/companion.service.js";
 import { OpenRouterProvider } from "./companion/openrouter.provider.js";
 import { SafetyService } from "./companion/safety.service.js";
@@ -29,6 +30,7 @@ import { PlayerService } from "./player/player.service.js";
   providers: [
     AssessmentService,
     CompanionAccessService,
+    CompanionRedisStore,
     CompanionService,
     OpenRouterProvider,
     SafetyService,

@@ -80,7 +80,7 @@ export class CompanionService {
     const grounded = this.groundedReply(request);
     if (grounded) return grounded;
     if (!this.provider.available) return this.fallback(request.message, level);
-    const modelAccess = this.access.acquireModel(request.sessionId);
+    const modelAccess = await this.access.acquireModel(request.sessionId);
     if (!modelAccess.granted) return this.capacityFallback(modelAccess.reason);
 
     const controller = new AbortController();
@@ -105,7 +105,7 @@ export class CompanionService {
     } catch {
       return this.fallback(request.message, level);
     } finally {
-      modelAccess.release();
+      await modelAccess.release();
       controller.abort();
       clearTimeout(timeout);
     }
@@ -142,7 +142,7 @@ export class CompanionService {
       yield* this.fixedStream(this.fallback(request.message, level));
       return;
     }
-    const modelAccess = this.access.acquireModel(request.sessionId);
+    const modelAccess = await this.access.acquireModel(request.sessionId);
     if (!modelAccess.granted) {
       yield* this.fixedStream(this.capacityFallback(modelAccess.reason));
       return;
@@ -181,7 +181,7 @@ export class CompanionService {
       yield { type: "replace", content: fallback.reply };
       yield { type: "done", response: fallback };
     } finally {
-      modelAccess.release();
+      await modelAccess.release();
       controller.abort();
       clearTimeout(timeout);
     }

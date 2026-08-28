@@ -38,9 +38,11 @@ services:
     environment:
       API_PORT: 3100
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
     expose: ["3100"]
     depends_on:
       postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
     read_only: true
     tmpfs: [/tmp]
     security_opt: [no-new-privileges:true]
@@ -77,6 +79,26 @@ services:
       retries: 10
     logging: *default-logging
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: sh -c 'exec redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD}"'
+    volumes: ["redis_data:/data"]
+    expose: ["6379"]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    mem_limit: 96m
+    cpus: 0.15
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+
   mosquitto:
     image: eclipse-mosquitto:2
     profiles: [hardware]
@@ -96,4 +118,5 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   mosquitto_data:

@@ -21,6 +21,12 @@ const environmentSchema = z
         value === undefined || (/^postgres(?:ql)?:\/\//u.test(value) && !isPlaceholder(value)),
       "must be a PostgreSQL URL"
     ),
+    REDIS_URL: optionalString.refine(
+      (value) => value === undefined || /^rediss?:\/\//u.test(value),
+      "must be a Redis URL"
+    ),
+    REDIS_PASSWORD: optionalString,
+    COMPANION_FINGERPRINT_SECRET: optionalString,
     PUBLIC_APP_URL: optionalUrl,
     OPENROUTER_API_KEY: optionalString,
     OPENROUTER_CHAT_MODEL: optionalString,
@@ -51,6 +57,41 @@ const environmentSchema = z
         path: ["DATABASE_URL"],
         message: "is required in production"
       });
+    }
+    if (environment.NODE_ENV === "production" && !environment.REDIS_URL) {
+      context.addIssue({
+        code: "custom",
+        path: ["REDIS_URL"],
+        message: "is required in production"
+      });
+    }
+    if (environment.NODE_ENV === "production" && !environment.REDIS_PASSWORD) {
+      context.addIssue({
+        code: "custom",
+        path: ["REDIS_PASSWORD"],
+        message: "is required in production"
+      });
+    }
+    if (
+      environment.NODE_ENV === "production" &&
+      (!environment.COMPANION_FINGERPRINT_SECRET ||
+        environment.COMPANION_FINGERPRINT_SECRET.length < 32)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["COMPANION_FINGERPRINT_SECRET"],
+        message: "must contain at least 32 characters in production"
+      });
+    }
+    for (const field of ["REDIS_PASSWORD", "COMPANION_FINGERPRINT_SECRET"] as const) {
+      const value = environment[field];
+      if (value && isPlaceholder(value)) {
+        context.addIssue({
+          code: "custom",
+          path: [field],
+          message: "must not be a template placeholder"
+        });
+      }
     }
     if (environment.OPENROUTER_API_KEY && !environment.OPENROUTER_CHAT_MODEL) {
       context.addIssue({

@@ -14,9 +14,9 @@ describe("parseEnvironment", () => {
     });
   });
 
-  it("requires persistent storage in production", () => {
+  it("requires persistent storage and shared budget infrastructure in production", () => {
     expect(() => parseEnvironment({ NODE_ENV: "production" })).toThrow(
-      "Invalid server configuration: DATABASE_URL"
+      "Invalid server configuration: DATABASE_URL, REDIS_URL, REDIS_PASSWORD, COMPANION_FINGERPRINT_SECRET"
     );
   });
 
@@ -54,11 +54,16 @@ describe("parseEnvironment", () => {
       parseEnvironment({
         NODE_ENV: "production",
         DATABASE_URL: "postgresql://wingedhorse:请替换密码@postgres:5432/wingedhorse",
+        REDIS_URL: "redis://redis:6379",
+        REDIS_PASSWORD: "change-me",
+        COMPANION_FINGERPRINT_SECRET: "请替换为随机生成的至少32字符密钥",
         OPENROUTER_API_KEY: "请替换为真实密钥",
         OPENROUTER_CHAT_MODEL: "deepseek/deepseek-chat",
         MQTT_USER: "wingedhorse",
         MQTT_PASSWORD: "change-me"
       })
-    ).toThrow("Invalid server configuration: DATABASE_URL, OPENROUTER_API_KEY, MQTT_PASSWORD");
+    ).toThrow(
+      "Invalid server configuration: DATABASE_URL, COMPANION_FINGERPRINT_SECRET, REDIS_PASSWORD, OPENROUTER_API_KEY, MQTT_PASSWORD"
+    );
   });
 });

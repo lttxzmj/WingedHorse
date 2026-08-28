@@ -52,7 +52,7 @@
 
 API 会在监听端口前验证生产环境：`DATABASE_URL` 必须存在，OpenRouter Key 与聊天模型必须成对配置，MQTT 用户名/密码必须成对配置，模板中的“请替换/change-me”占位 Secret 会导致启动失败。错误只报告字段名，不输出 Secret 值。
 
-Agent 的四个应用层保护变量必须使用正整数：`COMPANION_IP_RATE_LIMIT_PER_MINUTE`（默认 60）、`COMPANION_SESSION_RATE_LIMIT_PER_MINUTE`（默认 20）、`COMPANION_SESSION_MODEL_BUDGET_PER_DAY`（默认 40）、`COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY`（默认 1000）。日预算按 UTC 自然日、单 API 进程统计；当前单实例部署可直接使用。水平扩容前必须迁移到 Redis 原子计数，且在 OpenRouter 账号侧另设费用上限，不能把进程内计数当作账单级硬上限。
+Agent 的四个应用层保护变量必须使用正整数：`COMPANION_IP_RATE_LIMIT_PER_MINUTE`（默认 60）、`COMPANION_SESSION_RATE_LIMIT_PER_MINUTE`（默认 20）、`COMPANION_SESSION_MODEL_BUDGET_PER_DAY`（默认 40）、`COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY`（默认 1000）。生产 Compose 使用带 AOF 的 Redis 原子统计分钟窗口、同会话并发锁和 UTC 自然日预算；`REDIS_PASSWORD` 必须为随机长密码，`COMPANION_FINGERPRINT_SECRET` 至少 32 字符并在全部 API 实例保持一致。Redis 不可用时远端模型调用会关闭，但经过审核的危机流程仍可用。仍须在 OpenRouter 账号侧另设费用上限，应用计数不是账单级硬上限。
 
 注意：Compose 文件内的 `${POSTGRES_USER}` 等变量插值依赖 `--env-file ../.env.production`，而不是容器内的 `env_file` 注入；两者分工不同，部署命令必须同时带 `--env-file`。
 

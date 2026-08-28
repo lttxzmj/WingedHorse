@@ -25,7 +25,7 @@ export class CompanionController {
 
   @Post("messages")
   async message(@Body() body: unknown, @Req() request: FastifyRequest) {
-    const parsed = this.parseAndAuthorize(body, request);
+    const parsed = await this.parseAndAuthorize(body, request);
     return this.companion.reply(parsed);
   }
 
@@ -35,7 +35,7 @@ export class CompanionController {
     @Req() request: FastifyRequest,
     @Res() reply: FastifyReply
   ) {
-    const parsed = this.parseAndAuthorize(body, request);
+    const parsed = await this.parseAndAuthorize(body, request);
 
     reply.hijack();
     reply.raw.statusCode = 200;
@@ -52,7 +52,7 @@ export class CompanionController {
     }
   }
 
-  private parseAndAuthorize(body: unknown, request: FastifyRequest) {
+  private async parseAndAuthorize(body: unknown, request: FastifyRequest) {
     const parsed = companionMessageSchema.safeParse(body);
     if (!parsed.success)
       throw new BadRequestException({
@@ -60,7 +60,7 @@ export class CompanionController {
         message: "消息格式不正确"
       });
     if (this.safety.classify(parsed.data.message) === "normal") {
-      const decision = this.access.checkRequest(request.ip, parsed.data.sessionId);
+      const decision = await this.access.checkRequest(request.ip, parsed.data.sessionId);
       if (!decision.allowed) {
         throw new HttpException(
           {
