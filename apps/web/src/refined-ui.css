@@ -705,6 +705,38 @@
   font-size: 0.8rem;
 }
 
+.life-boundary--compact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.68rem 0.78rem;
+  border-radius: 1rem;
+  color: #665c4e;
+}
+
+.life-boundary--compact > div {
+  display: grid;
+  gap: 0.05rem;
+}
+
+.life-boundary--compact strong {
+  color: var(--color-ink-700);
+  font-size: 0.73rem;
+}
+
+.life-boundary--compact span {
+  font-size: 0.68rem;
+}
+
+.life-boundary--compact a {
+  color: #6b5318;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 .journey-card {
   margin-bottom: 1.8rem;
   border-color: rgb(201 149 25 / 18%);
@@ -1040,22 +1072,60 @@
   font-size: 0.62rem;
 }
 
-.photo-map__atlas-photos {
+.photo-map__region {
   position: absolute;
   z-index: 3;
-  inset: 5.25rem 1rem 4.8rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-content: center;
-  gap: 0.75rem;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: transparent;
+}
+
+.photo-map__region::before {
+  position: absolute;
+  inset: -0.45rem;
+  content: "";
+}
+
+.photo-map__region-dot {
+  display: block;
+  width: 0.46rem;
+  height: 0.46rem;
+  margin: 0.27rem;
+  border: 1px solid rgb(255 255 255 / 68%);
+  border-radius: 50%;
+  background: rgb(91 114 62 / 48%);
+  box-shadow: 0 2px 5px rgb(47 69 36 / 14%);
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.photo-map__region:hover .photo-map__region-dot,
+.photo-map__region:focus-visible .photo-map__region-dot {
+  transform: scale(1.65);
+  background: var(--color-brand-500);
+}
+
+.photo-map__region:focus-visible {
+  border-radius: 50%;
+  outline: 3px solid var(--color-focus-600);
+  outline-offset: 0.35rem;
+}
+
+.photo-map__region.has-photos {
+  z-index: 5;
+  width: 3.2rem;
+  height: 3.7rem;
 }
 
 .photo-map__polaroid {
   position: relative;
   display: grid;
-  width: 100%;
-  min-width: 0;
-  min-height: 4.5rem;
+  width: 3.05rem;
+  min-height: 3.5rem;
   padding: 0.22rem 0.22rem 0.38rem;
   transform: rotate(-4deg);
   border-radius: 0.18rem;
@@ -1063,13 +1133,8 @@
   box-shadow: 0 7px 16px rgb(53 65 36 / 24%);
 }
 
-.photo-map__polaroid--2,
-.photo-map__polaroid--4 {
+.photo-map__region:nth-of-type(3n) .photo-map__polaroid {
   transform: rotate(5deg);
-}
-
-.photo-map__polaroid--3 {
-  transform: rotate(-2deg) translateY(0.35rem);
 }
 
 .photo-map__polaroid img {
@@ -1086,6 +1151,21 @@
   line-height: 1;
 }
 
+.photo-map__polaroid b {
+  position: absolute;
+  top: -0.42rem;
+  right: -0.42rem;
+  display: grid;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.2rem;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  color: #5a430c;
+  background: var(--color-brand-500);
+  font-size: 0.58rem;
+}
 
 .photo-map__grassland-pocket {
   position: absolute;

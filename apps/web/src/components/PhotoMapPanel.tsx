@@ -119,28 +119,38 @@ export function PhotoMapPanel() {
         </button>
       </div>
       <p className="photo-map__intro">
-        选择照片后手动标记省份或地区。这里只保存省级位置和重绘后的压缩照片，不保存精确坐标、原文件或 EXIF。
+        选择照片后手动标记省份或地区。这里只保存省级位置和重绘后的压缩照片，不保存精确坐标、原文件或
+        EXIF。
       </p>
 
-      <div className="photo-map__atlas" aria-label="共同旅行照片手账">
+      <div className="photo-map__atlas" aria-label="中国省份照片足迹内测布局">
         <img src="/scene/travel-atlas-bg.webp" alt="暖色草原旅行手账底板" />
         <div className="photo-map__atlas-title" aria-hidden="true">
-          <strong>共同足迹</strong>
+          <strong>中国足迹</strong>
           <span>{moments.length ? `已经贴下 ${moments.length} 张` : "从一张照片开始"}</span>
         </div>
-        <div className="photo-map__atlas-photos">
-          {moments.slice(0, 8).map((moment, index) => (
+        {PHOTO_REGIONS.filter(
+          (region) => region.id !== "grassland" && momentsByRegion.has(region.id)
+        ).map((region) => {
+          const regionMoments = momentsByRegion.get(region.id) ?? [];
+          const latest = regionMoments[0];
+          if (!latest) return null;
+          return (
             <button
-              className={`photo-map__polaroid photo-map__polaroid--${(index % 4) + 1}`}
-              key={moment.id}
-              aria-label={`查看${regionLabel(moment.regionId)}的照片`}
-              onClick={() => setSelectedId(moment.id)}
+              className={`photo-map__region ${latest ? "has-photos" : ""}`}
+              style={{ left: `${region.x}%`, top: `${region.y}%` }}
+              key={region.id}
+              aria-label={`查看${region.label}的 ${regionMoments.length} 张照片`}
+              onClick={() => setSelectedId(latest.id)}
             >
-              <img src={moment.imageUrl} alt="" />
-              <small>{regionLabel(moment.regionId)}</small>
+              <span className="photo-map__polaroid">
+                <img src={latest.imageUrl} alt="" />
+                <small>{region.label}</small>
+                {regionMoments.length > 1 ? <b>{regionMoments.length}</b> : null}
+              </span>
             </button>
-          ))}
-        </div>
+          );
+        })}
         <button
           className="photo-map__grassland-pocket"
           onClick={() => {
@@ -161,7 +171,7 @@ export function PhotoMapPanel() {
       </div>
 
       <p className="photo-map__map-note">
-        这是旅行手账，不是地图，也不展示行政边界或精确坐标；地区只作为你手动选择的照片标签。
+        内测版按省级地理方位排列照片，不表达行政边界或精确坐标；大陆公开发布前将接入带审图号、边界未修改的标准地图底图。
       </p>
       {moments.length === 0 ? (
         <div className="photo-map__empty">

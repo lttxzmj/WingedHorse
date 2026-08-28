@@ -2,7 +2,7 @@ import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
-import { BookHeart, Heart, Map, MessageCircle, Navigation, Save } from "lucide-react";
+import { BookHeart, Heart, Map, MessageCircle, Navigation, Save, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
@@ -69,18 +69,21 @@ export function LifePage() {
           <h1>{view === "feed" ? "它今天也在生活" : "一起走过的地方"}</h1>
         </div>
       </header>
-      <aside className="life-boundary">
-        这不是公开朋友圈。系统事件可以按设置备份；足迹照片只保存在这台设备，仅保存你手动选择的省级位置，
-        不保存精确坐标，也不会发送给 AI。
-        <span role="status">
-          {lifeSyncEnabled
-            ? syncState === "synced"
-              ? " 已备份到 WingedHorse 服务端。"
-              : syncState === "offline"
-                ? " 服务端暂不可用，本机记录仍然完整。"
-                : " 正在同步本机记录……"
-            : " 当前仅保存在这台设备。"}
-        </span>
+      <aside className="life-boundary life-boundary--compact">
+        <AppIcon icon={ShieldCheck} size={19} />
+        <div>
+          <strong>只属于你们</strong>
+          <span role="status">
+            {lifeSyncEnabled
+              ? syncState === "synced"
+                ? "生活事件已备份；照片仍只在本机"
+                : syncState === "offline"
+                  ? "服务暂不可用，本机记录仍然完整"
+                  : "正在同步生活事件；照片不会上传"
+              : "生活事件和照片当前仅保存在这台设备"}
+          </span>
+        </div>
+        <Link to="/settings">隐私设置</Link>
       </aside>
       <div className="life-view-switch" role="tablist" aria-label="生活记录视图">
         <button

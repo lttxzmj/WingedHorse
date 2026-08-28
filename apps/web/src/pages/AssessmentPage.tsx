@@ -1,7 +1,7 @@
 import { currentQuestionSet, scoreAssessment } from "@wingedhorse/domain";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { useAppStore } from "../store/useAppStore";
 
@@ -35,6 +35,7 @@ function answerConfirmationDelay() {
 export function AssessmentPage() {
   const navigate = useNavigate();
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const hasPresentedQuestion = useRef(false);
   const answers = useAppStore((state) => state.answers);
   const index = useAppStore((state) => state.assessmentIndex);
   const setAnswer = useAppStore((state) => state.setAnswer);
@@ -52,7 +53,11 @@ export function AssessmentPage() {
   const chapter = getJourneyChapter(safeIndex);
 
   useEffect(() => {
-    headingRef.current?.focus();
+    if (!hasPresentedQuestion.current) {
+      hasPresentedQuestion.current = true;
+      return;
+    }
+    headingRef.current?.focus({ preventScroll: true });
   }, [safeIndex]);
   useEffect(() => {
     ensureAssessmentVersion(currentQuestionSet.version);
@@ -140,6 +145,7 @@ export function AssessmentPage() {
         key={question.id}
         className={"question-panel" + (advancing ? " question-panel--advancing" : "")}
         aria-describedby={error ? "answer-error" : undefined}
+        aria-busy={advancing}
       >
         <p className="question-panel__scene">{question.scene}</p>
         <h1 ref={headingRef} tabIndex={-1}>
@@ -159,6 +165,7 @@ export function AssessmentPage() {
                 aria-checked={active}
                 disabled={advancing}
                 onClick={() => chooseOption(option.id)}
+                style={{ "--option-order": optionIndex } as CSSProperties}
               >
                 <span className="question-option__key" aria-hidden="true">
                   {String.fromCharCode(65 + optionIndex)}
