@@ -8,7 +8,7 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "你是什么牛马" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "开始 90 秒测评" })).toBeEnabled();
-    expect(screen.getByText("测评结果仅供娱乐，牛马终究会自由的")).toBeVisible();
+    expect(screen.getByRole("button", { name: "开始测测" })).toBeEnabled();
+    expect(screen.getByText("答案由你选择，结果只作轻松参考")).toBeVisible();
   });
 });

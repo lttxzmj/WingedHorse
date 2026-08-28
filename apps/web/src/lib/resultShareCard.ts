@@ -20,7 +20,16 @@ function roundedRect(
   context.fill();
 }
 
-export function createResultShareCard(
+function loadCharacter(typeId: AssessmentResult["typeId"]): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("CHARACTER_LOAD_FAILED"));
+    image.src = `/characters/types/${typeId}.webp`;
+  });
+}
+
+export async function createResultShareCard(
   result: AssessmentResult,
   profile: { name: string; tagline: string; rarity: string }
 ): Promise<Blob> {
@@ -32,10 +41,15 @@ export function createResultShareCard(
 
   context.fillStyle = "#FFF7EC";
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#FFD057";
-  context.beginPath();
-  context.arc(540, 180, 92, 0, Math.PI * 2);
-  context.fill();
+  try {
+    const character = await loadCharacter(result.typeId);
+    context.drawImage(character, 405, 35, 270, 338);
+  } catch {
+    context.fillStyle = "#FFD057";
+    context.beginPath();
+    context.arc(540, 180, 92, 0, Math.PI * 2);
+    context.fill();
+  }
   context.fillStyle = "#3B2E24";
   context.textAlign = "center";
   context.font = '700 34px -apple-system, "PingFang SC", sans-serif';

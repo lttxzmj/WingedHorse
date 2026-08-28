@@ -1,0 +1,56 @@
+import type { AssessmentResult } from "@wingedhorse/domain";
+import { beforeEach, describe, expect, it } from "vitest";
+import { useAppStore } from "./useAppStore";
+
+const result: AssessmentResult = {
+  questionSetId: "wingedhorse-workday",
+  questionSetVersion: "2.1.0",
+  rawScores: { energy: 1, engine: 1, chaos: 1, direction: 1 },
+  normalizedScores: { energy: 50, engine: 50, chaos: 50, direction: 50 },
+  typeId: "chosen",
+  edgeDimensions: [],
+  easterEggs: [],
+  bloodline: { purity: 100, hidden: [] },
+  directionHint: "clear-direction"
+};
+
+describe("game settlement and cultivation state", () => {
+  beforeEach(() => {
+    useAppStore.getState().resetAll();
+  });
+
+  it("settles each game session only once", () => {
+    useAppStore.getState().setResult(result);
+    const first = useAppStore.getState().settleGame("session-1", { "iced-americano": 2 });
+    const duplicate = useAppStore.getState().settleGame("session-1", { "iced-americano": 2 });
+
+    expect(first).toBe(true);
+    expect(duplicate).toBe(false);
+    expect(useAppStore.getState().inventory["iced-americano"]).toBe(2);
+    expect(useAppStore.getState().gamesPlayed).toBe(1);
+    expect(useAppStore.getState().relationshipXp).toBe(8);
+    expect(useAppStore.getState().lifeEvents.map((event) => event.kind)).toEqual([
+      "game-haul",
+      "arrival"
+    ]);
+  });
+
+  it("adds a small relationship response when an owned item is used", () => {
+    useAppStore.getState().setResult(result);
+    useAppStore.getState().settleGame("session-2", { "iced-americano": 1 });
+    expect(useAppStore.getState().useItem("iced-americano")).toBe(true);
+    expect(useAppStore.getState().relationshipXp).toBe(10);
+    expect(useAppStore.getState().lifeEvents[0]).toMatchObject({
+      kind: "gift",
+      itemId: "iced-americano"
+    });
+  });
+
+  it("persists explicit life-event interactions", () => {
+    useAppStore.getState().setResult(result);
+    const [event] = useAppStore.getState().lifeEvents;
+    useAppStore.getState().toggleLifeEventLike(event!.id);
+    useAppStore.getState().toggleLifeEventSaved(event!.id);
+    expect(useAppStore.getState().lifeEvents[0]).toMatchObject({ liked: true, saved: true });
+  });
+});

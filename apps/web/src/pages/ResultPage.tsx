@@ -66,21 +66,16 @@ export function ResultPage() {
       >
         <WingedHorseCharacter
           mood={profile.mood}
-          aria-label={"代表" + profile.name + "的原创小飞马"}
+          typeId={result.typeId}
+          alt={"代表" + profile.name + "的原创牛马角色"}
         />
         <div className="result-hero__copy">
-          <p className="eyebrow">你的当前形态</p>
+          <p className="eyebrow">今日判词 · 你已走完 17 幕</p>
           <h1>{profile.name}</h1>
           <p className="result-rarity">{profile.rarity}</p>
           <p className="result-tagline">{profile.tagline}</p>
         </div>
       </section>
-
-      <nav className="result-jump-nav" aria-label="结果内容导航">
-        <a href="#result-scores">四维状态</a>
-        <a href="#result-profile">牛马白描</a>
-        <a href="#result-method">结果说明</a>
-      </nav>
 
       <div className="result-grid">
         <Card className="result-card" id="result-scores">
@@ -151,7 +146,7 @@ export function ResultPage() {
         </Card>
 
         <Card className="result-card" id="result-profile">
-          <h2>你的牛马白描</h2>
+          <h2>这很像你</h2>
           <ul className="observation-list">
             {profile.observations.map((item) => (
               <li key={item}>{item}</li>
@@ -172,10 +167,18 @@ export function ResultPage() {
           {egg}
         </p>
       ))}
-      <section className="evolution-callout">
-        <div>
-          <strong>你的进化图鉴</strong>
+      <section className="evolution-callout" aria-labelledby="evolution-title">
+        <div className="evolution-callout__copy">
+          <strong id="evolution-title">你的进化图鉴</strong>
           <p>{profile.evolution}</p>
+        </div>
+        <div className="evolution-path" aria-label="从此刻的牛马通往未知的天马">
+          <span>此刻</span>
+          <i aria-hidden="true" />
+          <span className="evolution-path__mystery" aria-hidden="true">
+            {profile.id === "chosen" ? "🪽" : "?"}
+          </span>
+          <span>{profile.id === "chosen" ? "天马已现" : "天马 · 未解锁"}</span>
         </div>
       </section>
       <Card className="result-card result-method" id="result-method">
@@ -201,19 +204,25 @@ export function ResultPage() {
       <section className="result-feedback" aria-label="结果反馈">
         <div>
           <strong>这次像你吗？</strong>
-          <p>只记录在当前浏览器，帮助你自己回看。</p>
+          <p>内测阶段，先把你的感受记在这台设备上。</p>
         </div>
         {feedback ? (
-          <span role="status">收到：{feedback === "accurate" ? "是我本人" : "不太准"}</span>
+          <span role="status">收到，谢谢你说真话。</span>
         ) : (
           <div>
-            <button onClick={() => setFeedback("accurate")}>是我本人</button>
-            <button onClick={() => setFeedback("inaccurate")}>不太准</button>
+            <button onClick={() => setFeedback("accurate")}>挺像</button>
+            <button onClick={() => setFeedback("inaccurate")}>不太像</button>
           </div>
         )}
       </section>
       <div className="result-actions">
-        <Button onClick={() => void navigate({ to: "/home" })}>开始进化</Button>
+        <Button
+          className="parallel-world-button"
+          onClick={() => void navigate({ to: "/home" })}
+          aria-label="去看看平行世界里的你"
+        >
+          去看看
+        </Button>
         <Button variant="secondary" onClick={() => void shareResultCard()}>
           保存或分享结果卡
         </Button>

@@ -4,6 +4,7 @@ import {
   addItem,
   consumeItem,
   createPetVitalsFromAssessment,
+  grantItems,
   INITIAL_PET_VITALS
 } from "./inventory.js";
 
@@ -38,6 +39,14 @@ describe("inventory transactions", () => {
     expect(() => addItem({ "iced-americano": 99 }, "iced-americano", 1)).toThrow(
       "ITEM_STACK_LIMIT"
     );
+  });
+
+  it("grants a game reward bundle atomically and caps stacks", () => {
+    expect(grantItems({ "iced-americano": 98 }, { "iced-americano": 4, compass: 1 })).toEqual({
+      "iced-americano": 99,
+      compass: 1
+    });
+    expect(() => grantItems({}, { compass: -1 })).toThrow("INVALID_ITEM_QUANTITY");
   });
 });
 

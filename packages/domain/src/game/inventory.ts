@@ -32,6 +32,22 @@ export function addItem(inventory: Inventory, itemId: ItemId, quantity = 1): Inv
   return { ...inventory, [itemId]: next };
 }
 
+export function grantItems(
+  inventory: Inventory,
+  rewards: Partial<Record<ItemId, number>>
+): Inventory {
+  return Object.entries(rewards).reduce<Inventory>((next, [id, quantity]) => {
+    if (!quantity) return next;
+    if (!Number.isInteger(quantity) || quantity < 0) throw new Error("INVALID_ITEM_QUANTITY");
+    const itemId = id as ItemId;
+    const owned = next[itemId] ?? 0;
+    return {
+      ...next,
+      [itemId]: Math.min(ITEM_CATALOG[itemId].stackLimit, owned + quantity)
+    };
+  }, inventory);
+}
+
 export function applyEffect(vitals: PetVitals, effect: ItemEffect): PetVitals {
   return {
     energy: clampMeter(vitals.energy + (effect.energy ?? 0)),

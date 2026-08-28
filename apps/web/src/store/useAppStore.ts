@@ -1,12 +1,16 @@
 import {
   addItem,
+  appendLifeEvent,
   consumeItem,
+  createLifeEvent,
   createPetVitalsFromAssessment,
+  grantItems,
   INITIAL_PET_VITALS,
   type AssessmentAnswers,
   type AssessmentResult,
   type Inventory,
   type ItemId,
+  type LifeEvent,
   type PetVitals
 } from "@wingedhorse/domain";
 import { create } from "zustand";
@@ -28,6 +32,10 @@ interface AppState {
   inventory: Inventory;
   petVitals: PetVitals;
   gamesPlayed: number;
+  relationshipXp: number;
+  lifeEvents: LifeEvent[];
+  lifeSyncEnabled: boolean;
+  settledGameIds: string[];
   manualMood: "good" | "flat" | "tired" | "anxious" | "sad" | null;
   memories: Array<{ id: string; content: string; createdAt: string }>;
   resultFeedback: "accurate" | "inaccurate" | null;
@@ -39,7 +47,12 @@ interface AppState {
   resetAssessment: () => void;
   collectItem: (itemId: ItemId, quantity?: number) => void;
   useItem: (itemId: ItemId) => boolean;
-  recordGame: () => void;
+  settleGame: (sessionId: string, rewards: Partial<Record<ItemId, number>>) => boolean;
+  comfortPet: () => void;
+  toggleLifeEventLike: (id: string) => void;
+  toggleLifeEventSaved: (id: string) => void;
+  mergeLifeEvents: (events: LifeEvent[]) => void;
+  setLifeSyncEnabled: (enabled: boolean) => void;
   setManualMood: (mood: AppState["manualMood"]) => void;
   setHardwareLink: (enabled: boolean) => void;
   setDeviceId: (deviceId: string) => void;
@@ -63,6 +76,10 @@ export const useAppStore = create<AppState>()(
       inventory: {},
       petVitals: INITIAL_PET_VITALS,
       gamesPlayed: 0,
+      relationshipXp: 0,
+      lifeEvents: [],
+      lifeSyncEnabled: false,
+      settledGameIds: [],
       manualMood: null,
       memories: [],
       resultFeedback: null,
@@ -72,10 +89,19 @@ export const useAppStore = create<AppState>()(
         set((state) => ({ answers: { ...state.answers, [questionId]: optionId } })),
       setAssessmentIndex: (assessmentIndex) => set({ assessmentIndex }),
       setResult: (result) =>
-        set({
+        set((state) => ({
           result,
-          petVitals: createPetVitalsFromAssessment(result.normalizedScores)
-        }),
+          petVitals: createPetVitalsFromAssessment(result.normalizedScores),
+          lifeEvents: appendLifeEvent(
+            state.lifeEvents,
+            createLifeEvent({
+              eventKey: `arrival:${result.questionSetVersion}:${result.typeId}`,
+              kind: "arrival",
+              occurredAt: new Date().toISOString(),
+              typeId: result.typeId
+            })
+          )
+        })),
       resetAssessment: () =>
         set({
           answers: {},
@@ -90,13 +116,87 @@ export const useAppStore = create<AppState>()(
         const state = get();
         try {
           const next = consumeItem(state.inventory, state.petVitals, itemId);
-          set(next);
+          set({
+            ...next,
+            relationshipXp: Math.min(999, state.relationshipXp + 2),
+            lifeEvents: state.result
+              ? appendLifeEvent(
+                  state.lifeEvents,
+                  createLifeEvent({
+                    eventKey: `gift:${itemId}:${Date.now()}`,
+                    kind: "gift",
+                    occurredAt: new Date().toISOString(),
+                    typeId: state.result.typeId,
+                    itemId
+                  })
+                )
+              : state.lifeEvents
+          });
           return true;
         } catch {
           return false;
         }
       },
-      recordGame: () => set((state) => ({ gamesPlayed: state.gamesPlayed + 1 })),
+      settleGame: (sessionId, rewards) => {
+        const normalizedId = sessionId.trim().slice(0, 80);
+        if (!normalizedId || get().settledGameIds.includes(normalizedId)) return false;
+        set((state) => ({
+          inventory: grantItems(state.inventory, rewards),
+          gamesPlayed: state.gamesPlayed + 1,
+          relationshipXp: state.relationshipXp + (state.gamesPlayed === 0 ? 8 : 2),
+          settledGameIds: [...state.settledGameIds.slice(-19), normalizedId],
+          lifeEvents: state.result
+            ? appendLifeEvent(
+                state.lifeEvents,
+                createLifeEvent({
+                  eventKey: `game-haul:${normalizedId}`,
+                  kind: "game-haul",
+                  occurredAt: new Date().toISOString(),
+                  typeId: state.result.typeId
+                })
+              )
+            : state.lifeEvents
+        }));
+        return true;
+      },
+      comfortPet: () =>
+        set((state) => ({
+          relationshipXp: Math.min(999, state.relationshipXp + 1),
+          lifeEvents: state.result
+            ? appendLifeEvent(
+                state.lifeEvents,
+                createLifeEvent({
+                  eventKey: `quiet-moment:${new Date().toISOString().slice(0, 10)}`,
+                  kind: "quiet-moment",
+                  occurredAt: new Date().toISOString(),
+                  typeId: state.result.typeId
+                })
+              )
+            : state.lifeEvents
+        })),
+      toggleLifeEventLike: (id) =>
+        set((state) => ({
+          lifeEvents: state.lifeEvents.map((event) =>
+            event.id === id ? { ...event, liked: !event.liked } : event
+          )
+        })),
+      toggleLifeEventSaved: (id) =>
+        set((state) => ({
+          lifeEvents: state.lifeEvents.map((event) =>
+            event.id === id ? { ...event, saved: !event.saved } : event
+          )
+        })),
+      mergeLifeEvents: (events) =>
+        set((state) => {
+          const merged = new Map(state.lifeEvents.map((event) => [event.eventKey, event]));
+          for (const event of events) merged.set(event.eventKey, event);
+          return {
+            lifeEvents: [...merged.values()]
+              .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
+              .slice(0, 30)
+          };
+        }),
+      setLifeSyncEnabled: (lifeSyncEnabled) => set({ lifeSyncEnabled }),
       setManualMood: (manualMood) => set({ manualMood }),
       setHardwareLink: (hardwareLink) => set({ hardwareLink }),
       setDeviceId: (deviceId) => set({ deviceId: deviceId.trim().slice(0, 64) }),
@@ -110,6 +210,10 @@ export const useAppStore = create<AppState>()(
           inventory: {},
           petVitals: INITIAL_PET_VITALS,
           gamesPlayed: 0,
+          relationshipXp: 0,
+          lifeEvents: [],
+          lifeSyncEnabled: false,
+          settledGameIds: [],
           manualMood: null,
           memories: [],
           resultFeedback: null,
@@ -158,7 +262,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: CURRENT_APP_STATE_KEY,
-      version: 3,
+      version: 4,
       partialize: (state) => ({
         answers: state.answers,
         assessmentIndex: state.assessmentIndex,
@@ -168,6 +272,10 @@ export const useAppStore = create<AppState>()(
         inventory: state.inventory,
         petVitals: state.petVitals,
         gamesPlayed: state.gamesPlayed,
+        relationshipXp: state.relationshipXp,
+        lifeEvents: state.lifeEvents,
+        lifeSyncEnabled: state.lifeSyncEnabled,
+        settledGameIds: state.settledGameIds,
         manualMood: state.manualMood,
         memories: state.memories,
         resultFeedback: state.resultFeedback,

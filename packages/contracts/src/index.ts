@@ -63,6 +63,129 @@ export const assessmentResultSchema = z.object({
 export type AssessmentSubmission = z.infer<typeof assessmentSubmissionSchema>;
 export type AssessmentResultResponse = z.infer<typeof assessmentResultSchema>;
 
+export const horseTypeIdSchema = z.enum([
+  "chosen",
+  "perpetual",
+  "veteran",
+  "explosive",
+  "saving",
+  "overthinker",
+  "tired",
+  "mad-literature"
+]);
+export const visitorTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43,128}$/);
+
+export const petVitalsSchema = z.object({
+  energy: z.number().min(0).max(100),
+  engine: z.number().min(0).max(100),
+  chaos: z.number().min(0).max(100),
+  direction: z.number().min(0).max(100)
+});
+
+export const lifeMotiveSchema = z.enum([
+  "recharge",
+  "momentum",
+  "decompress",
+  "explore",
+  "connect"
+]);
+export const plannedActivitySchema = z.enum([
+  "slow-breakfast",
+  "tidy-supplies",
+  "cloud-watch",
+  "map-walk",
+  "blanket-nap",
+  "write-postcard",
+  "practice-flight",
+  "evening-read"
+]);
+export const lifeEventKindSchema = z.enum([
+  "arrival",
+  "game-haul",
+  "gift",
+  "quiet-moment",
+  "autonomous"
+]);
+export const lifeEventItemIdSchema = z.enum([
+  "iced-americano",
+  "nap-mask",
+  "off-work-barrier",
+  "steering-wheel-charm",
+  "main-quest-note",
+  "refusal-script",
+  "screaming-chicken",
+  "mad-note",
+  "emotion-valve",
+  "compass",
+  "mentor-card",
+  "sponsored-tent-skin",
+  "sponsored-coffee-coupon"
+]);
+export const lifeEventCreateSchema = z.object({
+  eventKey: z.string().trim().min(1).max(180),
+  kind: lifeEventKindSchema,
+  occurredAt: z.iso.datetime(),
+  typeId: horseTypeIdSchema,
+  itemId: lifeEventItemIdSchema.optional(),
+  activity: plannedActivitySchema.optional(),
+  motive: lifeMotiveSchema.optional(),
+  source: z.enum(["user-action", "daily-plan"]).optional()
+});
+export const lifeEventSchema = lifeEventCreateSchema.extend({
+  id: z.string().min(1).max(100),
+  title: z.string().min(1).max(120),
+  body: z.string().min(1).max(500),
+  source: z.enum(["user-action", "daily-plan"]),
+  liked: z.boolean(),
+  saved: z.boolean()
+});
+export const lifeEventInteractionSchema = z.object({
+  interaction: z.enum(["liked", "saved"]),
+  value: z.boolean()
+});
+export const lifeEventListSchema = z.object({
+  events: z.array(lifeEventSchema),
+  nextCursor: z.string().nullable()
+});
+export const dailyPlanSchema = z.object({
+  id: z.string(),
+  dateKey: z.iso.date(),
+  motive: lifeMotiveSchema,
+  slots: z.array(
+    z.object({
+      id: z.string(),
+      scheduledAt: z.iso.datetime(),
+      activity: plannedActivitySchema
+    })
+  )
+});
+export const worldContextSchema = z.object({
+  dateKey: z.iso.date(),
+  period: z.enum(["morning", "afternoon", "evening", "night"]),
+  timezoneOffsetMinutes: z.number().int().min(-840).max(840),
+  localHour: z.number().int().min(0).max(23)
+});
+export const lifeSyncRequestSchema = z.object({
+  typeId: horseTypeIdSchema,
+  timezoneOffsetMinutes: z.number().int().min(-840).max(840),
+  vitals: petVitalsSchema,
+  relationshipXp: z.number().int().min(0).max(999),
+  clientEvents: z.array(lifeEventSchema).max(30).default([])
+});
+export const lifeSyncResponseSchema = z.object({
+  typeId: horseTypeIdSchema,
+  world: worldContextSchema,
+  plan: dailyPlanSchema,
+  events: z.array(lifeEventSchema).max(30),
+  generatedEventIds: z.array(z.string())
+});
+export type LifeSyncRequest = z.infer<typeof lifeSyncRequestSchema>;
+export type LifeSyncResponse = z.infer<typeof lifeSyncResponseSchema>;
+export type LifeEventCreateRequest = z.infer<typeof lifeEventCreateSchema>;
+export type LifeEventResponse = z.infer<typeof lifeEventSchema>;
+export type LifeEventInteractionRequest = z.infer<typeof lifeEventInteractionSchema>;
+export type LifeEventListResponse = z.infer<typeof lifeEventListSchema>;
+
 export const companionMessageSchema = z.object({
   sessionId: z.string().min(8).max(128),
   message: z.string().trim().min(1).max(1200),
@@ -77,7 +200,22 @@ export const companionMessageSchema = z.object({
     .default([]),
   memories: z.array(z.string().trim().min(1).max(240)).max(20).default([]),
   memoryEnabled: z.boolean().default(false),
-  moodHint: z.enum(["good", "flat", "tired", "anxious", "sad"]).optional()
+  moodHint: z.enum(["good", "flat", "tired", "anxious", "sad"]).optional(),
+  lifeContext: z
+    .object({
+      typeId: horseTypeIdSchema,
+      world: worldContextSchema,
+      plan: dailyPlanSchema,
+      vitals: petVitalsSchema,
+      relationshipXp: z.number().int().min(0).max(999),
+      recentEvents: z
+        .array(lifeEventSchema.pick({ title: true, body: true, occurredAt: true }))
+        .max(6),
+      inventory: z
+        .array(z.object({ name: z.string().max(40), count: z.number().int().positive() }))
+        .max(12)
+    })
+    .optional()
 });
 
 export const companionResponseSchema = z.object({

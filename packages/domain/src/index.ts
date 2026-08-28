@@ -8,5 +8,7 @@ export * from "./game/items.js";
 export * from "./game/inventory.js";
 export * from "./game/drop-table.js";
 export * from "./signals/pulse.js";
+export * from "./digital-life/life.js";
+export * from "./digital-life/engine.js";
 export * from "./signals/expression.js";
 export * from "./signals/lighting.js";

@@ -1,6 +1,7 @@
 import { Button, Card } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { deleteRemoteLifeData } from "../lib/lifeApi";
 import { useAppStore } from "../store/useAppStore";
 
 export function SettingsPage() {
@@ -10,7 +11,11 @@ export function SettingsPage() {
   const setHardwareLink = useAppStore((state) => state.setHardwareLink);
   const deviceId = useAppStore((state) => state.deviceId);
   const setDeviceId = useAppStore((state) => state.setDeviceId);
+  const lifeSyncEnabled = useAppStore((state) => state.lifeSyncEnabled);
+  const setLifeSyncEnabled = useAppStore((state) => state.setLifeSyncEnabled);
   const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   return (
     <main className="settings-page">
       <header className="subpage-header">
@@ -21,6 +26,23 @@ export function SettingsPage() {
         </div>
         <span>v0.1</span>
       </header>
+      <Card className="settings-card">
+        <div>
+          <h2>私密生活簿备份</h2>
+          <p>
+            默认只保存在当前浏览器。开启后，结构化生活事件会用随机访客凭证备份到 WingedHorse
+            服务端，不会自动发送给 OpenRouter。
+          </p>
+        </div>
+        <label className="settings-toggle">
+          <input
+            type="checkbox"
+            checked={lifeSyncEnabled}
+            onChange={(event) => setLifeSyncEnabled(event.target.checked)}
+          />
+          允许备份私密生活簿
+        </label>
+      </Card>
       <Card className="settings-card">
         <div>
           <h2>AI 与长期记忆</h2>
@@ -80,15 +102,27 @@ export function SettingsPage() {
       <Card className="settings-card settings-card--danger">
         <div>
           <h2>清除本机数据</h2>
-          <p>删除问卷草稿、结果、背包、养成状态和手动心情。本操作只影响当前浏览器，无法撤销。</p>
+          <p>
+            删除问卷草稿、结果、背包、养成状态和手动心情；如启用了生活簿备份，也会先删除服务端副本。本操作无法撤销。
+          </p>
         </div>
         {confirming ? (
           <div className="danger-actions">
             <Button
               variant="destructive"
+              loading={deleting}
               onClick={() => {
-                resetAll();
-                void navigate({ to: "/" });
+                setDeleting(true);
+                setDeleteError("");
+                void (lifeSyncEnabled ? deleteRemoteLifeData() : Promise.resolve())
+                  .then(() => {
+                    resetAll();
+                    void navigate({ to: "/" });
+                  })
+                  .catch(() => {
+                    setDeleteError("服务端副本暂时无法删除，本机数据尚未清除。请稍后重试。");
+                  })
+                  .finally(() => setDeleting(false));
               }}
             >
               确认全部清除
@@ -102,6 +136,11 @@ export function SettingsPage() {
             清除本机数据
           </Button>
         )}
+        {deleteError ? (
+          <p className="settings-error" role="alert">
+            {deleteError}
+          </p>
+        ) : null}
       </Card>
     </main>
   );

@@ -3,6 +3,20 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 
+const journeyChapters = [
+  { end: 0, label: "第一幕 · 晨间开机" },
+  { end: 1, label: "第二幕 · 通勤路上" },
+  { end: 4, label: "第三幕 · 工位日常" },
+  { end: 5, label: "第四幕 · 午间回血" },
+  { end: 12, label: "第五幕 · 下半场" },
+  { end: 15, label: "第六幕 · 周末与远方" },
+  { end: 16, label: "最终幕 · 异常坦白局" }
+] as const;
+
+function getJourneyChapter(questionIndex: number) {
+  return journeyChapters.find((chapter) => questionIndex <= chapter.end) ?? journeyChapters[0];
+}
+
 function stableHash(value: string) {
   let result = 2166136261;
   for (const character of value) {
@@ -29,6 +43,7 @@ export function AssessmentPage() {
   const undoTimer = useRef<number | null>(null);
   const safeIndex = Math.min(index, currentQuestionSet.questions.length - 1);
   const question = currentQuestionSet.questions[safeIndex];
+  const chapter = getJourneyChapter(safeIndex);
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -98,7 +113,7 @@ export function AssessmentPage() {
         </button>
         <div className="progress-block">
           <div className="progress-label">
-            <span>{question.scene}</span>
+            <span>{chapter.label}</span>
             <span>
               第 {safeIndex + 1}/{currentQuestionSet.questions.length} 题
             </span>
@@ -120,7 +135,9 @@ export function AssessmentPage() {
         <h1 ref={headingRef} tabIndex={-1}>
           {question.prompt}
         </h1>
-        <p className="question-panel__hint">选最常发生的你，不是最理想的你</p>
+        <p className="question-panel__hint">
+          {isLast ? "最后一题不计分，只想听听真实的你" : "选最常发生的你，不是最理想的你"}
+        </p>
         <div className="question-options" role="radiogroup" aria-label={question.prompt}>
           {options.map((option, optionIndex) => {
             const active = selected === option.id;

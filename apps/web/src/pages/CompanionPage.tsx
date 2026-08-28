@@ -29,6 +29,7 @@ export function CompanionPage() {
   const [sending, setSending] = useState(false);
   const [memoryEnabled, setMemoryEnabled] = useState(false);
   const memories = useAppStore((state) => state.memories);
+  const latestLifeEvent = useAppStore((state) => state.lifeEvents[0]);
   const addMemory = useAppStore((state) => state.addMemory);
 
   const send = async (event?: FormEvent) => {
@@ -114,7 +115,12 @@ export function CompanionPage() {
         ) : null}
       </section>
       <div className="prompt-chips" aria-label="快捷开场">
-        {["今天有点累", "我脑子很乱", "陪我安静一下"].map((prompt) => (
+        {[
+          "今天有点累",
+          "我脑子很乱",
+          "陪我安静一下",
+          ...(latestLifeEvent ? [`聊聊刚才的「${latestLifeEvent.title}」`] : [])
+        ].map((prompt) => (
           <button key={prompt} onClick={() => setDraft(prompt)}>
             {prompt}
           </button>

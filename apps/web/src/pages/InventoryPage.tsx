@@ -1,14 +1,30 @@
-import { ITEM_CATALOG, ITEM_IDS } from "@wingedhorse/domain";
+import { ITEM_CATALOG, ITEM_IDS, type ItemEffect } from "@wingedhorse/domain";
 import { Button, Card } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAppStore } from "../store/useAppStore";
+
+const EFFECT_LABELS = {
+  energy: "电量",
+  engine: "发动机",
+  chaos: "疯感",
+  direction: "导航仪"
+} as const;
+
+function describeEffect(effect: ItemEffect) {
+  const parts = Object.entries(effect).map(([key, value]) => {
+    const label = EFFECT_LABELS[key as keyof typeof EFFECT_LABELS];
+    return `${label} ${value && value > 0 ? "+" : ""}${value}`;
+  });
+  return parts.length ? parts.join(" · ") : "收藏物品，不改变状态";
+}
 
 export function InventoryPage() {
   const inventory = useAppStore((state) => state.inventory);
   const vitals = useAppStore((state) => state.petVitals);
   const useItem = useAppStore((state) => state.useItem);
   const [notice, setNotice] = useState("");
+  const [pendingItem, setPendingItem] = useState<(typeof ITEM_IDS)[number] | null>(null);
   const owned = ITEM_IDS.filter((id) => (inventory[id] ?? 0) > 0);
   return (
     <main className="inventory-page">
@@ -55,6 +71,7 @@ export function InventoryPage() {
                     {item.name} <small>× {inventory[id]}</small>
                   </h2>
                   <p>{item.description}</p>
+                  <p className="item-card__effect">使用后：{describeEffect(item.effect)}</p>
                   {item.sponsored ? (
                     <small className="sponsor-label">品牌赞助/活动道具</small>
                   ) : null}
@@ -63,8 +80,16 @@ export function InventoryPage() {
                   variant="secondary"
                   disabled={!item.consumable}
                   onClick={() => {
+                    if (item.rarity === "rare") {
+                      setPendingItem(id);
+                      return;
+                    }
                     const okay = useItem(id);
-                    setNotice(okay ? `飞马收下了${item.name}。` : "现在还不能使用它。");
+                    setNotice(
+                      okay
+                        ? `飞马收下了${item.name}，${describeEffect(item.effect)}，同行值 +2。`
+                        : "现在还不能使用它。"
+                    );
                   }}
                 >
                   {item.consumable ? "给牛马使用" : "已经收藏"}
@@ -83,6 +108,42 @@ export function InventoryPage() {
           </section>
         )}
       </section>
+      {pendingItem ? (
+        <section
+          className="inventory-confirm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="use-item-title"
+        >
+          <div>
+            <p className="eyebrow">稀有物品</p>
+            <h2 id="use-item-title">要使用{ITEM_CATALOG[pendingItem].name}吗？</h2>
+            <p>
+              使用后：{describeEffect(ITEM_CATALOG[pendingItem].effect)}。这件物品会从背包中减少 1
+              件。
+            </p>
+            <div>
+              <Button
+                onClick={() => {
+                  const item = ITEM_CATALOG[pendingItem];
+                  const okay = useItem(pendingItem);
+                  setNotice(
+                    okay
+                      ? `飞马收下了${item.name}，${describeEffect(item.effect)}，同行值 +2。`
+                      : "现在还不能使用它。"
+                  );
+                  setPendingItem(null);
+                }}
+              >
+                确认使用
+              </Button>
+              <Button variant="secondary" onClick={() => setPendingItem(null)}>
+                先留着
+              </Button>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

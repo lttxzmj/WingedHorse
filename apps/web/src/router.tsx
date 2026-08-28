@@ -10,6 +10,7 @@ import { LegalPage } from "./pages/LegalPage";
 import { MemoriesPage } from "./pages/MemoriesPage";
 import { LandingPage } from "./pages/LandingPage";
 import { ResultPage } from "./pages/ResultPage";
+import { LifePage } from "./pages/LifePage";
 
 function RootLayout() {
   return <Outlet />;
@@ -98,6 +99,11 @@ const memoriesRoute = createRoute({
   path: "/memories",
   component: MemoriesPage
 });
+const lifeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/life",
+  component: LifePage
+});
 const routeTree = rootRoute.addChildren([
   indexRoute,
   assessmentRoute,
@@ -111,7 +117,8 @@ const routeTree = rootRoute.addChildren([
   privacyRoute,
   termsRoute,
   aiNoticeRoute,
-  memoriesRoute
+  memoriesRoute,
+  lifeRoute
 ]);
 
 export const router = createRouter({ routeTree, defaultPreload: "intent" });

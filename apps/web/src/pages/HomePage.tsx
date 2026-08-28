@@ -1,15 +1,50 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { getResultProfile } from "@wingedhorse/domain";
-import { Button, Card } from "@wingedhorse/ui";
+import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
+
+function relationshipLabel(value: number) {
+  if (value >= 60) return "并肩老友";
+  if (value >= 25) return "默契搭子";
+  if (value >= 10) return "熟悉伙伴";
+  return "刚刚同行";
+}
 
 export function HomePage() {
   const navigate = useNavigate();
+  const [interactionOpen, setInteractionOpen] = useState(false);
+  const [reaction, setReaction] = useState("我不会催你。想一起做件小事，还是先休息？");
+  const [comforted, setComforted] = useState(false);
+  const characterButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const wasInteractionOpen = useRef(false);
   const result = useAppStore((state) => state.result);
   const inventoryCount = useAppStore((state) =>
     Object.values(state.inventory).reduce((sum, count) => sum + (count ?? 0), 0)
   );
+  const gamesPlayed = useAppStore((state) => state.gamesPlayed);
+  const relationshipXp = useAppStore((state) => state.relationshipXp);
+  const comfortPet = useAppStore((state) => state.comfortPet);
+
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setInteractionOpen(false);
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, []);
+
+  useEffect(() => {
+    if (interactionOpen) {
+      wasInteractionOpen.current = true;
+      closeButtonRef.current?.focus();
+    } else if (wasInteractionOpen.current) {
+      characterButtonRef.current?.focus();
+    }
+  }, [interactionOpen]);
+
   if (!result) {
     return (
       <main className="centered-page">
@@ -21,61 +56,132 @@ export function HomePage() {
       </main>
     );
   }
+
   const profile = getResultProfile(result.typeId);
+  const taskDone = gamesPlayed > 0;
   return (
-    <main className="home-page">
+    <main className="home-page home-page--immersive">
       <header className="home-header">
         <div>
           <p className="eyebrow">你的飞马草坪</p>
           <h1>晚上好，今天辛苦了。</h1>
         </div>
         <div className="home-header__tools">
-          <Link className="icon-button" aria-label="打开背包" to="/inventory">
-            🧺<small>{inventoryCount}</small>
+          <Link
+            className="icon-button"
+            aria-label={`打开背包，共 ${inventoryCount} 件`}
+            to="/inventory"
+          >
+            包<small>{inventoryCount}</small>
           </Link>
           <Link className="icon-button" aria-label="打开设置" to="/settings">
-            ⚙
+            设
           </Link>
         </div>
       </header>
-      <section className="lawn-stage">
+
+      <section className="lawn-stage lawn-stage--alive" aria-label="飞马生活草坪">
         <div className="lawn-stage__sun" aria-hidden="true" />
-        <p className="lawn-stage__bubble">我不会催你。想玩一会儿，还是先休息？</p>
-        <WingedHorseCharacter mood={profile.mood} aria-label={"草坪上的" + profile.name} />
+        <p className="lawn-stage__bubble" aria-live="polite">
+          {reaction}
+        </p>
+        <button
+          ref={characterButtonRef}
+          className="character-hotspot"
+          onClick={() => setInteractionOpen(true)}
+          aria-label={`和${profile.name}互动`}
+        >
+          <WingedHorseCharacter mood={profile.mood} typeId={result.typeId} alt={profile.name} />
+          <span>点点我</span>
+        </button>
+        <Link className="scene-hotspot scene-hotspot--drop" to="/game">
+          <b>补给雨</b>
+          <span>{taskDone ? "再接一局" : "今日小事"}</span>
+        </Link>
+        <Link className="scene-hotspot scene-hotspot--mail" to="/companion">
+          <b>小纸条</b>
+          <span>和我说两句</span>
+        </Link>
+        <Link className="scene-hotspot scene-hotspot--life" to="/life">
+          <b>生活簿</b>
+          <span>看看动态</span>
+        </Link>
         <div className="tent" aria-label="飞马休息的小帐篷">
-          <span aria-hidden="true">⌂</span>
+          <span aria-hidden="true">休</span>
+        </div>
+        <div className="lawn-progress" aria-label="同行进展">
+          <span>{relationshipLabel(relationshipXp)}</span>
+          <strong>同行值 {relationshipXp}</strong>
         </div>
       </section>
-      <section className="home-actions" aria-label="今日活动">
-        <Card className="action-card action-card--game">
-          <span aria-hidden="true">🎁</span>
-          <div>
-            <strong>接住今天的掉落</strong>
-            <p>30 秒，看看会掉下什么。</p>
-          </div>
-          <Button onClick={() => void navigate({ to: "/game" })}>开始</Button>
-        </Card>
-        <Card className="action-card">
-          <span aria-hidden="true">🫧</span>
-          <div>
-            <strong>和我说两句</strong>
-            <p>AI 伙伴会明确告诉你它是 AI。</p>
-          </div>
-          <Button variant="secondary" onClick={() => void navigate({ to: "/companion" })}>
-            去聊天
-          </Button>
-        </Card>
-        <Card className="action-card">
-          <span aria-hidden="true">🌤️</span>
-          <div>
-            <strong>告诉我此刻状态</strong>
-            <p>手动选择，或体验端侧镜头线索。</p>
-          </div>
-          <Button variant="secondary" onClick={() => void navigate({ to: "/signals" })}>
-            看看状态
-          </Button>
-        </Card>
+
+      <section className={`daily-event ${taskDone ? "daily-event--done" : ""}`}>
+        <div>
+          <p className="eyebrow">{taskDone ? "今天已经接住" : "今天的一件小事"}</p>
+          <h2>{taskDone ? "补给已经安全到家" : "陪我接一场 30 秒补给雨"}</h2>
+          <p>
+            {taskDone
+              ? "不用继续打卡。你可以把补给给飞马，也可以留在背包里。"
+              : "漏接不扣状态，完成第一局会增加 8 点同行值。"}
+          </p>
+        </div>
+        <Link
+          className="ui-button ui-button--primary inline-link-button"
+          to={taskDone ? "/inventory" : "/game"}
+        >
+          {taskDone ? "看看补给" : "一起去接"}
+        </Link>
       </section>
+
+      {interactionOpen ? (
+        <div className="interaction-backdrop" onPointerDown={() => setInteractionOpen(false)}>
+          <section
+            className="interaction-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="interaction-title"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <button
+              ref={closeButtonRef}
+              className="interaction-sheet__close"
+              onClick={() => setInteractionOpen(false)}
+              aria-label="关闭互动"
+            >
+              ×
+            </button>
+            <p className="eyebrow">{relationshipLabel(relationshipXp)} · AI 飞马</p>
+            <h2 id="interaction-title">现在想怎么陪它？</h2>
+            <p>互动不会影响你的测评类型，也不会因为离开而扣分。</p>
+            <div className="interaction-options">
+              <button
+                disabled={comforted}
+                onClick={() => {
+                  comfortPet();
+                  setComforted(true);
+                  setReaction("收到摸摸了。今天不用表现得很厉害。同行值 +1");
+                  setInteractionOpen(false);
+                }}
+              >
+                <strong>{comforted ? "已经摸过啦" : "摸摸它"}</strong>
+                <span>给一个安静回应</span>
+              </button>
+              <Link to="/companion">
+                <strong>递张小纸条</strong>
+                <span>进入有边界的 AI 对话</span>
+              </Link>
+              <Link to="/inventory">
+                <strong>给它一份补给</strong>
+                <span>先查看效果，再决定使用</span>
+              </Link>
+              <Link to="/signals">
+                <strong>告诉它现在的状态</strong>
+                <span>可以只手动选择，不开镜头</span>
+              </Link>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
