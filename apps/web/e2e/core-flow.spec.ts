@@ -60,8 +60,9 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   await page.getByRole("button", { name: "去看看平行世界里的你" }).click();
   await expect(page.getByText(/清晨|午后|傍晚|深夜/).first()).toBeVisible();
   await page.getByRole("link", { name: "查看共同生活" }).click();
-  await expect(page.getByRole("heading", { name: "它今天也在生活" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "它的朋友圈" })).toBeVisible();
   await expect(page.getByText("新住客到达草原")).toBeVisible();
+  await page.locator(".life-pinned-story > summary").click();
   await expect(page.getByRole("progressbar", { name: "共同远行进展" })).toHaveAttribute(
     "aria-valuenow",
     "0"
@@ -91,6 +92,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
     "true"
   );
   await page.getByRole("button", { name: "存进共同记忆" }).first().click();
+  await page.locator(".life-pinned-story > summary").click();
   await expect(page.getByRole("progressbar", { name: "共同远行进展" })).toHaveAttribute(
     "aria-valuenow",
     "1"
