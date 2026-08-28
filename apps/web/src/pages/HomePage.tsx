@@ -1,5 +1,5 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { getResultProfile } from "@wingedhorse/domain";
+import { deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -67,6 +67,7 @@ export function HomePage() {
   const latestStoryEvent = lifeEvents.find(
     (event) => event.kind === "story" || event.kind === "visitor"
   );
+  const journey = deriveJourneyGoal({ events: lifeEvents, gamesPlayed, relationshipXp });
   const greeting =
     worldContext?.period === "morning"
       ? "早上好"
@@ -125,8 +126,17 @@ export function HomePage() {
           <span aria-hidden="true">休</span>
         </div>
         <div className="lawn-progress" aria-label="同行进展">
-          <span>{relationshipLabel(relationshipXp)}</span>
-          <strong>同行值 {relationshipXp}</strong>
+          <div>
+            <span>{relationshipLabel(relationshipXp)}</span>
+            <strong>同行值 {relationshipXp}</strong>
+          </div>
+          <Link
+            to="/life"
+            hash="journey"
+            aria-label={`查看共同远行计划，已完成 ${journey.completedCount} 项`}
+          >
+            远行计划 {journey.completedCount}/{journey.totalCount}
+          </Link>
         </div>
       </section>
 

@@ -11,10 +11,24 @@ export interface PulseEstimate {
 
 export function estimatePulse(samples: readonly ColorSample[]): PulseEstimate {
   if (samples.length < 60) return { bpm: null, confidence: "low", reason: "采样时间太短" };
+  if (
+    samples.some(
+      (sample, index) =>
+        !Number.isFinite(sample.timestampMs) ||
+        !Number.isFinite(sample.green) ||
+        !Number.isFinite(sample.motion) ||
+        sample.motion < 0 ||
+        (index > 0 && sample.timestampMs <= samples[index - 1]!.timestampMs)
+    )
+  )
+    return { bpm: null, confidence: "low", reason: "采样数据无效" };
   const duration = (samples[samples.length - 1]!.timestampMs - samples[0]!.timestampMs) / 1000;
   if (duration < 8) return { bpm: null, confidence: "low", reason: "需要至少 8 秒稳定画面" };
   const mean = samples.reduce((sum, sample) => sum + sample.green, 0) / samples.length;
   const centered = samples.map((sample) => sample.green - mean);
+  const variance = centered.reduce((sum, value) => sum + value * value, 0) / centered.length;
+  if (variance < 0.01)
+    return { bpm: null, confidence: "low", reason: "颜色变化不足，无法估计趋势" };
   const powers: Array<{ bpm: number; power: number }> = [];
   for (let bpm = 48; bpm <= 150; bpm += 1) {
     const frequency = bpm / 60;

@@ -1777,6 +1777,92 @@ h1 {
   line-height: 1.55;
 }
 
+.journey-card {
+  scroll-margin-top: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid rgb(212 162 28 / 40%);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 92% 8%, rgb(255 248 222 / 95%) 0 15%, transparent 16%),
+    linear-gradient(145deg, #fffdf5, #fff4ca);
+  box-shadow: 0 5px 18px rgb(90 60 20 / 8%);
+}
+
+.journey-card__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.journey-card h2,
+.journey-card p {
+  margin: 0;
+}
+
+.journey-card h2 {
+  font-size: var(--font-title);
+}
+
+.journey-card__heading > strong {
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 75%);
+  font-size: var(--font-small);
+}
+
+.journey-card > p:not(.eyebrow) {
+  margin-top: var(--space-3);
+  color: var(--color-ink-700);
+  font-size: var(--font-small);
+  line-height: 1.55;
+}
+
+.journey-track {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.journey-track span {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  color: var(--color-ink-700);
+  text-align: center;
+}
+
+.journey-track i {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border: 1px solid var(--color-line-100);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 70%);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.journey-track .is-complete i {
+  border-color: var(--color-brand-700);
+  color: var(--color-ink-900);
+  background: var(--color-brand-300);
+}
+
+.journey-track small {
+  max-width: 5.5rem;
+  font-size: var(--font-micro);
+  line-height: 1.3;
+}
+
+.journey-card .journey-card__next {
+  color: var(--color-ink-900);
+  font-weight: 700;
+}
+
 .life-feed {
   display: grid;
   gap: var(--space-5);
@@ -1924,6 +2010,7 @@ h1 {
   bottom: var(--space-4);
   left: var(--space-4);
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
@@ -1932,6 +2019,19 @@ h1 {
   background: rgb(255 255 255 / 86%);
   font-size: var(--font-micro);
   backdrop-filter: blur(8px);
+}
+
+.lawn-progress > div {
+  display: grid;
+}
+
+.lawn-progress a {
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  color: var(--color-ink-900);
+  background: var(--color-brand-200);
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .daily-event {

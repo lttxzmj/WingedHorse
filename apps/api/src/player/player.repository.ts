@@ -23,6 +23,12 @@ export interface SettlementResult {
   alreadySettled: boolean;
 }
 
+export interface StartResult {
+  player: PlayerStateResponse;
+  sessionId: string;
+  startedAt: string;
+}
+
 function initialPlayer(bootstrap?: Omit<PlayerStateResponse, "revision">): PlayerStateResponse {
   return bootstrap
     ? { ...bootstrap, revision: 0 }
@@ -68,11 +74,19 @@ export class PlayerRepository implements OnModuleDestroy {
     typeId: HorseTypeId,
     startedAt: string,
     bootstrap?: Omit<PlayerStateResponse, "revision">
-  ): Promise<PlayerStateResponse> {
+  ): Promise<StartResult> {
     if (!this.pool) {
       const player = this.players.get(actorHash) ?? initialPlayer(bootstrap);
       this.players.set(actorHash, player);
       const sessions = this.sessions.get(actorHash) ?? new Map<string, StoredSession>();
+      const active = [...sessions.values()].find(
+        (session) =>
+          !session.settled && Date.parse(startedAt) - Date.parse(session.startedAt) < 600_000
+      );
+      if (active) return { player, sessionId: active.id, startedAt: active.startedAt };
+      for (const session of sessions.values()) {
+        if (!session.settled) session.settled = true;
+      }
       sessions.set(sessionId, {
         id: sessionId,
         typeId,
@@ -81,7 +95,7 @@ export class PlayerRepository implements OnModuleDestroy {
         settled: false
       });
       this.sessions.set(actorHash, sessions);
-      return player;
+      return { player, sessionId, startedAt };
     }
     const player = initialPlayer(bootstrap);
     const client = await this.pool.connect();
@@ -100,15 +114,37 @@ export class PlayerRepository implements OnModuleDestroy {
           player.relationshipXp
         ]
       );
+      const stored = await this.lockedPlayer(client, actorHash);
+      const activeResult = await client.query<Record<string, unknown>>(
+        `SELECT * FROM game_sessions
+         WHERE actor_hash=$1 AND settled_at IS NULL
+           AND started_at > $2::timestamptz - INTERVAL '10 minutes'
+         ORDER BY started_at DESC LIMIT 1 FOR UPDATE`,
+        [actorHash, startedAt]
+      );
+      const active = activeResult.rows[0];
+      if (active) {
+        await client.query("COMMIT");
+        return {
+          player: stored,
+          sessionId: String(active.session_id),
+          startedAt: new Date(String(active.started_at)).toISOString()
+        };
+      }
+      await client.query(
+        `UPDATE game_sessions SET settled_at=$2,
+          settlement='{"expired":true}'::jsonb
+         WHERE actor_hash=$1 AND settled_at IS NULL`,
+        [actorHash, startedAt]
+      );
       await client.query(
         `INSERT INTO game_sessions
           (actor_hash, session_id, type_id, started_at, duration_seconds)
          VALUES ($1,$2,$3,$4,30)`,
         [actorHash, sessionId, typeId, startedAt]
       );
-      const stored = await this.lockedPlayer(client, actorHash);
       await client.query("COMMIT");
-      return stored;
+      return { player: stored, sessionId, startedAt };
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;

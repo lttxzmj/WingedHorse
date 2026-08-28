@@ -22,14 +22,19 @@ export class PlayerService {
     now = new Date().toISOString()
   ) {
     const sessionId = randomBytes(24).toString("base64url");
-    const player = await this.repository.start(
+    const started = await this.repository.start(
       this.actorHash(visitorToken),
       sessionId,
       request.typeId,
       now,
       request.bootstrap
     );
-    return { sessionId, startedAt: now, durationSeconds: 30 as const, player };
+    return {
+      sessionId: started.sessionId,
+      startedAt: started.startedAt,
+      durationSeconds: 30 as const,
+      player: started.player
+    };
   }
 
   async state(visitorToken: string) {

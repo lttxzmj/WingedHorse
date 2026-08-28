@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 const LOCAL_REPLY_TEXT =
   "我暂时连不上远处的 AI 服务，但还在这里。你可以先用一句话说说现在最占脑子的事；如果不想说，也可以回草原休息。";
@@ -51,6 +52,10 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   await page.getByRole("link", { name: /生活簿/ }).click();
   await expect(page.getByRole("heading", { name: "它今天也在生活" })).toBeVisible();
   await expect(page.getByText("新住客到达草原")).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "共同远行进展" })).toHaveAttribute(
+    "aria-valuenow",
+    "0"
+  );
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-life-${testInfo.project.name}.png`,
@@ -60,6 +65,11 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   await expect(page.getByRole("button", { name: "已接住" }).first()).toHaveAttribute(
     "aria-pressed",
     "true"
+  );
+  await page.getByRole("button", { name: "存进共同记忆" }).first().click();
+  await expect(page.getByRole("progressbar", { name: "共同远行进展" })).toHaveAttribute(
+    "aria-valuenow",
+    "1"
   );
   await page.getByRole("link", { name: "回到草原" }).click();
   await page.locator(".character-hotspot").click();
@@ -220,6 +230,10 @@ test("a real game finishes, settles once, enters the bag and changes the life st
   await page.goto("/life");
   await expect(page.getByText("补给雨顺利收工")).toBeVisible();
   await expect(page.getByText(/收到一份.+/)).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "共同远行进展" })).toHaveAttribute(
+    "aria-valuenow",
+    "2"
+  );
   const persisted = await page.evaluate(() => {
     const raw = localStorage.getItem("wingedhorse-local-state-v2-1") ?? "{}";
     return JSON.parse(raw) as {
@@ -349,4 +363,57 @@ test("camera experiment is optional and manual mood works without permission", a
       path: `/private/tmp/wingedhorse-signals-${testInfo.project.name}.png`,
       fullPage: true
     });
+});
+
+test("life backup cannot silently authorize cloud game and inventory data", async ({ page }) => {
+  await page.goto("/settings");
+  const lifeBackup = page.getByLabel("允许备份私密生活簿");
+  const playerCloud = page.getByLabel("尚未授权：保持本地模式");
+  await expect(lifeBackup).not.toBeChecked();
+  await expect(playerCloud).toBeDisabled();
+  await lifeBackup.check();
+  await expect(lifeBackup).toBeChecked();
+  await expect(playerCloud).toBeDisabled();
+  await expect(page.getByText("需要你明确同意后才会接通")).toBeVisible();
+});
+
+test("local data export downloads a readable whitelist without internal ids", async ({ page }) => {
+  await page.goto("/settings");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载 JSON 文件" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^WingedHorse-我的数据-\d{4}-\d{2}-\d{2}\.json$/u);
+  const path = await download.path();
+  expect(path).not.toBeNull();
+  if (!path) throw new Error("Expected Playwright to retain the downloaded export");
+  const content = await readFile(path, "utf8");
+  const payload = JSON.parse(content) as Record<string, unknown>;
+  expect(payload.format).toBe("wingedhorse-user-data");
+  expect(content).not.toContain("assessmentOptionSeed");
+  expect(content).not.toContain("settledGameIds");
+  await expect(page.getByRole("status")).toHaveText("当前设备的数据已导出。");
+});
+
+test("production defaults keep camera and rPPG unavailable while manual mood stays usable", async ({
+  page
+}) => {
+  test.skip(process.env.PLAYWRIGHT_EXPECT_PRODUCTION_FLAGS !== "off");
+  await page.goto("/signals");
+  await expect(page.getByText("镜头实验暂未开放")).toBeVisible();
+  await expect(page.getByText("手动心情仍可正常使用")).toBeVisible();
+  await page.getByRole("button", { name: "有点累" }).click();
+  await expect(page.getByRole("button", { name: "有点累" })).toHaveClass(/is-selected/);
+  await expect(page.getByRole("button", { name: "开始 15 秒体验" })).toHaveCount(0);
+});
+
+test("review build can explicitly enable the camera and rPPG disclosure", async ({ page }) => {
+  test.skip(process.env.PLAYWRIGHT_EXPECT_PRODUCTION_FLAGS !== "on");
+  await page.goto("/signals");
+  await expect(page.getByText(/实验功能 · 不上传 · rPPG 已开启/u)).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", {
+      name: /临时使用摄像头处理颜色变化、画面稳定度和表情线索/u
+    })
+  ).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "开始 15 秒体验" })).toBeDisabled();
 });

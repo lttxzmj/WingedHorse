@@ -1,6 +1,11 @@
 # syntax=docker/dockerfile:1
 
 FROM node:24-alpine AS build
+
+ARG VITE_FEATURE_CAMERA_SIGNALS=false
+ARG VITE_FEATURE_RPPG=false
+ENV VITE_FEATURE_CAMERA_SIGNALS=$VITE_FEATURE_CAMERA_SIGNALS
+ENV VITE_FEATURE_RPPG=$VITE_FEATURE_RPPG
 RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
 WORKDIR /app
 COPY . .

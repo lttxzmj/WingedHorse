@@ -5,6 +5,9 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.web
+      args:
+        VITE_FEATURE_CAMERA_SIGNALS: ${VITE_FEATURE_CAMERA_SIGNALS:-false}
+        VITE_FEATURE_RPPG: ${VITE_FEATURE_RPPG:-false}
     restart: unless-stopped
     ports: ["8080:8080", "8443:8443"]
     volumes: ["./cert/https:/etc/nginx/ssl:ro"]

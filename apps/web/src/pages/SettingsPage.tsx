@@ -1,6 +1,7 @@
 import { Button, Card } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { createUserDataExport, downloadUserDataExport } from "../lib/dataExport";
 import { deleteRemoteLifeData, hasVisitorToken } from "../lib/lifeApi";
 import { useAppStore } from "../store/useAppStore";
 
@@ -16,6 +17,7 @@ export function SettingsPage() {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [exported, setExported] = useState(false);
   return (
     <main className="settings-page">
       <header className="subpage-header">
@@ -42,6 +44,25 @@ export function SettingsPage() {
           />
           允许备份私密生活簿
         </label>
+      </Card>
+      <Card className="settings-card">
+        <div>
+          <h2>导出我的数据</h2>
+          <p>
+            下载当前设备上的问卷、测评结果、背包、养成状态、生活簿、共同记忆和设置。文件不包含匿名凭证、内部游戏会话
+            ID 或原始媒体。
+          </p>
+        </div>
+        <Button
+          variant="tertiary"
+          onClick={() => {
+            downloadUserDataExport(createUserDataExport(useAppStore.getState()));
+            setExported(true);
+          }}
+        >
+          下载 JSON 文件
+        </Button>
+        {exported ? <p role="status">当前设备的数据已导出。</p> : null}
       </Card>
       <Card className="settings-card">
         <div>
@@ -117,7 +138,8 @@ export function SettingsPage() {
         <div>
           <h2>清除本机数据</h2>
           <p>
-            删除问卷草稿、结果、背包、养成状态和手动心情；如启用了生活簿备份，也会先删除服务端副本。本操作无法撤销。
+            删除问卷草稿、结果、背包、养成状态和手动心情；如存在任何 WingedHorse
+            服务端副本，也会先删除生活簿、游戏会话和玩家状态。本操作无法撤销。
           </p>
         </div>
         {confirming ? (

@@ -1,5 +1,5 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { getResultProfile } from "@wingedhorse/domain";
+import { deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import { useDigitalLife } from "../hooks/useDigitalLife";
@@ -18,6 +18,8 @@ function eventTime(value: string) {
 export function LifePage() {
   const result = useAppStore((state) => state.result);
   const events = useAppStore((state) => state.lifeEvents);
+  const gamesPlayed = useAppStore((state) => state.gamesPlayed);
+  const relationshipXp = useAppStore((state) => state.relationshipXp);
   const toggleLike = useAppStore((state) => state.toggleLifeEventLike);
   const toggleSaved = useAppStore((state) => state.toggleLifeEventSaved);
   const { lifeSyncEnabled, syncState } = useDigitalLife();
@@ -44,6 +46,7 @@ export function LifePage() {
   }
 
   const profile = getResultProfile(result.typeId);
+  const journey = deriveJourneyGoal({ events, gamesPlayed, relationshipXp });
   return (
     <main className="life-page">
       <header className="subpage-header life-header">
@@ -67,6 +70,36 @@ export function LifePage() {
             : " 当前仅保存在这台设备。"}
         </span>
       </aside>
+      <section className="journey-card" id="journey" aria-labelledby="journey-title">
+        <div className="journey-card__heading">
+          <div>
+            <p className="eyebrow">共同远行 · 没有期限</p>
+            <h2 id="journey-title">{journey.title}</h2>
+          </div>
+          <strong aria-label={`已完成 ${journey.completedCount} 项，共 ${journey.totalCount} 项`}>
+            {journey.completedCount}/{journey.totalCount}
+          </strong>
+        </div>
+        <p>{journey.description}</p>
+        <div
+          className="journey-track"
+          role="progressbar"
+          aria-label="共同远行进展"
+          aria-valuemin={0}
+          aria-valuemax={journey.totalCount}
+          aria-valuenow={journey.completedCount}
+        >
+          {journey.milestones.map((milestone) => (
+            <span className={milestone.completed ? "is-complete" : ""} key={milestone.id}>
+              <i aria-hidden="true">{milestone.completed ? "✓" : "·"}</i>
+              <small>{milestone.label}</small>
+            </span>
+          ))}
+        </div>
+        <p className="journey-card__next">
+          <span aria-hidden="true">↗</span> {journey.nextPrompt}
+        </p>
+      </section>
       {events.length === 0 ? (
         <section className="life-empty">
           <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />

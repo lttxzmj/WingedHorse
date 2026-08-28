@@ -22,10 +22,11 @@ const MOODS = [
   { id: "sad", emoji: "🌧️", label: "有点低落" }
 ] as const;
 
-const cameraEnabled = import.meta.env.VITE_FEATURE_CAMERA_SIGNALS !== "false";
+const cameraEnabled = import.meta.env.DEV || import.meta.env.VITE_FEATURE_CAMERA_SIGNALS === "true";
+const pulseEnabled = import.meta.env.VITE_FEATURE_RPPG === "true";
 
 interface SignalResult {
-  pulse: PulseEstimate;
+  pulse: PulseEstimate | null;
   activity: string;
   expression: ExpressionTag | null;
 }
@@ -40,6 +41,8 @@ export function SignalsPage() {
   const lastSampleAt = useRef(0);
   const lastExpressionAt = useRef(0);
   const expressionRef = useRef<ExpressionTag | null>(null);
+  const activeRef = useRef(false);
+  const runIdRef = useRef(0);
   const manualMood = useAppStore((state) => state.manualMood);
   const setManualMood = useAppStore((state) => state.setManualMood);
   const hardwareLink = useAppStore((state) => state.hardwareLink);
@@ -50,10 +53,30 @@ export function SignalsPage() {
   const [expression, setExpression] = useState<ExpressionTag | null>(null);
   const [result, setResult] = useState<SignalResult | null>(null);
   const [error, setError] = useState("");
+  const [starting, setStarting] = useState(false);
+
+  const cameraSupported =
+    cameraEnabled &&
+    typeof navigator !== "undefined" &&
+    window.isSecureContext &&
+    Boolean(navigator.mediaDevices && "getUserMedia" in navigator.mediaDevices);
 
   const stop = () => {
+    runIdRef.current += 1;
+    activeRef.current = false;
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     streamRef.current?.getTracks().forEach((track) => track.stop());
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
+    }
+    if (canvasRef.current) {
+      canvasRef.current.width = 0;
+      canvasRef.current.height = 0;
+    }
+    samplesRef.current = [];
+    lastGreenRef.current = null;
+    expressionRef.current = null;
     streamRef.current = null;
     frameRef.current = null;
     setActive(false);
@@ -63,12 +86,13 @@ export function SignalsPage() {
 
   const runExpression = () => {
     const video = videoRef.current;
-    if (!video || !active) return;
+    if (!video || !activeRef.current) return;
     const now = performance.now();
     if (now - lastExpressionAt.current < 500) return;
     lastExpressionAt.current = now;
+    const runId = runIdRef.current;
     void detectFaceLandmarks(video, now).then((landmarks) => {
-      if (!landmarks || !active) return;
+      if (!landmarks || !activeRef.current || runId !== runIdRef.current) return;
       const tag = classifyExpression(landmarks);
       expressionRef.current = tag;
       setExpression(tag);
@@ -77,7 +101,7 @@ export function SignalsPage() {
 
   const sample = () => {
     const video = videoRef.current;
-    if (!video || !active) return;
+    if (!video || !activeRef.current) return;
     const now = performance.now();
     if (
       now - lastSampleAt.current >= 90 &&
@@ -113,7 +137,7 @@ export function SignalsPage() {
         if (seconds >= 15) {
           const samples = samplesRef.current;
           setResult({
-            pulse: estimatePulse(samples),
+            pulse: pulseEnabled ? estimatePulse(samples) : null,
             activity:
               classifyVisualActivity(samples) === "steady" ? "画面比较稳定" : "画面移动较多",
             expression: expressionRef.current
@@ -127,15 +151,9 @@ export function SignalsPage() {
     frameRef.current = requestAnimationFrame(sample);
   };
 
-  useEffect(() => {
-    if (active) frameRef.current = requestAnimationFrame(sample);
-    return () => {
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
-    };
-  });
-
   const start = async () => {
-    if (!consented) return;
+    if (!consented || !cameraSupported || starting) return;
+    setStarting(true);
     setError("");
     setResult(null);
     setElapsed(0);
@@ -153,10 +171,18 @@ export function SignalsPage() {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
+      activeRef.current = true;
       setActive(true);
-    } catch {
+      frameRef.current = requestAnimationFrame(sample);
+    } catch (cause) {
       stop();
-      setError("没有获得摄像头权限。你仍然可以使用上面的手动心情选择。");
+      setError(
+        cause instanceof DOMException && cause.name === "NotFoundError"
+          ? "没有找到可用摄像头。你仍然可以使用上面的手动心情选择。"
+          : "没有获得摄像头权限。你仍然可以使用上面的手动心情选择。"
+      );
+    } finally {
+      setStarting(false);
     }
   };
 
@@ -189,10 +215,12 @@ export function SignalsPage() {
           ))}
         </div>
       </section>
-      {cameraEnabled ? (
+      {cameraSupported ? (
         <Card className="sensor-card">
           <div>
-            <p className="eyebrow">实验功能 · 不上传</p>
+            <p className="eyebrow">
+              实验功能 · 不上传{pulseEnabled ? " · rPPG 已开启" : " · rPPG 暂停开放"}
+            </p>
             <h2>15 秒镜头状态线索</h2>
             <p>
               只在此设备内存中读取中央区域的颜色变化、画面稳定度和表情线索。不会录音、上传、保存视频，也不用于诊断。
@@ -210,15 +238,18 @@ export function SignalsPage() {
           {result ? (
             <div className="signal-result" role="status">
               <strong>
-                {result.pulse.bpm
+                {result.pulse?.bpm
                   ? `趣味脉搏趋势约 ${result.pulse.bpm} 次/分`
-                  : "暂时没有得到清晰的脉搏趋势"}
+                  : pulseEnabled
+                    ? "暂时没有得到清晰的脉搏趋势"
+                    : "本次只分析画面稳定度与表情线索"}
               </strong>
               <p>
                 {result.activity}
                 {result.expression ? ` · 表情：${EXPRESSION_LABEL[result.expression]}` : ""} ·
-                置信度{result.pulse.confidence === "medium" ? "中" : "低"}
-                {result.pulse.reason ? ` · ${result.pulse.reason}` : ""}
+                {result.pulse
+                  ? ` · 脉搏趋势置信度${result.pulse.confidence === "medium" ? "中" : "低"}${result.pulse.reason ? ` · ${result.pulse.reason}` : ""}`
+                  : ""}
               </p>
             </div>
           ) : null}
@@ -231,16 +262,23 @@ export function SignalsPage() {
             <input
               type="checkbox"
               checked={consented}
+              disabled={active || starting}
               onChange={(event) => setConsented(event.target.checked)}
             />
-            我理解结果仅供趣味参考，并同意本次临时使用摄像头；退出即停止。
+            我理解结果仅供趣味参考，并同意本次临时使用摄像头处理
+            {pulseEnabled ? "颜色变化、画面稳定度和表情线索" : "画面稳定度和表情线索"}
+            ；结果不保存，退出即停止。
           </label>
           {active ? (
             <Button variant="secondary" onClick={stop}>
               立即停止
             </Button>
           ) : (
-            <Button disabled={!consented} onClick={() => void start()}>
+            <Button
+              disabled={!consented || starting}
+              loading={starting}
+              onClick={() => void start()}
+            >
               开始 15 秒体验
             </Button>
           )}
@@ -251,7 +289,11 @@ export function SignalsPage() {
       ) : (
         <Card className="sensor-card sensor-card--disabled">
           <p className="eyebrow">镜头实验暂未开放</p>
-          <p>手动心情模式已足够好用；镜头状态线索作为可选实验，未在此版本开启。</p>
+          <p>
+            {!window.isSecureContext
+              ? "当前页面不是安全的 HTTPS 环境，浏览器不会开放摄像头。手动心情仍可正常使用。"
+              : "当前浏览器没有可用的摄像头能力，或镜头实验尚未开放。手动心情仍可正常使用。"}
+          </p>
         </Card>
       )}
     </main>

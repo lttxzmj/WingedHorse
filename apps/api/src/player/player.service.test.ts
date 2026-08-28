@@ -37,6 +37,22 @@ describe("PlayerService", () => {
     expect(retry.player.inventory).toEqual({ "iced-americano": 1 });
   });
 
+  it("returns the same active session instead of issuing parallel reward claims", async () => {
+    const service = new PlayerService(new PlayerRepository());
+    const first = await service.start(
+      token,
+      { typeId: "chosen", bootstrap },
+      "2026-08-28T10:00:00.000Z"
+    );
+    const retry = await service.start(
+      token,
+      { typeId: "chosen", bootstrap },
+      "2026-08-28T10:00:03.000Z"
+    );
+    expect(retry.sessionId).toBe(first.sessionId);
+    expect(retry.startedAt).toBe(first.startedAt);
+  });
+
   it("rejects early, impossible and non-drop settlements", async () => {
     const service = new PlayerService(new PlayerRepository());
     const early = await service.start(

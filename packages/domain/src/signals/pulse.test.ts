@@ -22,4 +22,18 @@ describe("experimental pulse estimator", () => {
     expect(estimatePulse(moving).bpm).toBeNull();
     expect(classifyVisualActivity(moving)).toBe("moving");
   });
+
+  it("refuses constant, non-finite and out-of-order samples", () => {
+    const constant = createSignal(72).map((sample) => ({ ...sample, green: 100 }));
+    expect(estimatePulse(constant)).toMatchObject({
+      bpm: null,
+      reason: "颜色变化不足，无法估计趋势"
+    });
+    const invalid = createSignal(72);
+    invalid[60] = { ...invalid[60]!, green: Number.NaN };
+    expect(estimatePulse(invalid)).toMatchObject({ bpm: null, reason: "采样数据无效" });
+    const reversed = createSignal(72);
+    reversed[60] = { ...reversed[60]!, timestampMs: reversed[59]!.timestampMs };
+    expect(estimatePulse(reversed)).toMatchObject({ bpm: null, reason: "采样数据无效" });
+  });
 });
