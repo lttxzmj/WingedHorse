@@ -208,6 +208,7 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 
 ## 10. 安全设计
 
+- API 在创建 Nest 应用前使用 Zod 校验端口、生产数据库、OpenRouter、MQTT 和公网 URL；错误只列字段名，不回显值。生产数据库缺失、半配置凭据和模板占位 Secret 均直接拒绝启动。
 - OpenRouter Key、数据库密码和签名密钥只存在服务端 Secret。
 - CSP 限制脚本、媒体、连接和 iframe 来源。
 - Cookie 使用 Secure、HttpOnly、SameSite；需要时启用 CSRF 防护。

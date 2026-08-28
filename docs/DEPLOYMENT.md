@@ -50,6 +50,8 @@
 
 不得把 `.env.production`、证书私钥或 SSH 私钥提交到 Git。
 
+API 会在监听端口前验证生产环境：`DATABASE_URL` 必须存在，OpenRouter Key 与聊天模型必须成对配置，MQTT 用户名/密码必须成对配置，模板中的“请替换/change-me”占位 Secret 会导致启动失败。错误只报告字段名，不输出 Secret 值。
+
 注意：Compose 文件内的 `${POSTGRES_USER}` 等变量插值依赖 `--env-file ../.env.production`，而不是容器内的 `env_file` 注入；两者分工不同，部署命令必须同时带 `--env-file`。
 
 ## 3. 首次部署
