@@ -45,6 +45,20 @@ export function SettingsPage() {
       </Card>
       <Card className="settings-card">
         <div>
+          <h2>云端游戏与背包</h2>
+          <p>
+            待开放。启用后会把物品种类与数量、飞马四项养成值、游戏场次、得分和匿名游戏会话发送到
+            WingedHorse 服务端，用于防止重复发奖并在设备间保存背包；不会发送给
+            OpenRouter。需要你明确同意后才会接通。
+          </p>
+        </div>
+        <label className="settings-toggle">
+          <input type="checkbox" checked={false} disabled readOnly />
+          尚未授权：保持本地模式
+        </label>
+      </Card>
+      <Card className="settings-card">
+        <div>
           <h2>AI 与长期记忆</h2>
           <p>AI 飞马会明确标识身份。聊天记录不持久保存；只有你主动点“记住”的句子留在当前浏览器。</p>
         </div>

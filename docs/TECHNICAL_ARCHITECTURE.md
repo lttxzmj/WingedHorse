@@ -116,6 +116,8 @@
 - MVP 可由 API 定时任务惰性推进：用户访问时补算应发生事件；规模扩大后再迁移至 BullMQ worker。
 - v0.1 已实现确定性 Planner、惰性 Simulation、PostgreSQL Event/Plan Repository、匿名能力凭证和完整删除边界，详见 `docs/DIGITAL_LIFE_ENGINE.md`。
 - 跨日故事和 AI 牛马访客由纯领域规则稳定生成，不调用模型、不依赖定时任务，也不读取其他用户状态。
+- `PlayerRepository` 以 PostgreSQL 行锁执行一次性游戏结算和物品消耗；`game_sessions` 防止重试重复发奖，`player_states.revision` 标记养成事务版本。
+- 云端背包与生活簿是两个独立授权目的。浏览器在用户明确授权前不得调用 `/game/sessions` 或 `/player/items/consume`。
 
 ## 5. API 边界
 
@@ -125,7 +127,10 @@
 - POST /assessments
 - GET /assessments/:id/result
 - GET /pet
-- POST /game-sessions
+- POST /game/sessions
+- POST /game/sessions/:id/settle
+- GET /player/state
+- POST /player/items/consume
 - POST /game-sessions/:id/settle
 - GET /inventory
 - POST /inventory/:itemId/use
