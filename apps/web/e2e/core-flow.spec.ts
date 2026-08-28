@@ -470,7 +470,8 @@ test("a real game finishes, settles once, enters the bag and changes the life st
     });
 
   await page.getByRole("link", { name: "带着补给回草原" }).click();
-  await expect(page.getByText("背包里有新东西")).toBeVisible();
+  await expect(page.locator(".prairie-game-gate")).toContainText("宇宙 Online · 今日补给雨");
+  await expect(page.getByRole("link", { name: "开始游戏" })).toBeVisible();
   await page.getByRole("link", { name: /打开背包，共 [1-9]\d* 件/ }).click();
   await expect(page.getByRole("heading", { name: "今天接住的东西" })).toBeVisible();
   if (process.env.VISUAL_QA)

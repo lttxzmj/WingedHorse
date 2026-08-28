@@ -1003,7 +1003,16 @@
 }
 
 .prairie-game-gate > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.34rem;
   white-space: nowrap;
+}
+
+.prairie-game-gate {
+  border-color: rgb(255 233 165 / 82%);
+  background: linear-gradient(105deg, rgb(255 253 245 / 94%), rgb(255 249 226 / 94%));
 }
 
 .home-continuity {

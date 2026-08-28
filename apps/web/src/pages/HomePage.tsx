@@ -2,7 +2,6 @@ import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import {
   ITEM_CATALOG,
   deriveCompanionGrowth,
-  deriveJourneyGoal,
   getResultProfile,
   recommendCareItem
 } from "@wingedhorse/domain";
@@ -11,6 +10,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Camera,
   CloudSun,
+  Gamepad2,
   Hand,
   Heart,
   MapPinned,
@@ -93,24 +93,12 @@ export function HomePage() {
 
   const profile = getResultProfile(result.typeId);
   const growth = deriveCompanionGrowth(relationshipXp);
-  const journey = deriveJourneyGoal({ events: lifeEvents, gamesPlayed, relationshipXp });
-  const nextMilestone = journey.milestones.find((milestone) => !milestone.completed)?.id;
   const recommendedItemId = recommendCareItem(inventory, petVitals);
   const comfortedToday = lifeEvents.some(
     (event) => event.eventKey === `quiet-moment:${new Date().toISOString().slice(0, 10)}`
   );
-  const nextAction =
-    nextMilestone === "first-haul"
-      ? { eyebrow: "一起动一动", title: "接一场 30 秒补给雨", label: "开始游戏", to: "/game" as const }
-      : nextMilestone === "shared-supply"
-        ? inventoryCount > 0
-          ? { eyebrow: "背包里有新东西", title: "选一份补给给它", label: "打开背包", to: "/inventory" as const }
-          : { eyebrow: "先带点东西回来", title: "接一场轻松的补给雨", label: "开始游戏", to: "/game" as const }
-        : nextMilestone === "saved-memory"
-          ? { eyebrow: "留下一段共同生活", title: "把喜欢的动态存进记忆", label: "看看动态", to: "/life" as const }
-          : nextMilestone === "trusted-pair"
-            ? { eyebrow: "关系正在慢慢长大", title: "写张纸条，或只是陪它坐会儿", label: "写小纸条", to: "/companion" as const }
-            : { eyebrow: "第一段航线已经画好", title: "看看它今天又做了什么", label: "打开生活簿", to: "/life" as const };
+  const gamePrompt =
+    gamesPlayed > 0 ? "再接一场 30 秒补给雨" : "接住第一份补给，带回草原";
   const latestAutonomousEvent = lifeEvents.find((event) => event.source === "daily-plan");
   const latestStoryEvent = lifeEvents.find(
     (event) => event.kind === "story" || event.kind === "visitor"
@@ -197,10 +185,13 @@ export function HomePage() {
         </Link>
         <div className="prairie-task-dock prairie-game-gate">
           <div>
-            <p>{nextAction.eyebrow}</p>
-            <strong>{nextAction.title}</strong>
+            <p>宇宙 Online · 今日补给雨</p>
+            <strong>{gamePrompt}</strong>
           </div>
-          <Link to={nextAction.to}>{nextAction.label}</Link>
+          <Link to="/game">
+            <AppIcon icon={Gamepad2} size={16} />
+            <span>开始游戏</span>
+          </Link>
         </div>
       </section>
 
