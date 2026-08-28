@@ -16,6 +16,7 @@ import {
   type PetVitals,
   type WorldContext
 } from "@wingedhorse/domain";
+import type { PlayerStateResponse } from "@wingedhorse/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createClientId } from "../lib/clientId";
@@ -41,6 +42,7 @@ interface AppState {
   dailyPlan: DailyPlan | null;
   worldContext: WorldContext | null;
   lifeSyncEnabled: boolean;
+  cloudPlayerRevision: number;
   settledGameIds: string[];
   manualMood: "good" | "flat" | "tired" | "anxious" | "sad" | null;
   memories: Array<{ id: string; content: string; createdAt: string }>;
@@ -54,6 +56,9 @@ interface AppState {
   collectItem: (itemId: ItemId, quantity?: number) => void;
   useItem: (itemId: ItemId) => boolean;
   settleGame: (sessionId: string, rewards: Partial<Record<ItemId, number>>) => boolean;
+  applyCloudGameSettlement: (sessionId: string, player: PlayerStateResponse) => void;
+  applyCloudItemConsumption: (itemId: ItemId, player: PlayerStateResponse) => void;
+  applyCloudPlayerState: (player: PlayerStateResponse) => void;
   comfortPet: () => void;
   toggleLifeEventLike: (id: string) => void;
   toggleLifeEventSaved: (id: string) => void;
@@ -86,6 +91,8 @@ export function migratePersistedAppState(persistedState: unknown): Partial<AppSt
     dailyPlan: state.dailyPlan ?? null,
     worldContext: state.worldContext ?? null,
     lifeSyncEnabled: state.lifeSyncEnabled === true,
+    cloudPlayerRevision:
+      typeof state.cloudPlayerRevision === "number" ? state.cloudPlayerRevision : 0,
     settledGameIds: Array.isArray(state.settledGameIds) ? (state.settledGameIds as string[]) : []
   } as Partial<AppState>;
 }
@@ -106,6 +113,7 @@ export const useAppStore = create<AppState>()(
       dailyPlan: null,
       worldContext: null,
       lifeSyncEnabled: false,
+      cloudPlayerRevision: 0,
       settledGameIds: [],
       manualMood: null,
       memories: [],
@@ -190,6 +198,56 @@ export const useAppStore = create<AppState>()(
         }));
         return true;
       },
+      applyCloudPlayerState: (player) =>
+        set({
+          inventory: player.inventory,
+          petVitals: player.vitals,
+          gamesPlayed: player.gamesPlayed,
+          relationshipXp: player.relationshipXp,
+          cloudPlayerRevision: player.revision
+        }),
+      applyCloudGameSettlement: (sessionId, player) =>
+        set((state) => ({
+          inventory: player.inventory,
+          petVitals: player.vitals,
+          gamesPlayed: player.gamesPlayed,
+          relationshipXp: player.relationshipXp,
+          cloudPlayerRevision: player.revision,
+          settledGameIds: state.settledGameIds.includes(sessionId)
+            ? state.settledGameIds
+            : [...state.settledGameIds.slice(-19), sessionId],
+          lifeEvents: state.result
+            ? appendLifeEvent(
+                state.lifeEvents,
+                createLifeEvent({
+                  eventKey: `game-haul:${sessionId}`,
+                  kind: "game-haul",
+                  occurredAt: new Date().toISOString(),
+                  typeId: state.result.typeId
+                })
+              )
+            : state.lifeEvents
+        })),
+      applyCloudItemConsumption: (itemId, player) =>
+        set((state) => ({
+          inventory: player.inventory,
+          petVitals: player.vitals,
+          gamesPlayed: player.gamesPlayed,
+          relationshipXp: player.relationshipXp,
+          cloudPlayerRevision: player.revision,
+          lifeEvents: state.result
+            ? appendLifeEvent(
+                state.lifeEvents,
+                createLifeEvent({
+                  eventKey: `gift:${itemId}:r${player.revision}`,
+                  kind: "gift",
+                  occurredAt: new Date().toISOString(),
+                  typeId: state.result.typeId,
+                  itemId
+                })
+              )
+            : state.lifeEvents
+        })),
       comfortPet: () =>
         set((state) => ({
           relationshipXp: Math.min(999, state.relationshipXp + 1),
@@ -263,6 +321,7 @@ export const useAppStore = create<AppState>()(
           dailyPlan: null,
           worldContext: null,
           lifeSyncEnabled: false,
+          cloudPlayerRevision: 0,
           settledGameIds: [],
           manualMood: null,
           memories: [],
@@ -330,6 +389,7 @@ export const useAppStore = create<AppState>()(
         dailyPlan: state.dailyPlan,
         worldContext: state.worldContext,
         lifeSyncEnabled: state.lifeSyncEnabled,
+        cloudPlayerRevision: state.cloudPlayerRevision,
         settledGameIds: state.settledGameIds,
         manualMood: state.manualMood,
         memories: state.memories,

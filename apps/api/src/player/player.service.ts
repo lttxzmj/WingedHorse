@@ -4,6 +4,7 @@ import type {
   GameSessionStartRequest,
   GameSettlementRequest
 } from "@wingedhorse/contracts";
+import { DROP_TABLE } from "@wingedhorse/domain";
 import { createHash, randomBytes } from "node:crypto";
 import { PlayerRepository } from "./player.repository.js";
 
@@ -15,7 +16,11 @@ export class PlayerService {
     return createHash("sha256").update(visitorToken).digest("hex");
   }
 
-  async start(visitorToken: string, request: GameSessionStartRequest, now = new Date().toISOString()) {
+  async start(
+    visitorToken: string,
+    request: GameSessionStartRequest,
+    now = new Date().toISOString()
+  ) {
     const sessionId = randomBytes(24).toString("base64url");
     const player = await this.repository.start(
       this.actorHash(visitorToken),
@@ -30,7 +35,10 @@ export class PlayerService {
   async state(visitorToken: string) {
     const player = await this.repository.get(this.actorHash(visitorToken));
     if (!player)
-      throw new NotFoundException({ code: "PLAYER_STATE_NOT_FOUND", message: "还没有云端养成状态" });
+      throw new NotFoundException({
+        code: "PLAYER_STATE_NOT_FOUND",
+        message: "还没有云端养成状态"
+      });
     return player;
   }
 
@@ -40,6 +48,22 @@ export class PlayerService {
     request: GameSettlementRequest,
     now = new Date().toISOString()
   ) {
+    const points = new Map(DROP_TABLE.map((drop) => [drop.itemId, drop.points]));
+    let maximumScore = 0;
+    for (const [itemId, quantity] of Object.entries(request.caught)) {
+      const itemPoints = points.get(itemId as keyof typeof request.caught);
+      if (!itemPoints)
+        throw new BadRequestException({
+          code: "INVALID_GAME_REWARD",
+          message: "结算包含不会掉落的物品"
+        });
+      maximumScore += itemPoints * quantity * 10;
+    }
+    if (request.score > maximumScore)
+      throw new BadRequestException({
+        code: "INVALID_GAME_SCORE",
+        message: "结算分数与物品不一致"
+      });
     try {
       const result = await this.repository.settle(
         this.actorHash(visitorToken),

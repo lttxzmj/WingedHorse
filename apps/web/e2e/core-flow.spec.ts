@@ -145,9 +145,12 @@ test("leaving an unfinished game does not grant rewards", async ({ page }) => {
   await page.getByRole("button", { name: "准备开始" }).click();
   await expect(page.getByRole("button", { name: "向右移动" })).toBeVisible({ timeout: 8_000 });
   await page.goto("/home");
-  const persisted = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("wingedhorse-local-state-v2-1") ?? "{}")
+  const persistedJson = await page.evaluate(
+    () => localStorage.getItem("wingedhorse-local-state-v2-1") ?? "{}"
   );
+  const persisted = JSON.parse(persistedJson) as {
+    state?: { gamesPlayed?: number; inventory?: Record<string, number> };
+  };
   expect(persisted.state?.gamesPlayed ?? 0).toBe(0);
   expect(persisted.state?.inventory ?? {}).toEqual({});
 });
@@ -165,7 +168,6 @@ test("a real game finishes, settles once, enters the bag and changes the life st
   page
 }) => {
   test.setTimeout(70_000);
-  test.setTimeout(55_000);
   await page.evaluate(() => {
     localStorage.setItem(
       "wingedhorse-local-state-v2-1",
@@ -206,7 +208,7 @@ test("a real game finishes, settles once, enters the bag and changes the life st
   await expect(page.getByText(/最高 \d+ 连击/)).toBeVisible();
   await expect(page.getByLabel("本局获得物品").locator("span").first()).toBeVisible();
 
-  await page.getByRole("link", { name: "带着补给回草坪" }).click();
+  await page.getByRole("link", { name: "带着补给回草原" }).click();
   await expect(page.getByText("补给已经安全到家")).toBeVisible();
   await page.getByRole("link", { name: /打开背包，共 [1-9]\d* 件/ }).click();
   await expect(page.getByRole("heading", { name: "今天接住的东西" })).toBeVisible();

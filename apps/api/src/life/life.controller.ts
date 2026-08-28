@@ -18,10 +18,14 @@ import {
   visitorTokenSchema
 } from "@wingedhorse/contracts";
 import { LifeService } from "./life.service.js";
+import { PlayerService } from "../player/player.service.js";
 
 @Controller()
 export class LifeController {
-  constructor(@Inject(LifeService) private readonly life: LifeService) {}
+  constructor(
+    @Inject(LifeService) private readonly life: LifeService,
+    @Inject(PlayerService) private readonly player: PlayerService
+  ) {}
 
   private token(value: string | undefined): string {
     const parsed = visitorTokenSchema.safeParse(value);
@@ -86,7 +90,12 @@ export class LifeController {
   }
 
   @Delete("account/data")
-  deleteData(@Headers("x-wingedhorse-visitor-token") token: string | undefined) {
-    return this.life.deleteAll(this.token(token));
+  async deleteData(@Headers("x-wingedhorse-visitor-token") token: string | undefined) {
+    const visitorToken = this.token(token);
+    const [{ deleted }] = await Promise.all([
+      this.life.deleteAll(visitorToken),
+      this.player.deleteAll(visitorToken)
+    ]);
+    return { deleted };
   }
 }

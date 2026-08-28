@@ -208,7 +208,7 @@ export function GamePage() {
             <Button onClick={start}>{summary ? "再接一局" : "准备开始"}</Button>
             {summary ? (
               <Link className="quiet-link" to="/home">
-                带着补给回草坪
+                带着补给回草原
               </Link>
             ) : (
               <Link className="quiet-link" to="/home">

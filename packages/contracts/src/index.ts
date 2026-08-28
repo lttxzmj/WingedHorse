@@ -190,7 +190,10 @@ export type LifeEventResponse = z.infer<typeof lifeEventSchema>;
 export type LifeEventInteractionRequest = z.infer<typeof lifeEventInteractionSchema>;
 export type LifeEventListResponse = z.infer<typeof lifeEventListSchema>;
 
-export const inventorySchema = z.record(lifeEventItemIdSchema, z.number().int().min(1).max(99));
+export const inventorySchema = z.partialRecord(
+  lifeEventItemIdSchema,
+  z.number().int().min(1).max(99)
+);
 export const playerStateSchema = z.object({
   inventory: inventorySchema,
   vitals: petVitalsSchema,

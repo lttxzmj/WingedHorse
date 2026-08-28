@@ -1,8 +1,5 @@
 import { Injectable, OnModuleDestroy } from "@nestjs/common";
-import type {
-  GameSettlementRequest,
-  PlayerStateResponse
-} from "@wingedhorse/contracts";
+import type { GameSettlementRequest, PlayerStateResponse } from "@wingedhorse/contracts";
 import {
   INITIAL_PET_VITALS,
   consumeItem,
@@ -40,7 +37,7 @@ function initialPlayer(bootstrap?: Omit<PlayerStateResponse, "revision">): Playe
 
 function rowToPlayer(row: Record<string, unknown>): PlayerStateResponse {
   return {
-    inventory: (row.inventory ?? {}) as PlayerStateResponse["inventory"],
+    inventory: row.inventory ?? {},
     vitals: row.vitals as PlayerStateResponse["vitals"],
     gamesPlayed: Number(row.games_played),
     relationshipXp: Number(row.relationship_xp),
