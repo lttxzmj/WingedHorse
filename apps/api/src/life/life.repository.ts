@@ -50,7 +50,18 @@ function rowToEvent(row: Record<string, unknown>): LifeEvent {
     ...(row.item_id ? { itemId: row.item_id as NonNullable<LifeEvent["itemId"]> } : {}),
     ...(row.activity ? { activity: row.activity as NonNullable<LifeEvent["activity"]> } : {}),
     ...(row.motive ? { motive: row.motive as NonNullable<LifeEvent["motive"]> } : {}),
-    source: row.source === "daily-plan" ? "daily-plan" : "user-action",
+    ...(row.visitor_type_id
+      ? { visitorTypeId: row.visitor_type_id as NonNullable<LifeEvent["visitorTypeId"]> }
+      : {}),
+    ...(row.story_chapter
+      ? { storyChapter: Number(row.story_chapter) as NonNullable<LifeEvent["storyChapter"]> }
+      : {}),
+    source:
+      row.source === "daily-plan"
+        ? "daily-plan"
+        : row.source === "life-engine"
+          ? "life-engine"
+          : "user-action",
     liked: Boolean(row.liked),
     saved: Boolean(row.saved)
   };
@@ -79,8 +90,8 @@ export class LifeRepository implements OnModuleDestroy {
     }
     const result = await this.pool.query<Record<string, unknown>>(
       `INSERT INTO life_events
-        (actor_hash, event_id, event_key, kind, occurred_at, title, body, type_id, item_id, activity, motive, source, liked, saved)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        (actor_hash, event_id, event_key, kind, occurred_at, title, body, type_id, item_id, activity, motive, visitor_type_id, story_chapter, source, liked, saved)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        ON CONFLICT (actor_hash, event_key) DO UPDATE SET event_key = EXCLUDED.event_key
        RETURNING *`,
       [
@@ -95,6 +106,8 @@ export class LifeRepository implements OnModuleDestroy {
         event.itemId ?? null,
         event.activity ?? null,
         event.motive ?? null,
+        event.visitorTypeId ?? null,
+        event.storyChapter ?? null,
         event.source,
         event.liked,
         event.saved

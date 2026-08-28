@@ -2,8 +2,8 @@ import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { getResultProfile } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { setLifeEventInteraction, syncLifeEvents } from "../lib/lifeApi";
+import { useDigitalLife } from "../hooks/useDigitalLife";
+import { setLifeEventInteraction } from "../lib/lifeApi";
 import { useAppStore } from "../store/useAppStore";
 
 function eventTime(value: string) {
@@ -20,35 +20,13 @@ export function LifePage() {
   const events = useAppStore((state) => state.lifeEvents);
   const toggleLike = useAppStore((state) => state.toggleLifeEventLike);
   const toggleSaved = useAppStore((state) => state.toggleLifeEventSaved);
-  const lifeSyncEnabled = useAppStore((state) => state.lifeSyncEnabled);
-  const mergeLifeEvents = useAppStore((state) => state.mergeLifeEvents);
-  const [syncState, setSyncState] = useState<"idle" | "syncing" | "synced" | "offline">("idle");
-
-  useEffect(() => {
-    if (!lifeSyncEnabled || events.length === 0) return;
-    let active = true;
-    setSyncState("syncing");
-    void syncLifeEvents(events)
-      .then((remote) => {
-        if (!active) return;
-        mergeLifeEvents(remote);
-        setSyncState("synced");
-      })
-      .catch(() => {
-        if (active) setSyncState("offline");
-      });
-    return () => {
-      active = false;
-    };
-  }, [events.length, lifeSyncEnabled, mergeLifeEvents]);
+  const { lifeSyncEnabled, syncState } = useDigitalLife();
 
   function interact(eventId: string, interaction: "liked" | "saved", value: boolean) {
     if (interaction === "liked") toggleLike(eventId);
     else toggleSaved(eventId);
     if (lifeSyncEnabled)
-      void setLifeEventInteraction(eventId, { interaction, value }).catch(() =>
-        setSyncState("offline")
-      );
+      void setLifeEventInteraction(eventId, { interaction, value }).catch(() => undefined);
   }
 
   if (!result) {
@@ -69,7 +47,7 @@ export function LifePage() {
   return (
     <main className="life-page">
       <header className="subpage-header life-header">
-        <Link to="/home" aria-label="回到草坪">
+        <Link to="/home" aria-label="回到草原">
           ←
         </Link>
         <div>
@@ -92,53 +70,72 @@ export function LifePage() {
       {events.length === 0 ? (
         <section className="life-empty">
           <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />
-          <h2>草坪刚安静下来</h2>
+          <h2>草原刚安静下来</h2>
           <p>玩一局、送一份补给或摸摸它，新的共同记录就会出现在这里。</p>
-          <Button onClick={() => history.back()}>回草坪看看</Button>
+          <Button onClick={() => history.back()}>回草原看看</Button>
         </section>
       ) : (
         <section className="life-feed" aria-label="数字生命最近动态">
-          {events.map((event) => (
-            <article className="life-post" key={event.id}>
-              <header>
-                <WingedHorseCharacter
-                  typeId={event.typeId}
-                  mood={event.kind === "quiet-moment" ? "resting" : profile.mood}
-                  alt=""
-                />
-                <div>
-                  <strong>{profile.name}</strong>
-                  <time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time>
+          {events.map((event) => {
+            const eventProfile = getResultProfile(event.typeId);
+            const visitorProfile = event.visitorTypeId
+              ? getResultProfile(event.visitorTypeId)
+              : null;
+            return (
+              <article className={`life-post life-post--${event.kind}`} key={event.id}>
+                <header>
+                  <WingedHorseCharacter
+                    typeId={event.typeId}
+                    mood={event.kind === "quiet-moment" ? "resting" : eventProfile.mood}
+                    alt=""
+                  />
+                  <div>
+                    <strong>
+                      {event.kind === "visitor" && visitorProfile
+                        ? `${profile.name}和${visitorProfile.name}`
+                        : eventProfile.name}
+                    </strong>
+                    <time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time>
+                  </div>
+                  <span>{event.kind === "visitor" ? "AI 访客 · 仅自己可见" : "仅自己可见"}</span>
+                </header>
+                <div
+                  className={`life-post__scene life-post__scene--${event.kind}`}
+                  aria-hidden="true"
+                >
+                  <div className="life-post__characters">
+                    <WingedHorseCharacter typeId={event.typeId} mood={eventProfile.mood} alt="" />
+                    {visitorProfile && event.visitorTypeId ? (
+                      <WingedHorseCharacter
+                        typeId={event.visitorTypeId}
+                        mood={visitorProfile.mood}
+                        alt=""
+                      />
+                    ) : null}
+                  </div>
                 </div>
-                <span>仅自己可见</span>
-              </header>
-              <div
-                className={`life-post__scene life-post__scene--${event.kind}`}
-                aria-hidden="true"
-              >
-                <WingedHorseCharacter typeId={event.typeId} mood={profile.mood} alt="" />
-              </div>
-              <h2>{event.title}</h2>
-              <p>{event.body}</p>
-              <footer>
-                <button
-                  className={event.liked ? "is-active" : ""}
-                  aria-pressed={event.liked}
-                  onClick={() => interact(event.id, "liked", !event.liked)}
-                >
-                  {event.liked ? "已接住" : "接住这刻"}
-                </button>
-                <button
-                  className={event.saved ? "is-active" : ""}
-                  aria-pressed={event.saved}
-                  onClick={() => interact(event.id, "saved", !event.saved)}
-                >
-                  {event.saved ? "已存进共同记忆" : "存进共同记忆"}
-                </button>
-                <Link to="/companion">递张小纸条</Link>
-              </footer>
-            </article>
-          ))}
+                <h2>{event.title}</h2>
+                <p>{event.body}</p>
+                <footer>
+                  <button
+                    className={event.liked ? "is-active" : ""}
+                    aria-pressed={event.liked}
+                    onClick={() => interact(event.id, "liked", !event.liked)}
+                  >
+                    {event.liked ? "已接住" : "接住这刻"}
+                  </button>
+                  <button
+                    className={event.saved ? "is-active" : ""}
+                    aria-pressed={event.saved}
+                    onClick={() => interact(event.id, "saved", !event.saved)}
+                  >
+                    {event.saved ? "已存进共同记忆" : "存进共同记忆"}
+                  </button>
+                  <Link to="/companion">递张小纸条</Link>
+                </footer>
+              </article>
+            );
+          })}
         </section>
       )}
     </main>

@@ -14,6 +14,7 @@ import {
 import {
   lifeEventCreateSchema,
   lifeEventInteractionSchema,
+  lifeSyncRequestSchema,
   visitorTokenSchema
 } from "@wingedhorse/contracts";
 import { LifeService } from "./life.service.js";
@@ -38,6 +39,17 @@ export class LifeController {
     if (!parsed.success)
       throw new BadRequestException({ code: "INVALID_LIFE_EVENT", message: "生活事件格式不正确" });
     return this.life.create(this.token(token), parsed.data);
+  }
+
+  @Post("life/sync")
+  sync(@Headers("x-wingedhorse-visitor-token") token: string | undefined, @Body() body: unknown) {
+    const parsed = lifeSyncRequestSchema.safeParse(body);
+    if (!parsed.success)
+      throw new BadRequestException({
+        code: "INVALID_LIFE_SYNC",
+        message: "生活状态格式不正确"
+      });
+    return this.life.sync(this.token(token), parsed.data);
   }
 
   @Get("life/events")

@@ -1,12 +1,15 @@
 import { expect, test } from "@playwright/test";
 
+const LOCAL_REPLY_TEXT =
+  "我暂时连不上远处的 AI 服务，但还在这里。你可以先用一句话说说现在最占脑子的事；如果不想说，也可以回草原休息。";
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 });
 
-test("questionnaire reaches result, lawn and game without a broken step", async ({
+test("questionnaire reaches result, prairie and game without a broken step", async ({
   page
 }, testInfo) => {
   if (process.env.VISUAL_QA)
@@ -44,10 +47,10 @@ test("questionnaire reaches result, lawn and game without a broken step", async 
     page.getByText("本结果为娱乐测评，不构成心理、医疗或职业建议。类型只会在你主动复测时改变。")
   ).toBeVisible();
   await page.getByRole("button", { name: "去看看平行世界里的你" }).click();
-  await expect(page.getByRole("heading", { name: /今天辛苦了/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /先喘口气/ })).toBeVisible();
   await page.getByRole("link", { name: /生活簿/ }).click();
   await expect(page.getByRole("heading", { name: "它今天也在生活" })).toBeVisible();
-  await expect(page.getByText("新住客到达草坪")).toBeVisible();
+  await expect(page.getByText("新住客到达草原")).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-life-${testInfo.project.name}.png`,
@@ -58,7 +61,7 @@ test("questionnaire reaches result, lawn and game without a broken step", async 
     "aria-pressed",
     "true"
   );
-  await page.getByRole("link", { name: "回到草坪" }).click();
+  await page.getByRole("link", { name: "回到草原" }).click();
   await page.locator(".character-hotspot").click();
   await expect(page.getByRole("dialog", { name: "现在想怎么陪它？" })).toBeVisible();
   await page.getByRole("button", { name: /摸摸它/ }).click();
@@ -121,11 +124,171 @@ test("legacy questionnaire drafts are deleted instead of migrated", async ({ pag
   await expect(page.getByText("第 1/17 题")).toBeVisible();
 });
 
+test("game start and companion entry survive an HTTP context without randomUUID", async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(globalThis.crypto, "randomUUID", {
+      configurable: true,
+      value: undefined
+    });
+  });
+  await page.goto("/game");
+  await page.getByRole("button", { name: "准备开始" }).click();
+  await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 8_000 });
+  await page.goto("/companion");
+  await expect(page.getByRole("heading", { name: "说两句也好" })).toBeVisible();
+});
+
+test("leaving an unfinished game does not grant rewards", async ({ page }) => {
+  await page.goto("/game");
+  await page.getByRole("button", { name: "准备开始" }).click();
+  await expect(page.getByRole("button", { name: "向右移动" })).toBeVisible({ timeout: 8_000 });
+  await page.goto("/home");
+  const persisted = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("wingedhorse-local-state-v2-1") ?? "{}")
+  );
+  expect(persisted.state?.gamesPlayed ?? 0).toBe(0);
+  expect(persisted.state?.inventory ?? {}).toEqual({});
+});
+
+test("game loading failure offers a usable retry path", async ({ page }) => {
+  await page.route(/phaser/i, (route) => route.abort());
+  await page.goto("/game");
+  await page.getByRole("button", { name: "准备开始" }).click();
+  await expect(page.getByRole("alert")).toContainText("补给雨还没打开", { timeout: 10_000 });
+  await expect(page.getByRole("button", { name: "再试一次" })).toBeEnabled();
+  await expect(page.locator(".game-recovery a", { hasText: "回到草原" })).toBeVisible();
+});
+
+test("a real game finishes, settles once, enters the bag and changes the life story", async ({
+  page
+}) => {
+  test.setTimeout(70_000);
+  test.setTimeout(55_000);
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "wingedhorse-local-state-v2-1",
+      JSON.stringify({
+        version: 5,
+        state: {
+          assessmentOptionSeed: "playable-game-e2e",
+          result: {
+            questionSetId: "wingedhorse-v2-1",
+            questionSetVersion: "2.1.0",
+            rawScores: { energy: 0, engine: 0, chaos: 0, direction: 0 },
+            normalizedScores: { energy: 50, engine: 50, chaos: 50, direction: 50 },
+            typeId: "chosen",
+            edgeDimensions: [],
+            easterEggs: [],
+            bloodline: { purity: 100, hidden: [] },
+            directionHint: "clear-direction"
+          },
+          inventory: {},
+          petVitals: { energy: 50, engine: 50, chaos: 50, direction: 50 },
+          gamesPlayed: 0,
+          relationshipXp: 0,
+          lifeEvents: [],
+          settledGameIds: []
+        }
+      })
+    );
+    Object.defineProperty(globalThis.crypto, "randomUUID", {
+      configurable: true,
+      value: () => "e2e-playable-session"
+    });
+  });
+  await page.goto("/game");
+  await page.getByRole("button", { name: "准备开始" }).click();
+  await expect(page.getByRole("button", { name: "向左移动" })).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator(".game-hud")).toContainText(/[1-9]\d* 件/, { timeout: 12_000 });
+  await expect(page.getByText("本局得分")).toBeVisible({ timeout: 35_000 });
+  await expect(page.getByText(/最高 \d+ 连击/)).toBeVisible();
+  await expect(page.getByLabel("本局获得物品").locator("span").first()).toBeVisible();
+
+  await page.getByRole("link", { name: "带着补给回草坪" }).click();
+  await expect(page.getByText("补给已经安全到家")).toBeVisible();
+  await page.getByRole("link", { name: /打开背包，共 [1-9]\d* 件/ }).click();
+  await expect(page.getByRole("heading", { name: "今天接住的东西" })).toBeVisible();
+  await page.getByRole("button", { name: "给牛马使用" }).first().click();
+  const confirmation = page.getByRole("dialog", { name: /要使用.+吗/ });
+  if (await confirmation.isVisible()) await page.getByRole("button", { name: "确认使用" }).click();
+  await expect(page.getByRole("status")).toContainText("飞马收下了");
+
+  await page.goto("/life");
+  await expect(page.getByText("补给雨顺利收工")).toBeVisible();
+  await expect(page.getByText(/收到一份.+/)).toBeVisible();
+  const persisted = await page.evaluate(() => {
+    const raw = localStorage.getItem("wingedhorse-local-state-v2-1") ?? "{}";
+    return JSON.parse(raw) as {
+      state: {
+        gamesPlayed: number;
+        relationshipXp: number;
+        settledGameIds: string[];
+      };
+    };
+  });
+  expect(persisted.state.gamesPlayed).toBe(1);
+  expect(persisted.state.relationshipXp).toBe(10);
+  expect(persisted.state.settledGameIds).toHaveLength(1);
+  expect(persisted.state.settledGameIds[0]).toMatch(/^[A-Za-z0-9_-]{8,80}$/u);
+});
+
+test("returning after a week reveals the private story arc without a check-in streak", async ({
+  page
+}) => {
+  await page.evaluate(() => {
+    const arrivalAt = new Date(Date.now() - 8 * 86_400_000).toISOString();
+    localStorage.setItem(
+      "wingedhorse-local-state-v2-1",
+      JSON.stringify({
+        version: 5,
+        state: {
+          assessmentOptionSeed: "story-e2e-seed",
+          result: {
+            questionSetId: "wingedhorse-v2-1",
+            questionSetVersion: "2.1.0",
+            rawScores: { energy: 10, engine: 10, chaos: 10, direction: 10 },
+            normalizedScores: { energy: 50, engine: 50, chaos: 50, direction: 50 },
+            typeId: "tired",
+            edgeDimensions: [],
+            easterEggs: [],
+            bloodline: { purity: 100, hidden: [] },
+            directionHint: "clear-direction"
+          },
+          relationshipXp: 20,
+          lifeEvents: [
+            {
+              id: "life-arrival-e2e",
+              eventKey: "arrival:2.1.0:tired",
+              kind: "arrival",
+              occurredAt: arrivalAt,
+              title: "新住客到达草原",
+              body: "它把这里当作暂时不用逞强的地方。",
+              typeId: "tired",
+              source: "user-action",
+              liked: false,
+              saved: false
+            }
+          ]
+        }
+      })
+    );
+  });
+  await page.goto("/life");
+  await expect(page.getByText("帐篷里多了一盏小灯")).toBeVisible();
+  await expect(page.getByText("你们画下第一张草原地图")).toBeVisible();
+  await expect(page.getByText("翅膀第一次留下完整影子")).toBeVisible();
+  await expect(page.getByText("不是公开朋友圈")).toBeVisible();
+});
+
 test("AI disclosure, memory controls and network fallback remain usable", async ({
   page
 }, testInfo) => {
-  await page.route("**/api/companion/messages", async (route) =>
-    route.fulfill({
+  const companionRequests: Array<Record<string, unknown>> = [];
+  await page.route("**/api/companion/messages", async (route) => {
+    companionRequests.push(route.request().postDataJSON() as Record<string, unknown>);
+    await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
@@ -135,14 +298,15 @@ test("AI disclosure, memory controls and network fallback remain usable", async 
         aiDisclosure: true,
         memoryCandidate: null
       })
-    })
-  );
+    });
+  });
   await page.goto("/companion");
   await expect(page.getByText("嗨，我是 AI 飞马，不是真人或心理咨询师。")).toBeVisible();
   await page.getByLabel("本次允许带入已保存记忆").check();
   await page.getByLabel("想说什么都可以").fill("我喜欢散步");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText("我听见了，我们先把今天拆小一点。")).toBeVisible();
+  expect(companionRequests[0]).not.toHaveProperty("lifeContext");
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-chat-${testInfo.project.name}.png`,
@@ -153,6 +317,21 @@ test("AI disclosure, memory controls and network fallback remain usable", async 
   await expect(page.getByText("我喜欢散步")).toBeVisible();
   await page.getByRole("button", { name: "删除" }).click();
   await expect(page.getByText("还没有保存任何记忆")).toBeVisible();
+});
+
+test("companion exposes a recoverable local reply for malformed API responses", async ({
+  page
+}) => {
+  await page.route("**/api/companion/messages", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+  });
+  await page.goto("/companion");
+  await page.getByLabel("想说什么都可以").fill("我有点乱");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(page.getByText(LOCAL_REPLY_TEXT)).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("已切换为本地陪伴回复");
+  await page.getByLabel("想说什么都可以").fill("我还能继续说吗");
+  await expect(page.getByRole("button", { name: "发送" })).toBeEnabled();
 });
 
 test("camera experiment is optional and manual mood works without permission", async ({

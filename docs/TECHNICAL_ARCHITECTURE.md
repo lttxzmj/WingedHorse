@@ -1,6 +1,6 @@
 # WingedHorse 技术架构
 
-状态：Proposed v0.1  
+状态：Implemented baseline v0.2
 原则：Web/H5 优先、领域规则可测试、敏感数据最少化、部署方式可替换
 
 ## 1. 技术目标
@@ -114,6 +114,8 @@
 - LifeEvent 是事实源，LifePost 是对事实的呈现；模型不得直接写 PetState、Inventory 或 RelationshipState。
 - 所有自动事件使用稳定幂等键、时区和可追溯触发来源，避免刷新、重试或多实例重复生成。
 - MVP 可由 API 定时任务惰性推进：用户访问时补算应发生事件；规模扩大后再迁移至 BullMQ worker。
+- v0.1 已实现确定性 Planner、惰性 Simulation、PostgreSQL Event/Plan Repository、匿名能力凭证和完整删除边界，详见 `docs/DIGITAL_LIFE_ENGINE.md`。
+- 跨日故事和 AI 牛马访客由纯领域规则稳定生成，不调用模型、不依赖定时任务，也不读取其他用户状态。
 
 ## 5. API 边界
 
@@ -215,7 +217,7 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 - Domain：Vitest 单元测试，重点覆盖计分、掉落、背包和状态机。
 - UI：组件交互测试、可访问性检查、视觉回归。
 - API：模块集成测试与数据库事务测试。
-- E2E：Playwright 覆盖问卷 → 结果 → 草坪 → 小游戏 → 使用道具。
+- E2E：Playwright 在桌面与 390 px H5 覆盖问卷 → 结果 → 草原，并真实运行完整 30 秒小游戏，验证接住 → 幂等结算 → 入包 → 消耗 → 数值与生活事件；另覆盖未完成退出、加载失败、暂停和无 `randomUUID` 的 HTTP 环境。
 - AI：固定安全评测集，不用模型随机回答作为普通单元测试断言。
 - 性能：移动端 Lighthouse 与小游戏 FPS 采样。
 

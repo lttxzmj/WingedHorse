@@ -25,6 +25,8 @@ export class CompanionService {
         memoryCandidate: null
       };
     }
+    const grounded = this.groundedReply(request);
+    if (grounded) return grounded;
     if (!this.provider.available) return this.fallback(request.message, level);
 
     const controller = new AbortController();
@@ -63,6 +65,36 @@ export class CompanionService {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  private groundedReply(request: CompanionMessageRequest): CompanionMessageResponse | null {
+    const context = request.lifeContext;
+    if (!context) return null;
+    const asksAboutLife = /今天|刚才|最近|做了什么|发生了什么/u.test(request.message);
+    const asksAboutInventory = /背包|补给|物品|有什么/u.test(request.message);
+    const asksAboutState = /状态|感觉怎么样|还好吗/u.test(request.message);
+    let reply: string | null = null;
+    if (asksAboutLife) {
+      const event = context.recentEvents[0];
+      reply = event
+        ? `我记得。最近发生的是“${event.title}”：${event.body} 这是生活簿里真实记下来的事。`
+        : "今天的生活簿还很安静，我不想为了显得热闹而编造经历。等真的发生了什么，我会记下来。";
+    } else if (asksAboutInventory) {
+      reply = context.inventory.length
+        ? `背包里现在有${context.inventory.map((item) => `${item.name}×${item.count}`).join("、")}。这是当前实际库存。`
+        : "背包现在是空的。我们可以去接一场补给雨，但今天不玩也没关系。";
+    } else if (asksAboutState) {
+      reply = `我现在按“${context.plan.motive}”安排今天，同行值是 ${context.relationshipXp}。这些是养成状态，不是对你情绪或健康的判断。`;
+    }
+    return reply
+      ? {
+          reply,
+          source: "domain-grounded",
+          safetyLevel: "normal",
+          aiDisclosure: true,
+          memoryCandidate: null
+        }
+      : null;
   }
 
   private fallback(message: string, level: "normal" | "concern"): CompanionMessageResponse {

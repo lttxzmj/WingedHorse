@@ -3,8 +3,9 @@ import { ITEM_CATALOG, type ItemId } from "../game/items.js";
 
 import type { LifeMotive, PlannedActivity } from "./engine.js";
 
-export type LifeEventKind = "arrival" | "game-haul" | "gift" | "quiet-moment" | "autonomous";
-export type LifeEventSource = "user-action" | "daily-plan";
+export type LifeEventKind =
+  "arrival" | "game-haul" | "gift" | "quiet-moment" | "autonomous" | "visitor" | "story";
+export type LifeEventSource = "user-action" | "daily-plan" | "life-engine";
 
 export interface LifeEvent {
   id: string;
@@ -17,6 +18,8 @@ export interface LifeEvent {
   itemId?: ItemId | undefined;
   activity?: PlannedActivity | undefined;
   motive?: LifeMotive | undefined;
+  visitorTypeId?: HorseTypeId | undefined;
+  storyChapter?: 1 | 2 | 3 | undefined;
   source: LifeEventSource;
   liked: boolean;
   saved: boolean;
@@ -30,6 +33,8 @@ export interface CreateLifeEventInput {
   itemId?: ItemId | undefined;
   activity?: PlannedActivity | undefined;
   motive?: LifeMotive | undefined;
+  visitorTypeId?: HorseTypeId | undefined;
+  storyChapter?: 1 | 2 | 3 | undefined;
   source?: LifeEventSource | undefined;
 }
 
@@ -38,7 +43,7 @@ const copy: Record<
   (input: CreateLifeEventInput) => Pick<LifeEvent, "title" | "body">
 > = {
   arrival: () => ({
-    title: "新住客到达草坪",
+    title: "新住客到达草原",
     body: "它绕着帐篷看了一圈，把这里当作暂时不用逞强的地方。"
   }),
   "game-haul": () => ({
@@ -50,14 +55,14 @@ const copy: Record<
     body: "它没有立刻用掉，而是先朝你点了点头：被惦记到的感觉，比数值更暖一点。"
   }),
   "quiet-moment": () => ({
-    title: "草坪安静了十秒",
+    title: "草原安静了十秒",
     body: "你们谁也没催谁。风吹过鬃毛，这十秒也被算进了共同生活。"
   }),
   autonomous: (input) => {
     const content: Record<PlannedActivity, Pick<LifeEvent, "title" | "body">> = {
       "slow-breakfast": {
         title: "早餐吃得比闹钟慢一点",
-        body: "它把最后一口留到阳光照进草坪时才吃完，今天决定不抢跑。"
+        body: "它把最后一口留到阳光照进草原时才吃完，今天决定不抢跑。"
       },
       "tidy-supplies": {
         title: "把补给重新排了一遍",
@@ -73,7 +78,7 @@ const copy: Record<
       },
       "blanket-nap": {
         title: "把自己卷进毯子里",
-        body: "草坪安静了好一阵。醒来以后，它郑重宣布休息也算今日事项。"
+        body: "草原安静了好一阵。醒来以后，它郑重宣布休息也算今日事项。"
       },
       "write-postcard": {
         title: "写了一张没有地址的小纸条",
@@ -89,6 +94,29 @@ const copy: Record<
       }
     };
     return content[input.activity ?? "cloud-watch"];
+  },
+  visitor: (input) => ({
+    title: "一位 AI 牛马来草原坐了坐",
+    body: input.visitorTypeId
+      ? "它带来一张写着‘今天不用互相证明什么’的小卡片，聊完便自己回去了。"
+      : "访客在帐篷边坐了一会儿，没有打扰你们原本的节奏。"
+  }),
+  story: (input) => {
+    const chapters = {
+      1: {
+        title: "帐篷里多了一盏小灯",
+        body: "它说这盏灯不是用来催你回来的，只是想让你知道：晚一点也有人给你留着位置。"
+      },
+      2: {
+        title: "你们画下第一张草原地图",
+        body: "地图没有终点，只标了补给雨、安静角落和一条随时可以折返的小路。"
+      },
+      3: {
+        title: "翅膀第一次留下完整影子",
+        body: "它没有急着起飞。你们决定先把这一刻记下来，等真正想出发时再一起走。"
+      }
+    } as const;
+    return chapters[input.storyChapter ?? 1];
   }
 };
 
@@ -113,6 +141,8 @@ export function createLifeEvent(input: CreateLifeEventInput): LifeEvent {
     ...(input.itemId ? { itemId: input.itemId } : {}),
     ...(input.activity ? { activity: input.activity } : {}),
     ...(input.motive ? { motive: input.motive } : {}),
+    ...(input.visitorTypeId ? { visitorTypeId: input.visitorTypeId } : {}),
+    ...(input.storyChapter ? { storyChapter: input.storyChapter } : {}),
     ...eventCopy,
     liked: false,
     saved: false

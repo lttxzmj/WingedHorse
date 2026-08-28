@@ -23,7 +23,7 @@ function NotFoundPage() {
         <span className="empty-state__icon" aria-hidden="true">
           🪽
         </span>
-        <h1>这片草坪还没铺到这里</h1>
+        <h1>这片草原还没延伸到这里</h1>
         <p>回到起点，我们换一条路继续。</p>
         <Link className="ui-button ui-button--primary inline-link-button" to="/">
           回到首页

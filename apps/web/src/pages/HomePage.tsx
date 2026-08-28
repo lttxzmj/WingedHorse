@@ -4,6 +4,7 @@ import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { useDigitalLife } from "../hooks/useDigitalLife";
 
 function relationshipLabel(value: number) {
   if (value >= 60) return "并肩老友";
@@ -15,7 +16,7 @@ function relationshipLabel(value: number) {
 export function HomePage() {
   const navigate = useNavigate();
   const [interactionOpen, setInteractionOpen] = useState(false);
-  const [reaction, setReaction] = useState("我不会催你。想一起做件小事，还是先休息？");
+  const [reaction, setReaction] = useState("");
   const [comforted, setComforted] = useState(false);
   const characterButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -26,6 +27,9 @@ export function HomePage() {
   );
   const gamesPlayed = useAppStore((state) => state.gamesPlayed);
   const relationshipXp = useAppStore((state) => state.relationshipXp);
+  const lifeEvents = useAppStore((state) => state.lifeEvents);
+  const worldContext = useAppStore((state) => state.worldContext);
+  useDigitalLife();
   const comfortPet = useAppStore((state) => state.comfortPet);
 
   useEffect(() => {
@@ -59,12 +63,24 @@ export function HomePage() {
 
   const profile = getResultProfile(result.typeId);
   const taskDone = gamesPlayed > 0;
+  const latestAutonomousEvent = lifeEvents.find((event) => event.source === "daily-plan");
+  const latestStoryEvent = lifeEvents.find(
+    (event) => event.kind === "story" || event.kind === "visitor"
+  );
+  const greeting =
+    worldContext?.period === "morning"
+      ? "早上好"
+      : worldContext?.period === "afternoon"
+        ? "下午好"
+        : worldContext?.period === "night"
+          ? "夜深了"
+          : "晚上好";
   return (
     <main className="home-page home-page--immersive">
       <header className="home-header">
         <div>
-          <p className="eyebrow">你的飞马草坪</p>
-          <h1>晚上好，今天辛苦了。</h1>
+          <p className="eyebrow">你的飞马草原</p>
+          <h1>{greeting}，先喘口气。</h1>
         </div>
         <div className="home-header__tools">
           <Link
@@ -74,16 +90,22 @@ export function HomePage() {
           >
             包<small>{inventoryCount}</small>
           </Link>
+          <Link className="icon-button" aria-label="打开生活簿" to="/life">
+            簿
+          </Link>
           <Link className="icon-button" aria-label="打开设置" to="/settings">
             设
           </Link>
         </div>
       </header>
 
-      <section className="lawn-stage lawn-stage--alive" aria-label="飞马生活草坪">
+      <section className="lawn-stage lawn-stage--alive" aria-label="飞马生活草原">
         <div className="lawn-stage__sun" aria-hidden="true" />
         <p className="lawn-stage__bubble" aria-live="polite">
-          {reaction}
+          {reaction ||
+            latestStoryEvent?.body ||
+            latestAutonomousEvent?.body ||
+            "我不会催你。想一起做件小事，还是先休息？"}
         </p>
         <button
           ref={characterButtonRef}
@@ -94,18 +116,11 @@ export function HomePage() {
           <WingedHorseCharacter mood={profile.mood} typeId={result.typeId} alt={profile.name} />
           <span>点点我</span>
         </button>
-        <Link className="scene-hotspot scene-hotspot--drop" to="/game">
-          <b>补给雨</b>
-          <span>{taskDone ? "再接一局" : "今日小事"}</span>
-        </Link>
-        <Link className="scene-hotspot scene-hotspot--mail" to="/companion">
-          <b>小纸条</b>
-          <span>和我说两句</span>
-        </Link>
-        <Link className="scene-hotspot scene-hotspot--life" to="/life">
-          <b>生活簿</b>
-          <span>看看动态</span>
-        </Link>
+        {latestStoryEvent?.kind === "visitor" ? (
+          <Link className="scene-whisper" to="/life">
+            有位 AI 牛马来坐过
+          </Link>
+        ) : null}
         <div className="tent" aria-label="飞马休息的小帐篷">
           <span aria-hidden="true">休</span>
         </div>

@@ -1,8 +1,11 @@
 import {
   lifeEventListSchema,
   lifeEventSchema,
+  lifeSyncResponseSchema,
   type LifeEventCreateRequest,
-  type LifeEventInteractionRequest
+  type LifeEventInteractionRequest,
+  type LifeSyncRequest,
+  type LifeSyncResponse
 } from "@wingedhorse/contracts";
 import type { LifeEvent } from "@wingedhorse/domain";
 
@@ -22,6 +25,10 @@ export function getVisitorToken(): string {
   return token;
 }
 
+export function hasVisitorToken(): boolean {
+  return Boolean(localStorage.getItem(VISITOR_TOKEN_KEY));
+}
+
 function headers() {
   return {
     "Content-Type": "application/json",
@@ -36,7 +43,7 @@ async function expectJson(response: Response): Promise<unknown> {
 
 export async function syncLifeEvents(localEvents: LifeEvent[]): Promise<LifeEvent[]> {
   await Promise.all(
-    localEvents.map(async ({ eventKey, kind, occurredAt, typeId, itemId }) => {
+    localEvents.map(async ({ eventKey, kind, occurredAt, typeId, itemId, liked, saved }) => {
       const body: LifeEventCreateRequest = {
         eventKey,
         kind,
@@ -49,11 +56,28 @@ export async function syncLifeEvents(localEvents: LifeEvent[]): Promise<LifeEven
         headers: headers(),
         body: JSON.stringify(body)
       });
-      lifeEventSchema.parse(await expectJson(response));
+      const event = lifeEventSchema.parse(await expectJson(response));
+      await Promise.all(
+        (
+          [
+            ...(liked ? [{ interaction: "liked" as const, value: true }] : []),
+            ...(saved ? [{ interaction: "saved" as const, value: true }] : [])
+          ] satisfies LifeEventInteractionRequest[]
+        ).map((request) => setLifeEventInteraction(event.id, request))
+      );
     })
   );
   const response = await fetch("/api/life/events?limit=30", { headers: headers() });
   return lifeEventListSchema.parse(await expectJson(response)).events;
+}
+
+export async function syncDigitalLife(request: LifeSyncRequest): Promise<LifeSyncResponse> {
+  const response = await fetch("/api/life/sync", {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(request)
+  });
+  return lifeSyncResponseSchema.parse(await expectJson(response));
 }
 
 export async function setLifeEventInteraction(id: string, request: LifeEventInteractionRequest) {
@@ -66,6 +90,7 @@ export async function setLifeEventInteraction(id: string, request: LifeEventInte
 }
 
 export async function deleteRemoteLifeData(): Promise<void> {
+  if (!hasVisitorToken()) return;
   const response = await fetch("/api/account/data", { method: "DELETE", headers: headers() });
   await expectJson(response);
   localStorage.removeItem(VISITOR_TOKEN_KEY);

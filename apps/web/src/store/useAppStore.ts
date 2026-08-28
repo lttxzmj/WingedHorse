@@ -6,15 +6,19 @@ import {
   createPetVitalsFromAssessment,
   grantItems,
   INITIAL_PET_VITALS,
+  advanceDigitalLife,
   type AssessmentAnswers,
   type AssessmentResult,
+  type DailyPlan,
   type Inventory,
   type ItemId,
   type LifeEvent,
-  type PetVitals
+  type PetVitals,
+  type WorldContext
 } from "@wingedhorse/domain";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createClientId } from "../lib/clientId";
 
 export const LEGACY_APP_STATE_KEY = "wingedhorse-local-state";
 export const CURRENT_APP_STATE_KEY = "wingedhorse-local-state-v2-1";
@@ -34,6 +38,8 @@ interface AppState {
   gamesPlayed: number;
   relationshipXp: number;
   lifeEvents: LifeEvent[];
+  dailyPlan: DailyPlan | null;
+  worldContext: WorldContext | null;
   lifeSyncEnabled: boolean;
   settledGameIds: string[];
   manualMood: "good" | "flat" | "tired" | "anxious" | "sad" | null;
@@ -52,6 +58,8 @@ interface AppState {
   toggleLifeEventLike: (id: string) => void;
   toggleLifeEventSaved: (id: string) => void;
   mergeLifeEvents: (events: LifeEvent[]) => void;
+  advanceLife: (now: string, timezoneOffsetMinutes: number) => void;
+  applyLifeSync: (plan: DailyPlan, world: WorldContext, events: LifeEvent[]) => void;
   setLifeSyncEnabled: (enabled: boolean) => void;
   setManualMood: (mood: AppState["manualMood"]) => void;
   setHardwareLink: (enabled: boolean) => void;
@@ -63,6 +71,23 @@ interface AppState {
   setResultFeedback: (feedback: AppState["resultFeedback"]) => void;
   ensureAssessmentVersion: (version: string) => void;
   getAnswers: () => AssessmentAnswers;
+}
+
+export function migratePersistedAppState(persistedState: unknown): Partial<AppState> {
+  const state =
+    typeof persistedState === "object" && persistedState !== null
+      ? (persistedState as Record<string, unknown>)
+      : {};
+
+  return {
+    ...state,
+    relationshipXp: typeof state.relationshipXp === "number" ? state.relationshipXp : 0,
+    lifeEvents: Array.isArray(state.lifeEvents) ? (state.lifeEvents as LifeEvent[]) : [],
+    dailyPlan: state.dailyPlan ?? null,
+    worldContext: state.worldContext ?? null,
+    lifeSyncEnabled: state.lifeSyncEnabled === true,
+    settledGameIds: Array.isArray(state.settledGameIds) ? (state.settledGameIds as string[]) : []
+  } as Partial<AppState>;
 }
 
 export const useAppStore = create<AppState>()(
@@ -78,6 +103,8 @@ export const useAppStore = create<AppState>()(
       gamesPlayed: 0,
       relationshipXp: 0,
       lifeEvents: [],
+      dailyPlan: null,
+      worldContext: null,
       lifeSyncEnabled: false,
       settledGameIds: [],
       manualMood: null,
@@ -91,6 +118,8 @@ export const useAppStore = create<AppState>()(
       setResult: (result) =>
         set((state) => ({
           result,
+          dailyPlan: null,
+          worldContext: null,
           petVitals: createPetVitalsFromAssessment(result.normalizedScores),
           lifeEvents: appendLifeEvent(
             state.lifeEvents,
@@ -107,6 +136,8 @@ export const useAppStore = create<AppState>()(
           answers: {},
           assessmentIndex: 0,
           result: null,
+          dailyPlan: null,
+          worldContext: null,
           resultFeedback: null,
           assessmentOptionSeed: Math.random().toString(36).slice(2)
         }),
@@ -143,7 +174,7 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           inventory: grantItems(state.inventory, rewards),
           gamesPlayed: state.gamesPlayed + 1,
-          relationshipXp: state.relationshipXp + (state.gamesPlayed === 0 ? 8 : 2),
+          relationshipXp: Math.min(999, state.relationshipXp + (state.gamesPlayed === 0 ? 8 : 2)),
           settledGameIds: [...state.settledGameIds.slice(-19), normalizedId],
           lifeEvents: state.result
             ? appendLifeEvent(
@@ -196,6 +227,23 @@ export const useAppStore = create<AppState>()(
               .slice(0, 30)
           };
         }),
+      advanceLife: (now, timezoneOffsetMinutes) =>
+        set((state) => {
+          if (!state.result) return {};
+          const next = advanceDigitalLife({
+            visitorId: state.assessmentOptionSeed,
+            typeId: state.result.typeId,
+            now,
+            timezoneOffsetMinutes,
+            vitals: state.petVitals,
+            relationshipXp: state.relationshipXp,
+            events: state.lifeEvents,
+            ...(state.dailyPlan ? { previousPlan: state.dailyPlan } : {})
+          });
+          return { lifeEvents: next.events, dailyPlan: next.plan, worldContext: next.world };
+        }),
+      applyLifeSync: (dailyPlan, worldContext, events) =>
+        set({ dailyPlan, worldContext, lifeEvents: events }),
       setLifeSyncEnabled: (lifeSyncEnabled) => set({ lifeSyncEnabled }),
       setManualMood: (manualMood) => set({ manualMood }),
       setHardwareLink: (hardwareLink) => set({ hardwareLink }),
@@ -212,6 +260,8 @@ export const useAppStore = create<AppState>()(
           gamesPlayed: 0,
           relationshipXp: 0,
           lifeEvents: [],
+          dailyPlan: null,
+          worldContext: null,
           lifeSyncEnabled: false,
           settledGameIds: [],
           manualMood: null,
@@ -232,7 +282,7 @@ export const useAppStore = create<AppState>()(
           return {
             memories: [
               ...state.memories,
-              { id: crypto.randomUUID(), content: normalized, createdAt: new Date().toISOString() }
+              { id: createClientId(), content: normalized, createdAt: new Date().toISOString() }
             ]
           };
         }),
@@ -253,6 +303,8 @@ export const useAppStore = create<AppState>()(
                 answers: {},
                 assessmentIndex: 0,
                 result: null,
+                dailyPlan: null,
+                worldContext: null,
                 resultFeedback: null,
                 assessmentVersion: version,
                 assessmentOptionSeed: Math.random().toString(36).slice(2)
@@ -262,7 +314,8 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: CURRENT_APP_STATE_KEY,
-      version: 4,
+      version: 5,
+      migrate: migratePersistedAppState,
       partialize: (state) => ({
         answers: state.answers,
         assessmentIndex: state.assessmentIndex,
@@ -274,6 +327,8 @@ export const useAppStore = create<AppState>()(
         gamesPlayed: state.gamesPlayed,
         relationshipXp: state.relationshipXp,
         lifeEvents: state.lifeEvents,
+        dailyPlan: state.dailyPlan,
+        worldContext: state.worldContext,
         lifeSyncEnabled: state.lifeSyncEnabled,
         settledGameIds: state.settledGameIds,
         manualMood: state.manualMood,

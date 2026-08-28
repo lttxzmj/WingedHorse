@@ -12,6 +12,9 @@ import { MqttProvider } from "./devices/mqtt.provider.js";
 import { LifeController } from "./life/life.controller.js";
 import { LifeRepository } from "./life/life.repository.js";
 import { LifeService } from "./life/life.service.js";
+import { PlayerController } from "./player/player.controller.js";
+import { PlayerRepository } from "./player/player.repository.js";
+import { PlayerService } from "./player/player.service.js";
 
 @Module({
   controllers: [
@@ -19,7 +22,8 @@ import { LifeService } from "./life/life.service.js";
     AssessmentController,
     CompanionController,
     DevicesController,
-    LifeController
+    LifeController,
+    PlayerController
   ],
   providers: [
     AssessmentService,
@@ -29,7 +33,9 @@ import { LifeService } from "./life/life.service.js";
     DevicesService,
     MqttProvider,
     LifeRepository,
-    LifeService
+    LifeService,
+    PlayerRepository,
+    PlayerService
   ]
 })
 export class AppModule {}

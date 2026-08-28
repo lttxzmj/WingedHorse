@@ -104,7 +104,9 @@ export const lifeEventKindSchema = z.enum([
   "game-haul",
   "gift",
   "quiet-moment",
-  "autonomous"
+  "autonomous",
+  "visitor",
+  "story"
 ]);
 export const lifeEventItemIdSchema = z.enum([
   "iced-americano",
@@ -129,13 +131,15 @@ export const lifeEventCreateSchema = z.object({
   itemId: lifeEventItemIdSchema.optional(),
   activity: plannedActivitySchema.optional(),
   motive: lifeMotiveSchema.optional(),
-  source: z.enum(["user-action", "daily-plan"]).optional()
+  visitorTypeId: horseTypeIdSchema.optional(),
+  storyChapter: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+  source: z.enum(["user-action", "daily-plan", "life-engine"]).optional()
 });
 export const lifeEventSchema = lifeEventCreateSchema.extend({
   id: z.string().min(1).max(100),
   title: z.string().min(1).max(120),
   body: z.string().min(1).max(500),
-  source: z.enum(["user-action", "daily-plan"]),
+  source: z.enum(["user-action", "daily-plan", "life-engine"]).default("user-action"),
   liked: z.boolean(),
   saved: z.boolean()
 });
@@ -186,6 +190,45 @@ export type LifeEventResponse = z.infer<typeof lifeEventSchema>;
 export type LifeEventInteractionRequest = z.infer<typeof lifeEventInteractionSchema>;
 export type LifeEventListResponse = z.infer<typeof lifeEventListSchema>;
 
+export const inventorySchema = z.record(lifeEventItemIdSchema, z.number().int().min(1).max(99));
+export const playerStateSchema = z.object({
+  inventory: inventorySchema,
+  vitals: petVitalsSchema,
+  gamesPlayed: z.number().int().min(0).max(1_000_000),
+  relationshipXp: z.number().int().min(0).max(999),
+  revision: z.number().int().min(0)
+});
+export const gameSessionStartSchema = z.object({
+  typeId: horseTypeIdSchema,
+  bootstrap: playerStateSchema.omit({ revision: true }).optional()
+});
+export const gameSessionSchema = z.object({
+  sessionId: z.string().min(16).max(80),
+  startedAt: z.iso.datetime(),
+  durationSeconds: z.literal(30),
+  player: playerStateSchema
+});
+export const gameSettlementSchema = z.object({
+  score: z.number().int().min(0).max(100_000),
+  caught: inventorySchema.refine(
+    (inventory) => Object.values(inventory).reduce((sum, count) => sum + count, 0) <= 50,
+    "TOO_MANY_CAUGHT_ITEMS"
+  )
+});
+export const gameSettlementResponseSchema = z.object({
+  sessionId: z.string(),
+  alreadySettled: z.boolean(),
+  player: playerStateSchema
+});
+export const consumePlayerItemSchema = z.object({ itemId: lifeEventItemIdSchema });
+
+export type PlayerStateResponse = z.infer<typeof playerStateSchema>;
+export type GameSessionStartRequest = z.infer<typeof gameSessionStartSchema>;
+export type GameSessionResponse = z.infer<typeof gameSessionSchema>;
+export type GameSettlementRequest = z.infer<typeof gameSettlementSchema>;
+export type GameSettlementResponse = z.infer<typeof gameSettlementResponseSchema>;
+export type ConsumePlayerItemRequest = z.infer<typeof consumePlayerItemSchema>;
+
 export const companionMessageSchema = z.object({
   sessionId: z.string().min(8).max(128),
   message: z.string().trim().min(1).max(1200),
@@ -220,7 +263,7 @@ export const companionMessageSchema = z.object({
 
 export const companionResponseSchema = z.object({
   reply: z.string(),
-  source: z.enum(["openrouter", "local-fallback", "safety-flow"]),
+  source: z.enum(["openrouter", "local-fallback", "safety-flow", "domain-grounded"]),
   safetyLevel: z.enum(["normal", "concern", "urgent"]),
   aiDisclosure: z.literal(true),
   memoryCandidate: z.string().nullable()

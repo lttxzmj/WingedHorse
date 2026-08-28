@@ -1,7 +1,7 @@
 import { Button, Card } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { deleteRemoteLifeData } from "../lib/lifeApi";
+import { deleteRemoteLifeData, hasVisitorToken } from "../lib/lifeApi";
 import { useAppStore } from "../store/useAppStore";
 
 export function SettingsPage() {
@@ -114,7 +114,7 @@ export function SettingsPage() {
               onClick={() => {
                 setDeleting(true);
                 setDeleteError("");
-                void (lifeSyncEnabled ? deleteRemoteLifeData() : Promise.resolve())
+                void (hasVisitorToken() ? deleteRemoteLifeData() : Promise.resolve())
                   .then(() => {
                     resetAll();
                     void navigate({ to: "/" });

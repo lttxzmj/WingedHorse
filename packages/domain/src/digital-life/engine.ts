@@ -66,6 +66,23 @@ const activityPools: Record<LifeMotive, [PlannedActivity, ...PlannedActivity[]]>
   connect: ["write-postcard", "tidy-supplies", "evening-read", "slow-breakfast"]
 };
 
+const horseTypes: HorseTypeId[] = [
+  "chosen",
+  "perpetual",
+  "veteran",
+  "explosive",
+  "saving",
+  "overthinker",
+  "tired",
+  "mad-literature"
+];
+
+const storyMilestones = [
+  { day: 1, chapter: 1 as const },
+  { day: 3, chapter: 2 as const },
+  { day: 7, chapter: 3 as const }
+];
+
 function stableHash(value: string) {
   let hash = 2166136261;
   for (const character of value) {
@@ -81,6 +98,13 @@ function localDate(now: Date, timezoneOffsetMinutes: number) {
 
 function dateKey(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function daysBetween(fromDateKey: string, toDateKey: string) {
+  return Math.floor(
+    (Date.parse(`${toDateKey}T00:00:00.000Z`) - Date.parse(`${fromDateKey}T00:00:00.000Z`)) /
+      86_400_000
+  );
 }
 
 function periodForHour(hour: number): DayPeriod {
@@ -161,7 +185,7 @@ export function advanceDigitalLife(input: AdvanceDigitalLifeInput): AdvanceDigit
           relationshipXp: input.relationshipXp
         });
   const nowMs = Date.parse(input.now);
-  const generatedEvents = plan.slots
+  const plannedEvents = plan.slots
     .filter((slot) => Date.parse(slot.scheduledAt) <= nowMs)
     .map((slot) =>
       createLifeEvent({
@@ -175,6 +199,54 @@ export function advanceDigitalLife(input: AdvanceDigitalLifeInput): AdvanceDigit
       })
     )
     .filter((event) => !input.events.some((existing) => existing.eventKey === event.eventKey));
+  const arrival = [...input.events]
+    .filter((event) => event.kind === "arrival")
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))[0];
+  const daysTogether = arrival
+    ? Math.max(0, daysBetween(arrival.occurredAt.slice(0, 10), world.dateKey))
+    : 0;
+  const storyEvents = arrival
+    ? storyMilestones
+        .filter(({ day }) => day <= daysTogether)
+        .map(({ day, chapter }) =>
+          createLifeEvent({
+            eventKey: `story:${arrival.eventKey}:${chapter}`,
+            kind: "story",
+            occurredAt: new Date(Date.parse(arrival.occurredAt) + day * 86_400_000).toISOString(),
+            typeId: input.typeId,
+            storyChapter: chapter,
+            source: "life-engine"
+          })
+        )
+        .filter(
+          (event) =>
+            Date.parse(event.occurredAt) <= nowMs &&
+            !input.events.some((existing) => existing.eventKey === event.eventKey)
+        )
+    : [];
+  const visitorCandidates = horseTypes.filter((typeId) => typeId !== input.typeId);
+  const visitorTypeId =
+    visitorCandidates[
+      stableHash(`${input.visitorId}:${world.dateKey}:visitor`) % visitorCandidates.length
+    ]!;
+  const visitorDue =
+    daysTogether >= 2 &&
+    input.relationshipXp >= 10 &&
+    world.localHour >= 14 &&
+    stableHash(`${input.visitorId}:${world.dateKey}:visit-due`) % 3 === 0;
+  const visitorEvent = createLifeEvent({
+    eventKey: `visitor:${world.dateKey}:${visitorTypeId}`,
+    kind: "visitor",
+    occurredAt: input.now,
+    typeId: input.typeId,
+    visitorTypeId,
+    source: "life-engine"
+  });
+  const visitorEvents =
+    visitorDue && !input.events.some((existing) => existing.eventKey === visitorEvent.eventKey)
+      ? [visitorEvent]
+      : [];
+  const generatedEvents = [...plannedEvents, ...storyEvents, ...visitorEvents];
   const events = generatedEvents.reduce(
     (current, event) => appendLifeEvent(current, event),
     input.events

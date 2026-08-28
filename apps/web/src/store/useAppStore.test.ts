@@ -1,6 +1,6 @@
 import type { AssessmentResult } from "@wingedhorse/domain";
 import { beforeEach, describe, expect, it } from "vitest";
-import { useAppStore } from "./useAppStore";
+import { migratePersistedAppState, useAppStore } from "./useAppStore";
 
 const result: AssessmentResult = {
   questionSetId: "wingedhorse-workday",
@@ -52,5 +52,30 @@ describe("game settlement and cultivation state", () => {
     useAppStore.getState().toggleLifeEventLike(event!.id);
     useAppStore.getState().toggleLifeEventSaved(event!.id);
     expect(useAppStore.getState().lifeEvents[0]).toMatchObject({ liked: true, saved: true });
+  });
+
+  it("keeps existing progress when persisted state is upgraded", () => {
+    const migrated = migratePersistedAppState({
+      result,
+      inventory: { "iced-americano": 3 },
+      memories: [{ id: "memory-1", content: "保留我", createdAt: "2026-08-28T00:00:00.000Z" }]
+    });
+
+    expect(migrated).toMatchObject({
+      result,
+      inventory: { "iced-americano": 3 },
+      relationshipXp: 0,
+      lifeEvents: [],
+      settledGameIds: [],
+      dailyPlan: null,
+      worldContext: null
+    });
+    expect(migrated.memories).toHaveLength(1);
+  });
+
+  it("never lets game rewards exceed the sync contract XP limit", () => {
+    useAppStore.setState({ relationshipXp: 998, settledGameIds: [], gamesPlayed: 1 });
+    expect(useAppStore.getState().settleGame("xp-cap", {})).toBe(true);
+    expect(useAppStore.getState().relationshipXp).toBe(999);
   });
 });
