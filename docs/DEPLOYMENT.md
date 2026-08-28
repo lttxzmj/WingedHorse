@@ -11,8 +11,8 @@
 | 目标域名         | `wingedhorse.leisuremaking.cn`（待 DNS + 证书 + 备案确认）                                                                                                                  |
 | 端口             | web/nginx 绑定宿主 `8080`(HTTP) / `8443`(HTTPS)；`api:3100`、`postgres:5432` 仅内网；`mosquitto:1883` 对公网（设备直连，鉴权 + ACL）                                        |
 | 目录             | `/opt/wingedhorse/releases/<SHA>/`（候选版本）、`/opt/wingedhorse/current`（当前版本软链）、`/opt/wingedhorse/manual/`（golden copy）、`/opt/wingedhorse/backups/postgres/` |
-| 容器             | `wingedhorse-web-1`（nginx+静态）、`wingedhorse-api-1`（NestJS）、`wingedhorse-postgres-1`、`wingedhorse-mosquitto-1`（MQTT broker）                                        |
-| 备份             | 每日 03:00 crontab → `backup-postgres.sh`，保留 7 天                                                                                                                        |
+| 容器             | `wingedhorse-web-1`、`wingedhorse-api-1`、`wingedhorse-postgres-1`、`wingedhorse-redis-1`；MQTT broker 仅在 hardware profile 启动                                           |
+| 备份             | 每日 03:00 crontab → `backup-postgres.sh`，原子生成 gzip + SHA-256，保留 7 天                                                                                               |
 | OpenRouter       | 未配置，Agent 走 `local-fallback`                                                                                                                                           |
 
 共存说明：宿主 `80/443` 已被 VibeShot 的 `vibeshot-nginx` 占用，因此 WingedHorse 的 nginx 改为 `8080/8443`。上域名后按「域名与 TLS」章节接入 443（经 VibeShot nginx 分流或独立监听）。
@@ -62,7 +62,7 @@ Agent 的四个应用层保护变量必须使用正整数：`COMPANION_IP_RATE_L
 2. 从 `manual` 以 600 权限复制环境变量，并恢复证书。
 3. 在候选版本的 `deploy` 目录运行 `docker compose --env-file ../.env.production -f docker-compose.prod.yml config --quiet`。
 4. 审阅展开后的端口、卷和环境变量来源。
-5. 运行 `docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d --build`。
+5. 先运行一次 `backup-postgres.sh`，再执行迁移和 `docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d --build`。
 6. 检查 `docker compose --env-file ../.env.production -f docker-compose.prod.yml ps` 与 `https://域名/api/health`，健康后再原子更新 `current` 软链。
 
 生产 Compose 不公开 PostgreSQL 端口；Web、API 以只读根文件系统、最小 capability、资源限制和日志轮转运行。
@@ -94,20 +94,17 @@ Web 生产构建会生成 `asset-manifest.json`，Service Worker 按内容版本
 
 ## 5. 备份与恢复
 
-- 把 `deploy/backup-postgres.sh` 安装为服务器定时任务，每日执行并将副本同步到不同故障域。
+- 把 `deploy/backup-postgres.sh` 安装为服务器定时任务，每日执行并将 `.sql.gz` 与同名 `.sha256` 一起同步到不同故障域。脚本先写权限为 600 的临时 SQL，验证非空与 gzip 完整性后原子改名；失败不会留下看似成功的正式备份。
 - 默认保留 7 天；上线前按业务与隐私保留策略调整。
-- 每月至少做一次隔离环境恢复演练。恢复示例：
-
-      gunzip -c wingedhorse-YYYYMMDD-HHMMSS.sql.gz | \
-        docker compose -f docker-compose.prod.yml exec -T postgres \
-        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+- 每月至少执行一次 `deploy/restore-postgres-drill.sh <备份.sql.gz>`。脚本只允许恢复到以 `_restore` 或 `_restore_drill` 结尾的隔离数据库，校验 gzip、SHA-256 和四张核心事实表，并明确拒绝覆盖生产数据库。
+- `deploy/test-ops-scripts.sh` 使用隔离的伪 Docker 命令验证成功备份、校验文件、恢复门禁和生产库拒绝逻辑；CI 每次运行。
 
 ## 6. 发布与回滚门禁
 
 - CI 的格式、lint、类型、单测、E2E、构建全部通过。
 - 无密钥、原始音视频、未知授权素材进入镜像。
-- 数据库变更先备份并提供向下迁移；当前版本尚未启用生产数据库写入，启用前需要迁移评审。
-- 部署前记录上一版本 Git SHA。回滚时重新部署上一 SHA，不删除数据库卷。
+- 数据库变更先备份并完成兼容性评审；当前迁移均为向前兼容的新增表/列，旧应用可继续读取。破坏性迁移必须另行提供逆向方案。
+- 手动部署在迁移前生成已校验备份并记录 `current` 指向；候选构建、迁移或健康检查失败时自动重新构建上一 SHA，不改变数据库卷，也不删除失败现场。
 - 不在自动脚本中执行 `docker compose down -v`、删除卷或清理全部镜像。
 
 ## 7. 域名与 TLS（待办）

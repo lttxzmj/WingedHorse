@@ -47,15 +47,4 @@ jobs:
             install -m 600 /opt/wingedhorse/manual/.env.production "${release_dir}/.env.production"
             mkdir -p "${release_dir}/deploy/cert"
             cp -R /opt/wingedhorse/manual/cert/https "${release_dir}/deploy/cert/" 2>/dev/null || true
-            cd "${release_dir}/deploy"
-            docker compose --env-file ../.env.production -f docker-compose.prod.yml config --quiet
-            docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d postgres
-            until docker compose --env-file ../.env.production -f docker-compose.prod.yml exec -T postgres pg_isready -U "$(grep '^POSTGRES_USER=' ../.env.production | cut -d= -f2-)"; do sleep 2; done
-            for migration in migrations/*.sql; do
-              docker compose --env-file ../.env.production -f docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U "$(grep '^POSTGRES_USER=' ../.env.production | cut -d= -f2-)" -d "$(grep '^POSTGRES_DB=' ../.env.production | cut -d= -f2-)" < "$migration"
-            done
-            docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d --build
-            docker compose --env-file ../.env.production -f docker-compose.prod.yml ps
-            curl --fail --retry 12 --retry-delay 5 http://127.0.0.1:8080/api/health
-            ln -sfn "${release_dir}" /opt/wingedhorse/current.next
-            mv -Tf /opt/wingedhorse/current.next /opt/wingedhorse/current
+            /bin/bash "${release_dir}/deploy/promote-release.sh" "${release_dir}"

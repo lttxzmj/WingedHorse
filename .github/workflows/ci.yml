@@ -58,6 +58,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Verify backup and isolated restore scripts
+        run: |
+          bash -n deploy/promote-release.sh
+          deploy/test-ops-scripts.sh
       - name: Validate production Compose
         run: |
           cp deploy/.env.production.example .env.production
