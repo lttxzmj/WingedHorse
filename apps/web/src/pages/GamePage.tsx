@@ -276,32 +276,35 @@ export function GamePage() {
                   </figcaption>
                 </figure>
               </div>
-            ) : (
-              <div className="game-intro__brief">
-                <span className="game-intro__tag">
-                  <AppIcon icon={Sparkles} size={14} />
-                  今日补给雨
-                </span>
-                <h2>30 秒，把补给接回草原</h2>
-                <ul>
-                  <li>第一件会落在你附近</li>
-                  <li>连续接住，得分最高 ×10</li>
-                  <li>漏接不扣分，随时能暂停</li>
-                </ul>
-              </div>
-            )}
-            <Button onClick={start}>
-              <AppIcon icon={summary ? Play : Sparkles} size={17} />
-              {summary ? "再接一局" : "开始接补给"}
-            </Button>
+            ) : null}
             {summary ? (
-              <Link className="quiet-link" to="/home">
-                带着补给回草原
-              </Link>
+              <>
+                <Button onClick={start}>再接一局</Button>
+                <Link className="quiet-link" to="/home">
+                  带着补给回草原
+                </Link>
+              </>
             ) : (
-              <Link className="quiet-link" to="/home">
-                今天先不玩
-              </Link>
+              <div className="game-intro__dock">
+                <div className="game-intro__brief">
+                  <span className="game-intro__tag">
+                    <AppIcon icon={Sparkles} size={14} />
+                    今日补给雨
+                  </span>
+                  <h2>30 秒，把补给接回草原</h2>
+                  <ul>
+                    <li>第一件会落在你附近</li>
+                    <li>连续接住，最高 ×10</li>
+                    <li>漏接不扣分，随时能暂停</li>
+                  </ul>
+                </div>
+                <div className="game-intro__actions">
+                  <Button onClick={start}>开始接补给</Button>
+                  <Link className="quiet-link" to="/home">
+                    今天先不玩
+                  </Link>
+                </div>
+              </div>
             )}
           </div>
         )}
