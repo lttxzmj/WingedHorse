@@ -134,10 +134,10 @@ export function DropGameCanvas({
             const catcherSprite = this.textures.exists("player-character")
               ? this.add
                   .image(0, 0, "player-character")
-                  .setDisplaySize(158, 158)
+                  .setDisplaySize(184, 184)
                   .setOrigin(0.5, 0.56)
               : this.add.circle(0, 0, 42, 0xffd057).setStrokeStyle(4, 0x3b2e24);
-            this.catcher = this.add.container(width / 2, height - 82, [catcherSprite]);
+            this.catcher = this.add.container(width / 2, height - 94, [catcherSprite]);
 
             const move = (x: number) => {
               this.catcher.x = Phaser.Math.Clamp(x, 48, this.scale.width - 48);
@@ -173,7 +173,7 @@ export function DropGameCanvas({
             const x = isFirstDrop ? this.catcher.x : 72 + this.random() * (this.scale.width - 144);
             this.spawnedCount += 1;
             const item = ITEM_CATALOG[drop.itemId];
-            const label = this.add.container(x, -40);
+            const label = this.add.container(x, 86);
             const card = this.add.graphics();
             card.fillStyle(0x526442, 0.14);
             card.fillCircle(2, 4, 34);
@@ -243,13 +243,13 @@ export function DropGameCanvas({
               const interval = Math.max(360, 760 - elapsed * 0.012);
               this.nextDropInMs = interval + this.random() * 180;
             }
-            const catcherTop = this.catcher.y - 64;
+            const catcherTop = this.catcher.y - 72;
             this.drops = this.drops.filter((drop) => {
               drop.label.y += delta * 0.13 * drop.speed;
               const isCaught =
                 drop.label.y >= catcherTop &&
                 drop.label.y <= catcherTop + 70 &&
-                Math.abs(drop.label.x - this.catcher.x) < 60;
+                Math.abs(drop.label.x - this.catcher.x) < 68;
               if (isCaught) {
                 this.combo += 1;
                 this.maxCombo = Math.max(this.maxCombo, this.combo);

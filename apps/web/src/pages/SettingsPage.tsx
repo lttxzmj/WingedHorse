@@ -1,6 +1,7 @@
 import { Button, Card } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { BackLink } from "../components/BackLink";
 import { createUserDataExport, downloadUserDataExport } from "../lib/dataExport";
 import { deleteRemoteLifeData, hasVisitorToken } from "../lib/lifeApi";
 import { useAppStore } from "../store/useAppStore";
@@ -21,7 +22,7 @@ export function SettingsPage() {
   return (
     <main className="settings-page">
       <header className="subpage-header">
-        <Link to="/home">←</Link>
+        <BackLink to="/home" label="回到草原" />
         <div>
           <p className="eyebrow">设置与边界</p>
           <h1>你的数据由你决定</h1>

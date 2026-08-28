@@ -272,8 +272,15 @@ export const companionResponseSchema = z.object({
   memoryCandidate: z.string().nullable()
 });
 
+export const companionStreamEventSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("delta"), delta: z.string().min(1).max(1200) }),
+  z.object({ type: z.literal("replace"), content: z.string().trim().min(1).max(1200) }),
+  z.object({ type: z.literal("done"), response: companionResponseSchema })
+]);
+
 export type CompanionMessageRequest = z.infer<typeof companionMessageSchema>;
 export type CompanionMessageResponse = z.infer<typeof companionResponseSchema>;
+export type CompanionStreamEvent = z.infer<typeof companionStreamEventSchema>;
 
 export const moodIdSchema = z.enum(["good", "flat", "tired", "anxious", "sad"]);
 export type MoodId = z.infer<typeof moodIdSchema>;

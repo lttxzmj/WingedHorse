@@ -4,6 +4,15 @@ import { readFile } from "node:fs/promises";
 const LOCAL_REPLY_TEXT =
   "我暂时连不上远处的 AI 服务，但还在这里。你可以先用一句话说说现在最占脑子的事；如果不想说，也可以回草原休息。";
 
+function companionStream(response: Record<string, unknown>) {
+  return [
+    JSON.stringify({ type: "delta", delta: response.reply }),
+    JSON.stringify({ type: "done", response })
+  ]
+    .join("\n")
+    .concat("\n");
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
@@ -302,12 +311,12 @@ test("AI disclosure, memory controls and network fallback remain usable", async 
   page
 }, testInfo) => {
   const companionRequests: Array<Record<string, unknown>> = [];
-  await page.route("**/api/companion/messages", async (route) => {
+  await page.route("**/api/companion/messages/stream", async (route) => {
     companionRequests.push(route.request().postDataJSON() as Record<string, unknown>);
     await route.fulfill({
       status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
+      contentType: "application/x-ndjson",
+      body: companionStream({
         reply: "我听见了，我们先把今天拆小一点。",
         source: "local-fallback",
         safetyLevel: "normal",
@@ -367,12 +376,12 @@ test("companion sends life facts and manual mood only after session consent", as
     );
   });
   const requests: Array<Record<string, unknown>> = [];
-  await page.route("**/api/companion/messages", async (route) => {
+  await page.route("**/api/companion/messages/stream", async (route) => {
     requests.push(route.request().postDataJSON() as Record<string, unknown>);
     await route.fulfill({
       status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
+      contentType: "application/x-ndjson",
+      body: companionStream({
         reply: "今天先不催自己满电。我们只选一件小事。",
         source: "domain-grounded",
         safetyLevel: "normal",
@@ -397,8 +406,8 @@ test("companion sends life facts and manual mood only after session consent", as
 test("companion exposes a recoverable local reply for malformed API responses", async ({
   page
 }) => {
-  await page.route("**/api/companion/messages", async (route) => {
-    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+  await page.route("**/api/companion/messages/stream", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/x-ndjson", body: "{}\n" });
   });
   await page.goto("/companion");
   await page.getByLabel("想说什么都可以").fill("我有点乱");

@@ -1,15 +1,13 @@
-import {
-  companionResponseSchema,
-  type CompanionMessageRequest,
-  type CompanionMessageResponse
-} from "@wingedhorse/contracts";
+import type { CompanionMessageRequest, CompanionMessageResponse } from "@wingedhorse/contracts";
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { getResultProfile, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { BackLink } from "../components/BackLink";
 import { createClientId } from "../lib/clientId";
+import { streamCompanionMessage } from "../lib/companionStream";
 import { useAppStore } from "../store/useAppStore";
 import { useDigitalLife } from "../hooks/useDigitalLife";
 
@@ -40,6 +38,7 @@ export function CompanionPage() {
   ]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [partialReply, setPartialReply] = useState("");
   const [memoryEnabled, setMemoryEnabled] = useState(false);
   const [lifeContextEnabled, setLifeContextEnabled] = useState(false);
   const [deliveryNotice, setDeliveryNotice] = useState("");
@@ -60,7 +59,7 @@ export function CompanionPage() {
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView?.({ block: "end", behavior: "smooth" });
-  }, [messages.length, sending]);
+  }, [messages.length, partialReply, sending]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -75,6 +74,7 @@ export function CompanionPage() {
     setMessages((current) => [...current, userMessage]);
     setDraft("");
     setSending(true);
+    setPartialReply("");
     setDeliveryNotice("");
     const payload: CompanionMessageRequest = {
       sessionId: sessionId.current,
@@ -106,17 +106,7 @@ export function CompanionPage() {
     const timeout = window.setTimeout(() => controller.abort(), COMPANION_TIMEOUT_MS);
     abortRef.current = controller;
     try {
-      const response = await fetch("/api/companion/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-      if (!response.ok) throw new Error("COMPANION_UNAVAILABLE");
-      const parsed = companionResponseSchema.safeParse(await response.json());
-      if (!parsed.success || !parsed.data.reply.trim())
-        throw new Error("COMPANION_INVALID_RESPONSE");
-      const data: CompanionMessageResponse = parsed.data;
+      const data = await streamCompanionMessage(payload, setPartialReply, controller.signal);
       setMessages((current) => [
         ...current,
         {
@@ -146,6 +136,7 @@ export function CompanionPage() {
       window.clearTimeout(timeout);
       if (abortRef.current === controller) {
         abortRef.current = null;
+        setPartialReply("");
         setSending(false);
       }
     }
@@ -156,7 +147,7 @@ export function CompanionPage() {
       <header
         className={`subpage-header companion-header ${result ? "" : "companion-header--generic"}`}
       >
-        <Link to="/home">←</Link>
+        <BackLink to="/home" label="回到草原" />
         {result && profile ? (
           <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt="" />
         ) : null}
@@ -209,9 +200,13 @@ export function CompanionPage() {
         {sending ? (
           <article className="chat-bubble chat-bubble--assistant">
             <span>AI · {companionName}</span>
-            <p className="typing-dots" aria-label="正在回复">
-              •••
-            </p>
+            {partialReply ? (
+              <p aria-label="正在回复">{partialReply}</p>
+            ) : (
+              <p className="typing-dots" aria-label="正在回复">
+                •••
+              </p>
+            )}
           </article>
         ) : null}
         <div ref={listEndRef} aria-hidden="true" />

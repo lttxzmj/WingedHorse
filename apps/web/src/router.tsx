@@ -1,4 +1,6 @@
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from "@tanstack/react-router";
+import { Feather } from "lucide-react";
+import { AppIcon } from "./components/AppIcon";
 import { AssessmentPage } from "./pages/AssessmentPage";
 import { HomePage } from "./pages/HomePage";
 import { GamePage } from "./pages/GamePage";
@@ -20,9 +22,7 @@ function NotFoundPage() {
   return (
     <main className="centered-page">
       <section className="empty-state">
-        <span className="empty-state__icon" aria-hidden="true">
-          🪽
-        </span>
+        <span className="empty-state__icon" aria-hidden="true"><AppIcon icon={Feather} size={42} /></span>
         <h1>这片草原还没延伸到这里</h1>
         <p>回到起点，我们换一条路继续。</p>
         <Link className="ui-button ui-button--primary inline-link-button" to="/">

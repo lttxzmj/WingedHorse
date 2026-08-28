@@ -2,7 +2,9 @@ import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { Activity, BookHeart, Heart, MapPinned, MessageCircle, Package, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AppIcon } from "../components/AppIcon";
 import { useAppStore } from "../store/useAppStore";
 import { useDigitalLife } from "../hooks/useDigitalLife";
 
@@ -85,6 +87,7 @@ export function HomePage() {
         </div>
         <nav className="home-header__tools" aria-label="草原常用入口">
           <Link className="home-tool-link" to="/life">
+            <AppIcon icon={BookHeart} size={17} />
             生活簿
           </Link>
           <Link
@@ -92,6 +95,7 @@ export function HomePage() {
             aria-label={`打开背包，共 ${inventoryCount} 件`}
             to="/inventory"
           >
+            <AppIcon icon={Package} size={17} />
             背包{inventoryCount > 0 ? <small>{inventoryCount}</small> : null}
           </Link>
         </nav>
@@ -122,6 +126,13 @@ export function HomePage() {
             有位 AI 牛马来坐过
           </Link>
         ) : null}
+        <Link className="prairie-tent" to="/life" hash="map" aria-label="从帐篷打开共同草原地图">
+          <img src="/scene/prairie-tent.webp" alt="草原上的暖黄色帐篷" />
+          <span>
+            <AppIcon icon={MapPinned} size={15} />
+            共同地图
+          </span>
+        </Link>
         <div className={`prairie-task-dock ${taskDone ? "is-complete" : ""}`}>
           <div>
             <p>{taskDone ? "今天已经接住" : "今天的一件小事"}</p>
@@ -154,7 +165,7 @@ export function HomePage() {
               onClick={() => setInteractionOpen(false)}
               aria-label="关闭互动"
             >
-              ×
+              <AppIcon icon={X} size={22} />
             </button>
             <p className="eyebrow">{relationshipLabel(relationshipXp)} · AI 飞马</p>
             <h2 id="interaction-title">现在想怎么陪它？</h2>
@@ -169,18 +180,22 @@ export function HomePage() {
                   setInteractionOpen(false);
                 }}
               >
+                <AppIcon icon={Heart} size={21} />
                 <strong>{comforted ? "已经摸过啦" : "摸摸它"}</strong>
                 <span>给一个安静回应</span>
               </button>
               <Link to="/companion">
+                <AppIcon icon={MessageCircle} size={21} />
                 <strong>递张小纸条</strong>
                 <span>进入有边界的 AI 对话</span>
               </Link>
               <Link to="/inventory">
+                <AppIcon icon={Package} size={21} />
                 <strong>给它一份补给</strong>
                 <span>先查看效果，再决定使用</span>
               </Link>
               <Link to="/signals">
+                <AppIcon icon={Activity} size={21} />
                 <strong>告诉它现在的状态</strong>
                 <span>可以只手动选择，不开镜头</span>
               </Link>

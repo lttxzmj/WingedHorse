@@ -2,7 +2,10 @@ import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
+import { ChevronLeft, ChevronRight, Package, Pause, Play } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AppIcon } from "../components/AppIcon";
+import { BackLink } from "../components/BackLink";
 import { DropGameCanvas, type GameStats, type GameSummary } from "../game/DropGameCanvas";
 import { createClientId } from "../lib/clientId";
 import { useAppStore } from "../store/useAppStore";
@@ -23,6 +26,7 @@ export function GamePage() {
   const [gameError, setGameError] = useState("");
   const [controlDirection, setControlDirection] = useState<-1 | 0 | 1>(0);
   const [catchNotice, setCatchNotice] = useState("");
+  const [showGuide, setShowGuide] = useState(true);
   const settleGame = useAppStore((state) => state.settleGame);
   const result = useAppStore((state) => state.result);
 
@@ -44,6 +48,7 @@ export function GamePage() {
     setGameError("");
     setControlDirection(0);
     setCatchNotice("");
+    setShowGuide(true);
     setGameLoadState("loading");
     setCountdown(3);
     setPhase("countdown");
@@ -60,18 +65,29 @@ export function GamePage() {
   };
 
   const playing = phase === "playing";
+  const beginMove = (direction: -1 | 1) => (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setControlDirection(direction);
+  };
+  const endMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setControlDirection(0);
+  };
 
   return (
     <main className="game-page">
       <header className="subpage-header">
-        <Link to="/home" aria-label="回到草原">
-          ←
-        </Link>
+        <BackLink to="/home" label="回到草原" />
         <div>
           <p className="eyebrow">宇宙 Online · 补给雨</p>
           <h1>接住今天的补给</h1>
         </div>
-        <Link to="/inventory">背包</Link>
+        <Link className="subpage-header__tool" to="/inventory">
+          <AppIcon icon={Package} size={17} />
+          背包
+        </Link>
       </header>
       <section className="game-shell">
         {playing ? (
@@ -97,8 +113,12 @@ export function GamePage() {
                 }}
                 aria-pressed={paused}
               >
+                <AppIcon icon={paused ? Play : Pause} size={16} />
                 {paused ? "继续" : "暂停"}
               </button>
+              <span className="game-time-progress">
+                <i style={{ width: `${(stats.remainingSeconds / 30) * 100}%` }} />
+              </span>
             </div>
             {gameLoadState === "error" ? (
               <div className="game-recovery" role="alert">
@@ -122,6 +142,8 @@ export function GamePage() {
                     setGameLoadState("error");
                   }}
                   onCatch={(itemId, points) => {
+                    setShowGuide(false);
+                    if ("vibrate" in navigator) navigator.vibrate(18);
                     setCatchNotice(`${ITEM_CATALOG[itemId].name} +${points}`);
                     window.setTimeout(() => setCatchNotice(""), 900);
                   }}
@@ -137,25 +159,30 @@ export function GamePage() {
                     <button
                       type="button"
                       aria-label="向左移动"
-                      onPointerDown={() => setControlDirection(-1)}
-                      onPointerUp={() => setControlDirection(0)}
-                      onPointerCancel={() => setControlDirection(0)}
-                      onPointerLeave={() => setControlDirection(0)}
+                      onPointerDown={beginMove(-1)}
+                      onPointerUp={endMove}
+                      onPointerCancel={endMove}
+                      onLostPointerCapture={() => setControlDirection(0)}
                     >
-                      ←
+                      <AppIcon icon={ChevronLeft} size={32} strokeWidth={2.5} />
                     </button>
                     <p id="game-control-help">按住移动，也可以直接拖动飞马</p>
                     <button
                       type="button"
                       aria-label="向右移动"
-                      onPointerDown={() => setControlDirection(1)}
-                      onPointerUp={() => setControlDirection(0)}
-                      onPointerCancel={() => setControlDirection(0)}
-                      onPointerLeave={() => setControlDirection(0)}
+                      onPointerDown={beginMove(1)}
+                      onPointerUp={endMove}
+                      onPointerCancel={endMove}
+                      onLostPointerCapture={() => setControlDirection(0)}
                     >
-                      →
+                      <AppIcon icon={ChevronRight} size={32} strokeWidth={2.5} />
                     </button>
                   </div>
+                ) : null}
+                {gameLoadState === "ready" && showGuide ? (
+                  <p className="game-play-guide" role="status">
+                    按住两侧移动，或直接拖动飞马去接补给
+                  </p>
                 ) : null}
                 {catchNotice ? (
                   <p className="game-catch-notice" role="status">
@@ -176,7 +203,7 @@ export function GamePage() {
         ) : phase === "countdown" ? (
           <div className="game-countdown" aria-live="assertive">
             <span>{countdown || "GO"}</span>
-            <p>拖动屏幕，或使用 ← → / A D</p>
+            <p>拖动屏幕，或使用方向键 / A D</p>
           </div>
         ) : (
           <div className="game-intro">

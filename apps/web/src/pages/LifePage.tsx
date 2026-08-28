@@ -2,6 +2,11 @@ import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
+import { BookHeart, Heart, Map, MessageCircle, Navigation, Save } from "lucide-react";
+import { useState } from "react";
+import { AppIcon } from "../components/AppIcon";
+import { BackLink } from "../components/BackLink";
+import { PhotoMapPanel } from "../components/PhotoMapPanel";
 import { useDigitalLife } from "../hooks/useDigitalLife";
 import { setLifeEventInteraction } from "../lib/lifeApi";
 import { useAppStore } from "../store/useAppStore";
@@ -16,6 +21,9 @@ function eventTime(value: string) {
 }
 
 export function LifePage() {
+  const [view, setView] = useState<"feed" | "map">(() =>
+    typeof window !== "undefined" && window.location.hash === "#map" ? "map" : "feed"
+  );
   const result = useAppStore((state) => state.result);
   const events = useAppStore((state) => state.lifeEvents);
   const gamesPlayed = useAppStore((state) => state.gamesPlayed);
@@ -29,6 +37,11 @@ export function LifePage() {
     else toggleSaved(eventId);
     if (lifeSyncEnabled)
       void setLifeEventInteraction(eventId, { interaction, value }).catch(() => undefined);
+  }
+
+  function switchView(next: "feed" | "map") {
+    setView(next);
+    window.history.replaceState(null, "", next === "map" ? "#map" : "#feed");
   }
 
   if (!result) {
@@ -50,16 +63,14 @@ export function LifePage() {
   return (
     <main className="life-page">
       <header className="subpage-header life-header">
-        <Link to="/home" aria-label="回到草原">
-          ←
-        </Link>
+        <BackLink to="/home" label="回到草原" />
         <div>
           <p className="eyebrow">{profile.name}的私密生活簿</p>
-          <h1>它今天也在生活</h1>
+          <h1>{view === "feed" ? "它今天也在生活" : "一起走过的草原"}</h1>
         </div>
       </header>
       <aside className="life-boundary">
-        这里只记录你和数字生命之间的结构化事件，不是公开朋友圈，也不会被推荐给陌生人。
+        系统事件可以按设置备份；地图照片只保存在这台设备，不读取真实位置，也不会发送给 AI。
         <span role="status">
           {lifeSyncEnabled
             ? syncState === "synced"
@@ -70,115 +81,154 @@ export function LifePage() {
             : " 当前仅保存在这台设备。"}
         </span>
       </aside>
-      <section className="journey-card" id="journey" aria-labelledby="journey-title">
-        <div className="journey-card__heading">
-          <div>
-            <p className="eyebrow">共同远行 · 没有期限</p>
-            <h2 id="journey-title">{journey.title}</h2>
-          </div>
-          <strong aria-label={`已完成 ${journey.completedCount} 项，共 ${journey.totalCount} 项`}>
-            {journey.completedCount}/{journey.totalCount}
-          </strong>
-        </div>
-        <p>{journey.description}</p>
-        <div
-          className="journey-track"
-          role="progressbar"
-          aria-label="共同远行进展"
-          aria-valuemin={0}
-          aria-valuemax={journey.totalCount}
-          aria-valuenow={journey.completedCount}
+      <div className="life-view-switch" role="tablist" aria-label="生活记录视图">
+        <button
+          role="tab"
+          aria-selected={view === "feed"}
+          className={view === "feed" ? "is-active" : ""}
+          onClick={() => switchView("feed")}
         >
-          {journey.milestones.map((milestone) => (
-            <span className={milestone.completed ? "is-complete" : ""} key={milestone.id}>
-              <i aria-hidden="true">{milestone.completed ? "✓" : "·"}</i>
-              <small>{milestone.label}</small>
-            </span>
-          ))}
-        </div>
-        <p className="journey-card__next">
-          <span aria-hidden="true">↗</span> {journey.nextPrompt}
-        </p>
-      </section>
-      {events.length === 0 ? (
-        <section className="life-empty">
-          <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />
-          <h2>草原刚安静下来</h2>
-          <p>玩一局、送一份补给或摸摸它，新的共同记录就会出现在这里。</p>
-          <Button onClick={() => history.back()}>回草原看看</Button>
-        </section>
+          <AppIcon icon={BookHeart} size={18} />
+          生活动态
+        </button>
+        <button
+          role="tab"
+          aria-selected={view === "map"}
+          className={view === "map" ? "is-active" : ""}
+          onClick={() => switchView("map")}
+        >
+          <AppIcon icon={Map} size={18} />
+          草原地图
+        </button>
+      </div>
+      {view === "map" ? (
+        <PhotoMapPanel />
       ) : (
-        <section className="life-feed" aria-label="数字生命最近动态">
-          <div className="life-feed__heading">
-            <p className="eyebrow">最近发生</p>
-            <span>{events.length} 段共同生活</span>
-          </div>
-          {events.map((event, index) => {
-            const eventProfile = getResultProfile(event.typeId);
-            const visitorProfile = event.visitorTypeId
-              ? getResultProfile(event.visitorTypeId)
-              : null;
-            return (
-              <article
-                className={`life-post life-post--${event.kind} ${index === 0 ? "life-post--featured" : "life-post--compact"}`}
-                key={event.id}
+        <>
+          <section className="journey-card" id="journey" aria-labelledby="journey-title">
+            <div className="journey-card__heading">
+              <div>
+                <p className="eyebrow">共同远行 · 没有期限</p>
+                <h2 id="journey-title">{journey.title}</h2>
+              </div>
+              <strong
+                aria-label={`已完成 ${journey.completedCount} 项，共 ${journey.totalCount} 项`}
               >
-                <header>
-                  <WingedHorseCharacter
-                    typeId={event.typeId}
-                    mood={event.kind === "quiet-moment" ? "resting" : eventProfile.mood}
-                    alt=""
-                  />
-                  <div>
-                    <strong>
-                      {event.kind === "visitor" && visitorProfile
-                        ? `${profile.name}和${visitorProfile.name}`
-                        : eventProfile.name}
-                    </strong>
-                    <time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time>
-                  </div>
-                  <span>{event.kind === "visitor" ? "AI 访客 · 仅自己可见" : "仅自己可见"}</span>
-                </header>
-                {index === 0 ? (
-                  <div
-                    className={`life-post__scene life-post__scene--${event.kind}`}
-                    aria-hidden="true"
+                {journey.completedCount}/{journey.totalCount}
+              </strong>
+            </div>
+            <p>{journey.description}</p>
+            <div
+              className="journey-track"
+              role="progressbar"
+              aria-label="共同远行进展"
+              aria-valuemin={0}
+              aria-valuemax={journey.totalCount}
+              aria-valuenow={journey.completedCount}
+            >
+              {journey.milestones.map((milestone) => (
+                <span className={milestone.completed ? "is-complete" : ""} key={milestone.id}>
+                  <i aria-hidden="true">{milestone.completed ? "✓" : "·"}</i>
+                  <small>{milestone.label}</small>
+                </span>
+              ))}
+            </div>
+            <p className="journey-card__next">
+              <AppIcon icon={Navigation} size={16} /> {journey.nextPrompt}
+            </p>
+          </section>
+          {events.length === 0 ? (
+            <section className="life-empty">
+              <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />
+              <h2>草原刚安静下来</h2>
+              <p>玩一局、送一份补给或摸摸它，新的共同记录就会出现在这里。</p>
+              <Button onClick={() => history.back()}>回草原看看</Button>
+            </section>
+          ) : (
+            <section className="life-feed" aria-label="数字生命最近动态">
+              <div className="life-feed__heading">
+                <p className="eyebrow">最近发生</p>
+                <span>{events.length} 段共同生活</span>
+              </div>
+              {events.map((event, index) => {
+                const eventProfile = getResultProfile(event.typeId);
+                const visitorProfile = event.visitorTypeId
+                  ? getResultProfile(event.visitorTypeId)
+                  : null;
+                return (
+                  <article
+                    className={`life-post life-post--${event.kind} ${index === 0 ? "life-post--featured" : "life-post--compact"}`}
+                    key={event.id}
                   >
-                    <div className="life-post__characters">
-                      <WingedHorseCharacter typeId={event.typeId} mood={eventProfile.mood} alt="" />
-                      {visitorProfile && event.visitorTypeId ? (
-                        <WingedHorseCharacter
-                          typeId={event.visitorTypeId}
-                          mood={visitorProfile.mood}
-                          alt=""
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
-                <h2>{event.title}</h2>
-                <p>{event.body}</p>
-                <footer>
-                  <button
-                    className={event.liked ? "is-active" : ""}
-                    aria-pressed={event.liked}
-                    onClick={() => interact(event.id, "liked", !event.liked)}
-                  >
-                    {event.liked ? "已接住" : "接住这刻"}
-                  </button>
-                  <button
-                    className={event.saved ? "is-active" : ""}
-                    aria-pressed={event.saved}
-                    onClick={() => interact(event.id, "saved", !event.saved)}
-                  >
-                    {event.saved ? "已存进共同记忆" : "存进共同记忆"}
-                  </button>
-                  <Link to="/companion">递张小纸条</Link>
-                </footer>
-              </article>
-            );
-          })}
-        </section>
+                    <header>
+                      <WingedHorseCharacter
+                        typeId={event.typeId}
+                        mood={event.kind === "quiet-moment" ? "resting" : eventProfile.mood}
+                        alt=""
+                      />
+                      <div>
+                        <strong>
+                          {event.kind === "visitor" && visitorProfile
+                            ? `${profile.name}和${visitorProfile.name}`
+                            : eventProfile.name}
+                        </strong>
+                        <time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time>
+                      </div>
+                      <span>
+                        {event.kind === "visitor" ? "AI 访客 · 仅自己可见" : "仅自己可见"}
+                      </span>
+                    </header>
+                    {index === 0 ? (
+                      <div
+                        className={`life-post__scene life-post__scene--${event.kind}`}
+                        aria-hidden="true"
+                      >
+                        <div className="life-post__characters">
+                          <WingedHorseCharacter
+                            typeId={event.typeId}
+                            mood={eventProfile.mood}
+                            alt=""
+                          />
+                          {visitorProfile && event.visitorTypeId ? (
+                            <WingedHorseCharacter
+                              typeId={event.visitorTypeId}
+                              mood={visitorProfile.mood}
+                              alt=""
+                            />
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+                    <h2>{event.title}</h2>
+                    <p>{event.body}</p>
+                    <footer>
+                      <button
+                        className={event.liked ? "is-active" : ""}
+                        aria-pressed={event.liked}
+                        onClick={() => interact(event.id, "liked", !event.liked)}
+                      >
+                        <AppIcon icon={Heart} size={17} />
+                        {event.liked ? "已接住" : "接住这刻"}
+                      </button>
+                      <button
+                        className={event.saved ? "is-active" : ""}
+                        aria-pressed={event.saved}
+                        onClick={() => interact(event.id, "saved", !event.saved)}
+                      >
+                        <AppIcon icon={Save} size={17} />
+                        {event.saved ? "已存进共同记忆" : "存进共同记忆"}
+                      </button>
+                      <Link to="/companion">
+                        <AppIcon icon={MessageCircle} size={17} />
+                        递张小纸条
+                      </Link>
+                    </footer>
+                  </article>
+                );
+              })}
+            </section>
+          )}
+        </>
       )}
     </main>
   );

@@ -8,18 +8,20 @@ import {
   type PulseEstimate
 } from "@wingedhorse/domain";
 import { Button, Card } from "@wingedhorse/ui";
-import { Link } from "@tanstack/react-router";
+import { BatteryLow, CircleMinus, CloudRain, SunMedium, Wind } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AppIcon } from "../components/AppIcon";
+import { BackLink } from "../components/BackLink";
 import { detectFaceLandmarks } from "../lib/faceLandmarker";
 import { sendMoodToDevice } from "../lib/devices";
 import { useAppStore } from "../store/useAppStore";
 
 const MOODS = [
-  { id: "good", emoji: "🌤️", label: "还不错" },
-  { id: "flat", emoji: "😶", label: "没什么感觉" },
-  { id: "tired", emoji: "🪫", label: "有点累" },
-  { id: "anxious", emoji: "🌪️", label: "有点紧绷" },
-  { id: "sad", emoji: "🌧️", label: "有点低落" }
+  { id: "good", icon: SunMedium, label: "还不错" },
+  { id: "flat", icon: CircleMinus, label: "没什么感觉" },
+  { id: "tired", icon: BatteryLow, label: "有点累" },
+  { id: "anxious", icon: Wind, label: "有点紧绷" },
+  { id: "sad", icon: CloudRain, label: "有点低落" }
 ] as const;
 
 const cameraEnabled = import.meta.env.DEV || import.meta.env.VITE_FEATURE_CAMERA_SIGNALS === "true";
@@ -189,7 +191,7 @@ export function SignalsPage() {
   return (
     <main className="signals-page">
       <header className="subpage-header">
-        <Link to="/home">←</Link>
+        <BackLink to="/home" label="回到草原" />
         <div>
           <p className="eyebrow">端侧状态实验室</p>
           <h1>让飞马多懂一点此刻</h1>
@@ -209,7 +211,7 @@ export function SignalsPage() {
                 if (hardwareLink && deviceId) void sendMoodToDevice(deviceId, mood.id);
               }}
             >
-              <span>{mood.emoji}</span>
+              <AppIcon icon={mood.icon} size={26} />
               {mood.label}
             </button>
           ))}

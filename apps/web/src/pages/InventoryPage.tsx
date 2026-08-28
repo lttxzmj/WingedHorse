@@ -1,7 +1,10 @@
 import { ITEM_CATALOG, ITEM_IDS, type ItemEffect } from "@wingedhorse/domain";
 import { Button, Card } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
+import { PackageOpen } from "lucide-react";
 import { useState } from "react";
+import { AppIcon } from "../components/AppIcon";
+import { BackLink } from "../components/BackLink";
 import { useAppStore } from "../store/useAppStore";
 
 const EFFECT_LABELS = {
@@ -29,7 +32,7 @@ export function InventoryPage() {
   return (
     <main className="inventory-page">
       <header className="subpage-header">
-        <Link to="/home">←</Link>
+        <BackLink to="/home" label="回到草原" />
         <div>
           <p className="eyebrow">飞马背包</p>
           <h1>今天接住的东西</h1>
@@ -99,7 +102,7 @@ export function InventoryPage() {
           })
         ) : (
           <section className="empty-state inventory-empty">
-            <span className="empty-state__icon">🧺</span>
+            <span className="empty-state__icon"><AppIcon icon={PackageOpen} size={42} /></span>
             <h2>背包还是空的</h2>
             <p>去接一局掉落，第一份礼物也许正在路上。</p>
             <Link className="ui-button ui-button--primary inline-link-button" to="/game">

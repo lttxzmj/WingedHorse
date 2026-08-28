@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { BackLink } from "../components/BackLink";
 
 type LegalKind = "privacy" | "terms" | "ai";
 
@@ -71,7 +72,7 @@ export function LegalPage({ kind }: { kind: LegalKind }) {
   return (
     <main className="legal-page">
       <header className="subpage-header">
-        <Link to="/settings">←</Link>
+        <BackLink to="/settings" label="返回设置" />
         <div>
           <p className="eyebrow">{content.eyebrow}</p>
           <h1>{content.title}</h1>
