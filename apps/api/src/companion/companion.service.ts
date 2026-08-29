@@ -281,7 +281,7 @@ export class CompanionService {
         ? "上一条还在路上，我先等一下。你刚写下的话还留在这台设备上，可以稍后再发。"
         : reason === "device-budget"
           ? "今天和我聊得差不多啦。明天再来；草原、补给和背包还能继续玩。"
-          : "远端额度暂时到上限了。我不会悄悄换模型；你可以先回草原、看生活簿和背包，稍后再聊。";
+          : "远端额度暂时到上限了。我不会悄悄换模型；你可以先回草原、看朋友圈和背包，稍后再聊。";
     return {
       reply,
       source: "local-fallback",
@@ -343,8 +343,8 @@ export class CompanionService {
     } else if (asksAboutLife) {
       const event = context.recentEvents[0];
       reply = event
-        ? `我记得。最近生活簿里是「${event.title}」：${toCharacterSpeech(event.body)}`
-        : "今天的生活簿还很安静，我不想为了热闹去编经历。";
+        ? `我记得。最近朋友圈里是「${event.title}」：${toCharacterSpeech(event.body)}`
+        : "今天的朋友圈还很安静，我不想为了热闹去编经历。";
     } else if (asksAboutInventory) {
       reply = context.inventory.length
         ? `我翻了翻背包：${context.inventory.map((item) => `${item.name}×${item.count}`).join("、")}。这些是现在的实际库存。`

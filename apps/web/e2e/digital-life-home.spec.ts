@@ -58,19 +58,34 @@ test.beforeEach(async ({ page }) => {
 test("digital life home keeps companionship primary and care functional", async ({
   page
 }, testInfo) => {
-  await expect(page.getByRole("heading", { name: "来来" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "打开生活簿" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "来来的草原" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开朋友圈" })).toBeVisible();
   await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
   await expect(page.getByLabel(/^心情 /)).toBeVisible();
   await expect(page.getByLabel("元气 40")).toBeVisible();
+  await expect(page.getByLabel("当前身份与状态")).toBeVisible();
+  await expect(page.getByLabel("常用入口").getByRole("link", { name: /打开背包/ })).toBeVisible();
+  await expect(
+    page.getByLabel("常用入口").getByRole("link", { name: "打开设置与隐私" })
+  ).toBeVisible();
   await expect(page.getByLabel("来来刚带回来的补给").getByRole("button")).toHaveCount(3);
-  await expect(page.getByText("点一下收进背包")).toBeVisible();
+  await expect(page.getByText("点一下收进背包")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "熟悉阶段" })).toHaveCount(0);
   await expect(page.getByLabel("和来来说一句")).toBeVisible();
   await expect(page.getByRole("button", { name: "更多：相册、拍照与表情识别" })).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /语音：点一下听写，按住唤醒/ })
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /语音：点一下听写，按住唤醒/ })).toBeEnabled();
+  const composerFontSize = await page
+    .getByLabel("和来来说一句")
+    .evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+  expect(composerFontSize).toBeGreaterThanOrEqual(16);
+
+  await page.getByRole("link", { name: "打开设置与隐私" }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole("heading", { name: "你的数据由你决定" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "娱乐问卷" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "密友" })).toBeVisible();
+  await page.getByRole("link", { name: "回到草原" }).click();
+  await expect(page).toHaveURL(/\/home$/);
   await page.getByRole("button", { name: "更多：相册、拍照与表情识别" }).click();
   await expect(page.getByRole("menuitem", { name: "相册" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "拍照" })).toBeVisible();

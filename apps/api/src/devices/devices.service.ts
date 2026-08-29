@@ -133,8 +133,7 @@ export class DevicesService implements OnModuleInit, OnModuleDestroy {
       const parsed = deviceTelemetrySchema.safeParse(normalizedData);
       if (parsed.success) {
         // rest_off 仅同步状态，不派生触摸事件。
-        const event =
-          interaction === "rest_off" ? null : deriveHardwareEvent(parsed.data);
+        const event = interaction === "rest_off" ? null : deriveHardwareEvent(parsed.data);
         this.telemetrySubject.next({
           deviceId: parsed.data.deviceId,
           telemetry: parsed.data,

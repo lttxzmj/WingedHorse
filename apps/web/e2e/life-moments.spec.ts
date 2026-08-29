@@ -81,7 +81,7 @@ test.beforeEach(async ({ page }) => {
 
 test("life feed reads like the character's private moments", async ({ page }, testInfo) => {
   await expect(page.getByRole("heading", { name: "它的朋友圈" })).toBeVisible();
-  await expect(page.getByText("只保存在这台设备")).toBeVisible();
+  await expect(page.getByRole("button", { name: /仅自己/ })).toBeVisible();
   await expect(page.getByText("共同远行")).toBeVisible();
   await expect(page.getByText("醒来以后，我郑重宣布休息也算今日事项。")).toBeVisible();
   await expect(page.getByText("我没有立刻用掉，而是先朝你点了点头")).toBeVisible();

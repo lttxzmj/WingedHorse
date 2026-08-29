@@ -142,6 +142,7 @@ describe("CompanionService", () => {
     expect(result.source).toBe("domain-grounded");
     expect(result.reply).toContain("不催满电");
     expect(result.reply).not.toContain("生活簿");
+    expect(result.reply).not.toContain("朋友圈");
     expect(provider.complete).not.toHaveBeenCalled();
   });
 

@@ -51,6 +51,7 @@ describe("Companion Prairie State & Tree-hole Sensing", () => {
         body: "接住多少都算收获。",
         typeId: "chosen",
         source: "user-action",
+        visibility: "private",
         liked: false,
         saved: false
       }

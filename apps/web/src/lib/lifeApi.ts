@@ -48,29 +48,32 @@ async function expectJson(response: Response): Promise<unknown> {
 
 export async function syncLifeEvents(localEvents: LifeEvent[]): Promise<LifeEvent[]> {
   await Promise.all(
-    localEvents.map(async ({ eventKey, kind, occurredAt, typeId, itemId, liked, saved }) => {
-      const body: LifeEventCreateRequest = {
-        eventKey,
-        kind,
-        occurredAt,
-        typeId,
-        ...(itemId ? { itemId } : {})
-      };
-      const response = await fetch("/api/life/events", {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify(body)
-      });
-      const event = lifeEventSchema.parse(await expectJson(response));
-      await Promise.all(
-        (
-          [
-            ...(liked ? [{ interaction: "liked" as const, value: true }] : []),
-            ...(saved ? [{ interaction: "saved" as const, value: true }] : [])
-          ] satisfies LifeEventInteractionRequest[]
-        ).map((request) => setLifeEventInteraction(event.id, request))
-      );
-    })
+    localEvents.map(
+      async ({ eventKey, kind, occurredAt, typeId, itemId, liked, saved, visibility }) => {
+        const body: LifeEventCreateRequest = {
+          eventKey,
+          kind,
+          occurredAt,
+          typeId,
+          ...(itemId ? { itemId } : {}),
+          ...(visibility ? { visibility } : {})
+        };
+        const response = await fetch("/api/life/events", {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify(body)
+        });
+        const event = lifeEventSchema.parse(await expectJson(response));
+        await Promise.all(
+          (
+            [
+              ...(liked ? [{ interaction: "liked" as const, value: true }] : []),
+              ...(saved ? [{ interaction: "saved" as const, value: true }] : [])
+            ] satisfies LifeEventInteractionRequest[]
+          ).map((request) => setLifeEventInteraction(event.id, request))
+        );
+      }
+    )
   );
   const response = await fetch("/api/life/events?limit=30", { headers: headers() });
   return lifeEventListSchema.parse(await expectJson(response)).events;
@@ -92,6 +95,40 @@ export async function setLifeEventInteraction(id: string, request: LifeEventInte
     body: JSON.stringify(request)
   });
   return lifeEventSchema.parse(await expectJson(response));
+}
+
+export async function setRemoteLifeEventVisibility(
+  id: string,
+  visibility: LifeEvent["visibility"]
+) {
+  const response = await fetch(`/api/life/events/${encodeURIComponent(id)}/visibility`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ visibility })
+  });
+  return lifeEventSchema.parse(await expectJson(response));
+}
+
+export async function publishLifeEventVisibility(event: LifeEvent) {
+  const body: LifeEventCreateRequest = {
+    eventKey: event.eventKey,
+    kind: event.kind,
+    occurredAt: event.occurredAt,
+    typeId: event.typeId,
+    ...(event.itemId ? { itemId: event.itemId } : {}),
+    visibility: event.visibility
+  };
+  const created = lifeEventSchema.parse(
+    await expectJson(
+      await fetch("/api/life/events", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify(body)
+      })
+    )
+  );
+  if (created.visibility === event.visibility) return created;
+  return setRemoteLifeEventVisibility(created.id, event.visibility);
 }
 
 export async function deleteRemoteLifeData(): Promise<void> {

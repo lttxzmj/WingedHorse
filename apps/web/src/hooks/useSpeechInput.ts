@@ -35,7 +35,10 @@ function writeConsent() {
 
 export function useSpeechInput({ enabled = true, onDictation, onWake }: UseSpeechInputOptions) {
   const Recognition = getSpeechRecognitionCtor();
-  const supported = Boolean(Recognition);
+  // 非安全上下文（HTTP 裸 IP）下浏览器会拒绝麦克风，直接视为不支持，
+  // 避免引导用户开启一个必然失败的功能
+  const secureContext = typeof window === "undefined" || window.isSecureContext !== false;
+  const supported = Boolean(Recognition) && secureContext;
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const modeRef = useRef<SpeechListenMode>("off");
   const wakeEnabledRef = useRef(false);
@@ -49,7 +52,10 @@ export function useSpeechInput({ enabled = true, onDictation, onWake }: UseSpeec
   const [interimText, setInterimText] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
-  const [consentNeeded, setConsentNeeded] = useState(() => supported && !readConsent());
+  // 授权卡不再开屏常驻：只在用户主动点麦克风时弹出（意图驱动）
+  const [consentNeeded, setConsentNeeded] = useState(false);
+  const [consented, setConsented] = useState(readConsent);
+  const consentedRef = useRef(readConsent());
 
   useEffect(() => {
     onDictationRef.current = onDictation;
@@ -99,7 +105,7 @@ export function useSpeechInput({ enabled = true, onDictation, onWake }: UseSpeec
         setError("当前浏览器还不支持语音输入，可以改用打字。");
         return;
       }
-      if (consentNeeded) {
+      if (!consentedRef.current) {
         setError("请先同意麦克风仅用于端侧听写与唤醒。");
         return;
       }
@@ -235,25 +241,35 @@ export function useSpeechInput({ enabled = true, onDictation, onWake }: UseSpeec
         setStatus("");
       }
     };
-  }, [Recognition, clearRestartTimer, consentNeeded, enabled, stop]);
+  }, [Recognition, clearRestartTimer, enabled, stop]);
 
   const acceptConsent = useCallback(() => {
     writeConsent();
+    consentedRef.current = true;
+    setConsented(true);
     setConsentNeeded(false);
     setError("");
   }, []);
 
+  const requestConsent = useCallback(() => {
+    setConsentNeeded(true);
+  }, []);
+
+  const declineConsent = useCallback(() => {
+    setConsentNeeded(false);
+  }, []);
+
   const startDictation = useCallback(() => {
-    if (consentNeeded) return;
+    if (!consentedRef.current) return;
     wakeEnabledRef.current = false;
     startRef.current("dictation");
-  }, [consentNeeded]);
+  }, []);
 
   const startWake = useCallback(() => {
-    if (consentNeeded) return;
+    if (!consentedRef.current) return;
     wakeEnabledRef.current = true;
     startRef.current("wake");
-  }, [consentNeeded]);
+  }, []);
 
   const toggleDictation = useCallback(() => {
     if (mode === "dictation" && listening) {
@@ -298,7 +314,10 @@ export function useSpeechInput({ enabled = true, onDictation, onWake }: UseSpeec
     status,
     error,
     consentNeeded,
+    consented,
     acceptConsent,
+    requestConsent,
+    declineConsent,
     startDictation,
     startWake,
     toggleDictation,

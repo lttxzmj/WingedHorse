@@ -31,7 +31,9 @@ describe.sequential("SettingsPage entertainment questionnaire", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "娱乐问卷" })).toBeInTheDocument();
-    expect(screen.getByText("17 题，大约 90 秒。结果只作轻松参考，不是心理或职业建议。")).toBeVisible();
+    expect(
+      screen.getByText("17 题，大约 90 秒。结果只作轻松参考，不是心理或职业建议。")
+    ).toBeVisible();
     expect(screen.getByRole("link", { name: "开始测测" })).toBeVisible();
     expect(screen.queryByText(/心理诊断|健康监测|治疗/u)).not.toBeInTheDocument();
     expect(screen.getByText(/来来是 AI，不是真人/u)).toBeVisible();
@@ -42,7 +44,9 @@ describe.sequential("SettingsPage entertainment questionnaire", () => {
     render(<App />);
 
     expect(
-      await screen.findByText("你现在是「天选牛马」。类型只会在你主动重测时改变，结果只作轻松参考。")
+      await screen.findByText(
+        "你现在是「天选牛马」。类型只会在你主动重测时改变，结果只作轻松参考。"
+      )
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "查看结果" })).toHaveAttribute("href", "/result");
 

@@ -30,7 +30,7 @@ import {
   Wind,
   X
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { CompanionComposer, type CompanionComposerSubmit } from "../components/CompanionComposer";
 import { ItemIcon } from "../components/ItemIcon";
@@ -42,20 +42,49 @@ import { subscribeDeviceEvents, sendMoodToDevice } from "../lib/devices";
 import { trackEvent } from "../lib/analytics";
 import { createWorkdayComicCard } from "../lib/workdayComicCard";
 import { useDigitalLife } from "../hooks/useDigitalLife";
+import { useKeyboardInset } from "../hooks/useKeyboardInset";
 import { useAppStore } from "../store/useAppStore";
 import "../cultivation.css";
 import "../digital-life-experience.css";
 
 const HOME_CHAT_FALLBACK = "我暂时连不上远处，但还在这儿。点开对话框，还能慢慢说。";
 
-function chooseSceneDrops(seedSource: string): ItemId[] {
+type SceneDropLayout = {
+  itemId: ItemId;
+  left: number;
+  top: number;
+  rotate: number;
+  delayMs: number;
+};
+
+function chooseSceneDrops(seedSource: string): SceneDropLayout[] {
   let seed = 0;
   for (const character of seedSource) seed = (seed * 31 + character.charCodeAt(0)) >>> 0;
 
-  const choices = [...ITEM_IDS];
-  return Array.from({ length: 3 }, () => {
+  const next = () => {
     seed = (seed * 1_664_525 + 1_013_904_223) >>> 0;
-    return choices.splice(seed % choices.length, 1)[0] as ItemId;
+    return seed;
+  };
+
+  const choices = [...ITEM_IDS];
+  const slots = [
+    { left: 10, top: 6 },
+    { left: 38, top: 2 },
+    { left: 22, top: 18 }
+  ];
+
+  return slots.map((slot, index) => {
+    const itemId = choices.splice(next() % choices.length, 1)[0] as ItemId;
+    const leftJitter = (next() % 9) - 4;
+    const topJitter = (next() % 7) - 3;
+    const rotate = ((next() % 17) - 8) * 1.2;
+    return {
+      itemId,
+      left: Math.min(52, Math.max(6, slot.left + leftJitter)),
+      top: Math.min(24, Math.max(1, slot.top + topJitter)),
+      rotate,
+      delayMs: index * 180 + (next() % 120)
+    };
   });
 }
 
@@ -64,6 +93,10 @@ function getMoodLabel(energy: number, chaos: number, defaultMood: string) {
   if (chaos > 70) return "有点炸毛";
   if (defaultMood === "happy") return "心情不错";
   return "安静在线";
+}
+
+function getMoodMeter(energy: number, chaos: number) {
+  return Math.max(0, Math.min(100, Math.round((energy + (100 - chaos)) / 2)));
 }
 
 export function DigitalLifeExperiencePage() {
@@ -87,7 +120,7 @@ export function DigitalLifeExperiencePage() {
   const interactionTriggerRef = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const wasInteractionOpen = useRef(false);
-  const sceneDropsRef = useRef<{ key: string; items: ItemId[] } | null>(null);
+  const sceneDropsRef = useRef<{ key: string; items: SceneDropLayout[] } | null>(null);
   const chatSessionId = useRef(createClientId());
   const chatAbortRef = useRef<AbortController | null>(null);
   const lastChatExchange = useRef<{ user: string; assistant: string } | null>(null);
@@ -128,6 +161,7 @@ export function DigitalLifeExperiencePage() {
   const [comicMessage, setComicMessage] = useState("");
   const [comicSharing, setComicSharing] = useState(false);
   useDigitalLife();
+  useKeyboardInset();
 
   // 监听硬件实体交互，深度融入家园气泡与互动
   useEffect(() => {
@@ -240,9 +274,14 @@ export function DigitalLifeExperiencePage() {
   }
   const sceneDrops = sceneDropsRef.current.items;
   const remainingDrops = sceneDrops
-    .map((itemId, index) => ({ itemId, index, dropKey: `${sceneDropKey}:${index}:${itemId}` }))
+    .map((drop, index) => ({
+      ...drop,
+      index,
+      dropKey: `${sceneDropKey}:${index}:${drop.itemId}`
+    }))
     .filter((drop) => !collectedKeys.includes(drop.dropKey));
   const moodLabel = getMoodLabel(petVitals.energy, petVitals.chaos, profile.mood);
+  const moodMeter = getMoodMeter(petVitals.energy, petVitals.chaos);
   const onDuty = workShift.status === "on";
   const comic = createWorkdayComic({
     dateLabel: `${new Date().getMonth() + 1}月${new Date().getDate()}日`,
@@ -427,51 +466,64 @@ export function DigitalLifeExperiencePage() {
   return (
     <main className="home-page home-page--immersive">
       <header className="home-header home-header--quiet digital-life-header">
-        <nav className="digital-life-header__toolbar" aria-label="来来当前状态与常用入口">
-          <div className="home-status-pill" aria-label="来来当前状态">
-            <span
-              className="home-status-pill__item home-status-pill__item--mood"
-              aria-label={`心情 ${moodLabel}`}
-            >
-              <AppIcon icon={Heart} size={15} />
-              <em>{moodLabel}</em>
-            </span>
-            <i className="home-status-pill__divider" aria-hidden="true" />
-            <span
-              className="home-status-pill__item home-status-pill__item--energy"
-              aria-label={`元气 ${petVitals.energy}`}
-            >
-              <AppIcon icon={BatteryCharging} size={15} />
-              <em>{petVitals.energy}</em>
-            </span>
-          </div>
-          <div className="home-tool-group">
-            <Link
-              className="home-tool-link"
-              aria-label={`打开背包，共 ${inventoryCount} 件`}
-              to="/inventory"
-            >
-              <AppIcon icon={Package} size={19} />
-              <span>背包</span>
-              {inventoryCount > 0 ? <small>{inventoryCount}</small> : null}
-            </Link>
-            <Link className="home-tool-link" to="/settings" aria-label="打开设置与隐私">
-              <AppIcon icon={Settings} size={19} />
-              <span>设置</span>
-            </Link>
-          </div>
-        </nav>
-
         <div className="home-header__identity digital-life-header__identity">
-          <h1>{CHARACTER_NAME}</h1>
-          <p className="digital-life-presence">
-            <i aria-hidden="true" />
-            <span>
-              {profile.name} · {prairieState.statusNote} · {growth.relationshipLabel}
+          <h1>来来的草原</h1>
+          <div className="digital-life-header__tags" aria-label="当前身份与状态">
+            <span className="digital-life-chip">{profile.name}</span>
+            <span className="digital-life-chip">{growth.relationshipLabel}</span>
+            <span className="digital-life-chip digital-life-chip--presence">
+              <i aria-hidden="true" />
+              {prairieState.statusNote}
             </span>
-          </p>
+          </div>
+          <div className="digital-life-header__meters" aria-label="来来当前状态">
+            <div className="digital-life-meter digital-life-meter--mood">
+              <AppIcon icon={Heart} size={14} />
+              <div
+                className="digital-life-meter__track"
+                role="progressbar"
+                aria-label={`心情 ${moodLabel}`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={moodMeter}
+              >
+                <i style={{ width: `${moodMeter}%` }} />
+              </div>
+              <em>{moodLabel}</em>
+            </div>
+            <div className="digital-life-meter digital-life-meter--energy">
+              <AppIcon icon={BatteryCharging} size={14} />
+              <div
+                className="digital-life-meter__track"
+                role="progressbar"
+                aria-label={`元气 ${petVitals.energy}`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={petVitals.energy}
+              >
+                <i style={{ width: `${petVitals.energy}%` }} />
+              </div>
+              <em>{petVitals.energy}</em>
+            </div>
+          </div>
         </div>
       </header>
+
+      <nav className="digital-life-rail" aria-label="常用入口">
+        <Link
+          className="digital-life-rail__btn"
+          aria-label={`打开背包，共 ${inventoryCount} 件`}
+          to="/inventory"
+        >
+          <AppIcon icon={Package} size={20} />
+          <span>背包</span>
+          {inventoryCount > 0 ? <small>{inventoryCount}</small> : null}
+        </Link>
+        <Link className="digital-life-rail__btn" to="/settings" aria-label="打开设置与隐私">
+          <AppIcon icon={Settings} size={20} />
+          <span>设置</span>
+        </Link>
+      </nav>
 
       <section
         className={`lawn-stage lawn-stage--alive digital-life-stage digital-life-stage--${prairieState.ambientTheme}`}
@@ -479,40 +531,38 @@ export function DigitalLifeExperiencePage() {
       >
         {remainingDrops.length > 0 ? (
           <div className="digital-life-stage__drops" aria-label="来来刚带回来的补给">
-            <div className="digital-life-stage__drops-heading">
-              <span>
-                <AppIcon icon={Sparkles} size={15} />
-                刚带回来的补给
-              </span>
-              <small>点一下收进背包</small>
-            </div>
-            <div className="digital-life-stage__drop-list">
-              {remainingDrops.map(({ itemId, index, dropKey }) => {
-                const item = ITEM_CATALOG[itemId];
-                const isCollecting = collectingId === dropKey;
+            {remainingDrops.map(({ itemId, index, dropKey, left, top, rotate, delayMs }) => {
+              const item = ITEM_CATALOG[itemId];
+              const isCollecting = collectingId === dropKey;
 
-                return (
-                  <button
-                    className={`digital-life-stage__drop ${
-                      isCollecting ? "is-collecting" : ""
-                    }`.trim()}
-                    key={dropKey}
-                    type="button"
-                    onClick={() => handleCollectDrop(itemId, index)}
-                    aria-label={`收集掉落的${item.name}`}
-                    disabled={isCollecting}
-                  >
-                    {isCollecting ? (
-                      <span className="digital-life-stage__drop-badge" aria-hidden="true">
-                        +1
-                      </span>
-                    ) : null}
-                    <ItemIcon itemId={itemId} size={25} />
-                    <span>{item.name.replace("补给", "")}</span>
-                  </button>
-                );
-              })}
-            </div>
+              return (
+                <button
+                  className={`digital-life-stage__drop ${
+                    isCollecting ? "is-collecting" : ""
+                  }`.trim()}
+                  key={dropKey}
+                  type="button"
+                  style={
+                    {
+                      left: `${left}%`,
+                      top: `${top}%`,
+                      "--drop-rotate": `${rotate}deg`,
+                      "--drop-delay": `${delayMs}ms`
+                    } as CSSProperties
+                  }
+                  onClick={() => handleCollectDrop(itemId, index)}
+                  aria-label={`收集掉落的${item.name}`}
+                  disabled={isCollecting}
+                >
+                  {isCollecting ? (
+                    <span className="digital-life-stage__drop-badge" aria-hidden="true">
+                      +1
+                    </span>
+                  ) : null}
+                  <ItemIcon itemId={itemId} size={28} />
+                </button>
+              );
+            })}
           </div>
         ) : null}
 
@@ -599,7 +649,7 @@ export function DigitalLifeExperiencePage() {
             />
           </button>
         </div>
-        <Link className="digital-life-stage__tent-link" to="/life" aria-label="打开生活簿">
+        <Link className="digital-life-stage__tent-link" to="/life" aria-label="打开朋友圈">
           <img
             className="digital-life-stage__tent"
             src="/scene/prairie-tent.webp"
@@ -731,7 +781,7 @@ export function DigitalLifeExperiencePage() {
               )}
             </div>
             <Link className="interaction-sheet__journal" to="/life">
-              去共同生活簿看看
+              去朋友圈看看
               <AppIcon icon={ChevronRight} size={17} />
             </Link>
           </section>

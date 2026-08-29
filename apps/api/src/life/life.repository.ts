@@ -62,6 +62,7 @@ function rowToEvent(row: Record<string, unknown>): LifeEvent {
         : row.source === "life-engine"
           ? "life-engine"
           : "user-action",
+    visibility: row.visibility === "friends" ? "friends" : "private",
     liked: Boolean(row.liked),
     saved: Boolean(row.saved)
   };
@@ -88,8 +89,8 @@ export class LifeRepository implements OnModuleDestroy {
     }
     const result = await this.pool.query<Record<string, unknown>>(
       `INSERT INTO life_events
-        (actor_hash, event_id, event_key, kind, occurred_at, title, body, type_id, item_id, activity, motive, visitor_type_id, story_chapter, source, liked, saved)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+        (actor_hash, event_id, event_key, kind, occurred_at, title, body, type_id, item_id, activity, motive, visitor_type_id, story_chapter, source, visibility, liked, saved)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        ON CONFLICT (actor_hash, event_key) DO UPDATE SET event_key = EXCLUDED.event_key
        RETURNING *`,
       [
@@ -107,6 +108,7 @@ export class LifeRepository implements OnModuleDestroy {
         event.visitorTypeId ?? null,
         event.storyChapter ?? null,
         event.source,
+        event.visibility,
         event.liked,
         event.saved
       ]
@@ -115,12 +117,29 @@ export class LifeRepository implements OnModuleDestroy {
   }
 
   async list(actorHash: string, cursorValue?: string, limit = 20): Promise<LifeEventPage> {
+    return this.listFiltered(actorHash, "all", cursorValue, limit);
+  }
+
+  async listFriendsVisible(
+    actorHash: string,
+    cursorValue?: string,
+    limit = 20
+  ): Promise<LifeEventPage> {
+    return this.listFiltered(actorHash, "friends", cursorValue, limit);
+  }
+
+  private async listFiltered(
+    actorHash: string,
+    visibility: "all" | "friends",
+    cursorValue?: string,
+    limit = 20
+  ): Promise<LifeEventPage> {
     const cursor = decodeCursor(cursorValue);
     if (cursorValue && !cursor) throw new Error("INVALID_CURSOR");
     if (!this.pool) {
-      const all = [...(this.memory.get(actorHash)?.values() ?? [])].sort(
-        (a, b) => b.occurredAt.localeCompare(a.occurredAt) || b.id.localeCompare(a.id)
-      );
+      const all = [...(this.memory.get(actorHash)?.values() ?? [])]
+        .filter((event) => visibility === "all" || event.visibility === "friends")
+        .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt) || b.id.localeCompare(a.id));
       const start = cursor
         ? all.findIndex(
             (event) =>
@@ -135,7 +154,10 @@ export class LifeRepository implements OnModuleDestroy {
       };
     }
     const values: unknown[] = [actorHash, limit];
-    const where = cursor ? "AND (occurred_at, event_id) < ($3::timestamptz, $4::text)" : "";
+    const visibilityClause = visibility === "friends" ? "AND visibility = 'friends'" : "";
+    const where = cursor
+      ? `${visibilityClause} AND (occurred_at, event_id) < ($3::timestamptz, $4::text)`
+      : visibilityClause;
     if (cursor) values.push(cursor.occurredAt, cursor.id);
     const result = await this.pool.query<Record<string, unknown>>(
       `SELECT * FROM life_events WHERE actor_hash = $1 ${where}
@@ -168,6 +190,27 @@ export class LifeRepository implements OnModuleDestroy {
       `UPDATE life_events SET ${column} = $3, updated_at = NOW()
        WHERE actor_hash = $1 AND event_id = $2 RETURNING *`,
       [actorHash, id, value]
+    );
+    return result.rows[0] ? rowToEvent(result.rows[0]) : null;
+  }
+
+  async setVisibility(
+    actorHash: string,
+    id: string,
+    visibility: LifeEvent["visibility"]
+  ): Promise<LifeEvent | null> {
+    if (!this.pool) {
+      const events = this.memory.get(actorHash);
+      const event = events?.get(id);
+      if (!event) return null;
+      const updated = { ...event, visibility };
+      events!.set(id, updated);
+      return updated;
+    }
+    const result = await this.pool.query<Record<string, unknown>>(
+      `UPDATE life_events SET visibility = $3, updated_at = NOW()
+       WHERE actor_hash = $1 AND event_id = $2 RETURNING *`,
+      [actorHash, id, visibility]
     );
     return result.rows[0] ? rowToEvent(result.rows[0]) : null;
   }

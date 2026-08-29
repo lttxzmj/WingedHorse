@@ -100,13 +100,13 @@ export function SettingsPage() {
       <Card className="settings-card">
         <div>
           <h2>密友</h2>
-          <p>最多 6 人，只彼此可见。</p>
+          <p>最多 6 人。加入后可互看对方设为「密友可见」的朋友圈动态。</p>
         </div>
         <Link to="/friends">去邀请</Link>
       </Card>
       <Card className="settings-card">
         <div>
-          <h2>私密生活簿备份</h2>
+          <h2>朋友圈备份</h2>
           <p>
             默认只留在这台浏览器。打开后，生活事件会用随机访客凭证备份到服务端，不会自动发给
             OpenRouter。
@@ -118,14 +118,14 @@ export function SettingsPage() {
             checked={lifeSyncEnabled}
             onChange={(event) => setLifeSyncEnabled(event.target.checked)}
           />
-          允许备份私密生活簿
+          允许备份朋友圈
         </label>
       </Card>
       <Card className="settings-card">
         <div>
           <h2>导出我的数据</h2>
           <p>
-            下载这台设备上的问卷、结果、背包、养成、生活簿、记忆和设置。不含匿名凭证、内部会话 ID
+            下载这台设备上的问卷、结果、背包、养成、朋友圈、记忆和设置。不含匿名凭证、内部会话 ID
             或原始媒体。
           </p>
         </div>
@@ -157,7 +157,8 @@ export function SettingsPage() {
         <div>
           <h2>AI 与长期记忆</h2>
           <p>
-            来来是 AI，不是真人。聊天不长期保存；只有你点「记住」的句子留在这台浏览器。远处模型有每日次数，用完后仍可本地陪伴。
+            来来是
+            AI，不是真人。聊天不长期保存；只有你点「记住」的句子留在这台浏览器。远处模型有每日次数，用完后仍可本地陪伴。
           </p>
         </div>
         <div className="settings-links">
@@ -229,7 +230,7 @@ export function SettingsPage() {
         <div>
           <h2>清除本机数据</h2>
           <p>
-            删除问卷、结果、背包、养成、记忆、手动心情和本机足迹。若服务端有生活簿或玩家状态副本，会先删掉。此操作无法撤销。
+            删除问卷、结果、背包、养成、记忆、手动心情和本机足迹。若服务端有朋友圈或玩家状态副本，会先删掉。此操作无法撤销。
           </p>
         </div>
         {confirming ? (

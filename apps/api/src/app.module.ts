@@ -12,6 +12,9 @@ import { SafetyService } from "./companion/safety.service.js";
 import { DevicesController } from "./devices/devices.controller.js";
 import { DevicesService } from "./devices/devices.service.js";
 import { MqttProvider } from "./devices/mqtt.provider.js";
+import { FriendsController } from "./friends/friends.controller.js";
+import { FriendsRepository } from "./friends/friends.repository.js";
+import { FriendsService } from "./friends/friends.service.js";
 import { LifeController } from "./life/life.controller.js";
 import { LifeRepository } from "./life/life.repository.js";
 import { LifeService } from "./life/life.service.js";
@@ -25,6 +28,7 @@ import { PlayerService } from "./player/player.service.js";
     AssessmentController,
     CompanionController,
     DevicesController,
+    FriendsController,
     LifeController,
     PlayerController
   ],
@@ -38,6 +42,8 @@ import { PlayerService } from "./player/player.service.js";
     SafetyService,
     DevicesService,
     MqttProvider,
+    FriendsRepository,
+    FriendsService,
     LifeRepository,
     LifeService,
     PlayerRepository,

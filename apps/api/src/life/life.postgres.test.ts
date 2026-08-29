@@ -20,7 +20,9 @@ describe.runIf(Boolean(databaseUrl))("LifeRepository PostgreSQL integration", ()
       "001_life_events.sql",
       "002_life_events_metadata.sql",
       "003_life_story_visitors.sql",
-      "004_player_game_state.sql"
+      "004_player_game_state.sql",
+      "005_analytics_and_intent.sql",
+      "006_friends_and_visibility.sql"
     ]) {
       const migration = await readFile(
         new URL(`../../../../deploy/migrations/${file}`, import.meta.url),
@@ -28,14 +30,18 @@ describe.runIf(Boolean(databaseUrl))("LifeRepository PostgreSQL integration", ()
       );
       await admin.query(migration);
     }
-    await admin.query("TRUNCATE life_events, digital_life_plans, game_sessions, player_states");
+    await admin.query(
+      "TRUNCATE life_events, digital_life_plans, game_sessions, player_states, visitor_profiles, friendships"
+    );
     repository = new LifeRepository();
     service = new LifeService(repository);
   });
 
   afterAll(async () => {
     await repository?.onModuleDestroy();
-    await admin?.query("TRUNCATE life_events, digital_life_plans, game_sessions, player_states");
+    await admin?.query(
+      "TRUNCATE life_events, digital_life_plans, game_sessions, player_states, visitor_profiles, friendships"
+    );
     await admin?.end();
     if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
     else process.env.DATABASE_URL = previousDatabaseUrl;

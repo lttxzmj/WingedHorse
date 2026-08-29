@@ -6,6 +6,8 @@ import type { LifeMotive, PlannedActivity } from "./engine.js";
 export type LifeEventKind =
   "arrival" | "game-haul" | "gift" | "quiet-moment" | "autonomous" | "visitor" | "story";
 export type LifeEventSource = "user-action" | "daily-plan" | "life-engine";
+/** 朋友圈逐条可见范围；默认仅自己，不做广场。 */
+export type LifeEventVisibility = "private" | "friends";
 
 export interface LifeEvent {
   id: string;
@@ -21,6 +23,7 @@ export interface LifeEvent {
   visitorTypeId?: HorseTypeId | undefined;
   storyChapter?: 1 | 2 | 3 | undefined;
   source: LifeEventSource;
+  visibility: LifeEventVisibility;
   liked: boolean;
   saved: boolean;
 }
@@ -36,6 +39,7 @@ export interface CreateLifeEventInput {
   visitorTypeId?: HorseTypeId | undefined;
   storyChapter?: 1 | 2 | 3 | undefined;
   source?: LifeEventSource | undefined;
+  visibility?: LifeEventVisibility | undefined;
 }
 
 const copy: Record<
@@ -138,6 +142,7 @@ export function createLifeEvent(input: CreateLifeEventInput): LifeEvent {
     occurredAt: input.occurredAt,
     typeId: input.typeId,
     source: input.source ?? "user-action",
+    visibility: input.visibility ?? "private",
     ...(input.itemId ? { itemId: input.itemId } : {}),
     ...(input.activity ? { activity: input.activity } : {}),
     ...(input.motive ? { motive: input.motive } : {}),
@@ -162,4 +167,20 @@ export function toggleLifeEventInteraction(
   return events.map((event) =>
     event.id === id ? { ...event, [interaction]: !event[interaction] } : event
   );
+}
+
+export function normalizeLifeEventVisibility(value: unknown): LifeEventVisibility {
+  return value === "friends" ? "friends" : "private";
+}
+
+export function setLifeEventVisibility(
+  events: LifeEvent[],
+  id: string,
+  visibility: LifeEventVisibility
+): LifeEvent[] {
+  return events.map((event) => (event.id === id ? { ...event, visibility } : event));
+}
+
+export function lifeEventsVisibleToFriends(events: readonly LifeEvent[]): LifeEvent[] {
+  return events.filter((event) => event.visibility === "friends");
 }

@@ -46,6 +46,7 @@ describe("LifeService engine sync", () => {
             title: "新住客到达草原",
             body: "它把这里当作暂时不用逞强的地方。",
             source: "user-action",
+            visibility: "private",
             liked: false,
             saved: false
           }
@@ -75,6 +76,7 @@ describe("LifeService engine sync", () => {
             body: "这段内容不应被保存。",
             storyChapter: 3,
             source: "user-action",
+            visibility: "private",
             liked: false,
             saved: false
           }

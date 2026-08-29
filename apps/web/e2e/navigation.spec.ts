@@ -69,6 +69,18 @@ test("automatic game start is consumed once and guest exits return home", async 
   await expect(page).toHaveURL(/\/$/);
 });
 
+test("home settings entry shows the page after a leftover document scroll", async ({ page }) => {
+  await seedReturningUser(page);
+  await page.goto("/home");
+  await page.evaluate(() => window.scrollTo(0, 480));
+  await page.getByRole("link", { name: "打开设置与隐私" }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole("heading", { name: "你的数据由你决定" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "协议与隐私" })).toBeVisible();
+  const scrollY = await page.evaluate(() => window.scrollY);
+  expect(scrollY).toBeLessThanOrEqual(2);
+});
+
 test("settings children return to settings", async ({ page }) => {
   await page.goto("/settings");
   await page.getByRole("link", { name: /管理与体验/ }).click();
@@ -85,13 +97,17 @@ test("settings children return to settings", async ({ page }) => {
 test("settings offers entertainment questionnaire start, result and retest", async ({ page }) => {
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "娱乐问卷" })).toBeVisible();
-  await expect(page.getByText("17 题，大约 90 秒。结果只作轻松参考，不是心理或职业建议。")).toBeVisible();
+  await expect(
+    page.getByText("17 题，大约 90 秒。结果只作轻松参考，不是心理或职业建议。")
+  ).toBeVisible();
   await page.getByRole("link", { name: "开始测测" }).click();
   await expect(page).toHaveURL(/\/assessment$/);
 
   await seedReturningUser(page);
   await page.goto("/settings");
-  await expect(page.getByText("你现在是「天选牛马」。类型只会在你主动重测时改变，结果只作轻松参考。")).toBeVisible();
+  await expect(
+    page.getByText("你现在是「天选牛马」。类型只会在你主动重测时改变，结果只作轻松参考。")
+  ).toBeVisible();
   await page.getByRole("link", { name: "查看结果" }).click();
   await expect(page).toHaveURL(/\/result$/);
 

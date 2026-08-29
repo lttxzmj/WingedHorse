@@ -20,7 +20,9 @@ describe.runIf(Boolean(databaseUrl))("PlayerRepository PostgreSQL integration", 
       "001_life_events.sql",
       "002_life_events_metadata.sql",
       "003_life_story_visitors.sql",
-      "004_player_game_state.sql"
+      "004_player_game_state.sql",
+      "005_analytics_and_intent.sql",
+      "006_friends_and_visibility.sql"
     ]) {
       const migration = await readFile(
         new URL(`../../../../deploy/migrations/${file}`, import.meta.url),

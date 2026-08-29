@@ -6,13 +6,22 @@ import {
   toCharacterSpeech
 } from "@wingedhorse/domain";
 import { Link } from "@tanstack/react-router";
-import { BookHeart, ChevronDown, Heart, LockKeyhole, Map, MessageCircle, Save } from "lucide-react";
+import {
+  BookHeart,
+  ChevronDown,
+  Heart,
+  LockKeyhole,
+  Map,
+  MessageCircle,
+  Save,
+  Users
+} from "lucide-react";
 import { useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
 import { PhotoMapPanel } from "../components/PhotoMapPanel";
 import { useDigitalLife } from "../hooks/useDigitalLife";
-import { setLifeEventInteraction } from "../lib/lifeApi";
+import { setLifeEventInteraction, publishLifeEventVisibility } from "../lib/lifeApi";
 import { useAppStore } from "../store/useAppStore";
 import "../life-moments.css";
 
@@ -62,13 +71,25 @@ export function LifePage() {
   const relationshipXp = useAppStore((state) => state.relationshipXp);
   const toggleLike = useAppStore((state) => state.toggleLifeEventLike);
   const toggleSaved = useAppStore((state) => state.toggleLifeEventSaved);
+  const setEventVisibility = useAppStore((state) => state.setLifeEventVisibility);
   const { lifeSyncEnabled } = useDigitalLife();
+  const [visibilityHint, setVisibilityHint] = useState("");
 
   function interact(eventId: string, interaction: "liked" | "saved", value: boolean) {
     if (interaction === "liked") toggleLike(eventId);
     else toggleSaved(eventId);
     if (lifeSyncEnabled)
       void setLifeEventInteraction(eventId, { interaction, value }).catch(() => undefined);
+  }
+
+  function toggleVisibility(event: (typeof events)[number]) {
+    const next = event.visibility === "friends" ? "private" : "friends";
+    setEventVisibility(event.id, next);
+    setVisibilityHint("");
+    void publishLifeEventVisibility({ ...event, visibility: next }).catch(() => {
+      setEventVisibility(event.id, event.visibility);
+      setVisibilityHint("可见范围暂时没同步上，请稍后再试。");
+    });
   }
 
   function switchView(next: "feed" | "map") {
@@ -97,7 +118,7 @@ export function LifePage() {
       <header className="subpage-header life-header">
         <BackLink to="/home" label="回到草原" />
         <div>
-          <p className="eyebrow">{CHARACTER_NAME} · 只给你看</p>
+          <p className="eyebrow">{CHARACTER_NAME} · 逐条设置可见范围</p>
           <h1>{view === "feed" ? "它的朋友圈" : "一起走过的地方"}</h1>
         </div>
       </header>
@@ -201,6 +222,13 @@ export function LifePage() {
                 <p className="eyebrow">最近</p>
                 <span>{events.length} 条</span>
               </div>
+              {visibilityHint ? (
+                <p className="life-feed__hint" role="status">
+                  {visibilityHint}
+                </p>
+              ) : (
+                <p className="life-feed__hint">默认仅自己可见。点「仅自己」可分享给密友。</p>
+              )}
               {events.map((event, index) => {
                 const eventProfile = getResultProfile(event.typeId);
                 const voice = characterVoice(event.title, event.body, event.kind);
@@ -257,10 +285,28 @@ export function LifePage() {
                       ) : null}
                       <div className="life-post__meta">
                         <time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time>
-                        <span>
-                          <AppIcon icon={LockKeyhole} size={13} />
-                          {event.kind === "visitor" ? "AI 访客 · 仅你可见" : "仅你可见"}
-                        </span>
+                        {event.kind === "visitor" ? <span>AI 访客</span> : null}
+                        <button
+                          type="button"
+                          className={
+                            event.visibility === "friends"
+                              ? "life-post__visibility is-friends"
+                              : "life-post__visibility"
+                          }
+                          aria-pressed={event.visibility === "friends"}
+                          aria-label={
+                            event.visibility === "friends"
+                              ? "当前密友可见，点击改为仅自己"
+                              : "当前仅自己可见，点击设为密友可见"
+                          }
+                          onClick={() => toggleVisibility(event)}
+                        >
+                          <AppIcon
+                            icon={event.visibility === "friends" ? Users : LockKeyhole}
+                            size={13}
+                          />
+                          {event.visibility === "friends" ? "密友可见" : "仅自己"}
+                        </button>
                       </div>
                       <footer>
                         <button

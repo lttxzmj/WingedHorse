@@ -7,10 +7,19 @@ import {
   useRouterState
 } from "@tanstack/react-router";
 import { Feather } from "lucide-react";
-import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import {
+  Component,
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  type ReactNode
+} from "react";
 import { AppIcon } from "./components/AppIcon";
 import { GlobalHardwareListener } from "./components/GlobalHardwareListener";
 import { LandingPage } from "./pages/LandingPage";
+import { restoreDocumentViewport } from "./lib/viewport";
 
 const AssessmentPage = lazy(() =>
   import("./pages/AssessmentPage").then((module) => ({ default: module.AssessmentPage }))
@@ -50,6 +59,9 @@ const LifePage = lazy(() =>
 const FriendsPage = lazy(() =>
   import("./pages/FriendsPage").then((module) => ({ default: module.FriendsPage }))
 );
+const FriendLifePage = lazy(() =>
+  import("./pages/FriendLifePage").then((module) => ({ default: module.FriendLifePage }))
+);
 const IntentPage = lazy(() =>
   import("./pages/IntentPage").then((module) => ({ default: module.IntentPage }))
 );
@@ -68,7 +80,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/terms": "用户协议",
   "/ai-notice": "AI 使用说明",
   "/memories": "长期记忆",
-  "/life": "私密生活簿",
+  "/life": "朋友圈",
   "/friends": "密友小圈",
   "/intent": "把来来带回家"
 };
@@ -78,9 +90,14 @@ function RouteEffects() {
   const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => {
-    const pageTitle = ROUTE_TITLES[pathname] ?? "页面未找到";
+    const pageTitle =
+      ROUTE_TITLES[pathname] ?? (pathname.startsWith("/friends/") ? "密友朋友圈" : "页面未找到");
     document.title = `${pageTitle} · 牛马飞升`;
     setAnnouncement(`已进入${pageTitle}`);
+  }, [pathname]);
+
+  useLayoutEffect(() => {
+    restoreDocumentViewport();
   }, [pathname]);
 
   useEffect(() => {
@@ -120,8 +137,19 @@ function RouteEffects() {
   );
 }
 
-class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  override state = { failed: false };
+class RouteErrorBoundary extends Component<
+  { children: ReactNode; resetKey: string },
+  { failed: boolean; resetKey: string }
+> {
+  override state = { failed: false, resetKey: "" };
+
+  static getDerivedStateFromProps(
+    props: { resetKey: string },
+    state: { failed: boolean; resetKey: string }
+  ) {
+    if (props.resetKey !== state.resetKey) return { failed: false, resetKey: props.resetKey };
+    return null;
+  }
 
   static getDerivedStateFromError() {
     return { failed: true };
@@ -161,8 +189,9 @@ function RouteLoading() {
 }
 
 function RootLayout() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   return (
-    <RouteErrorBoundary>
+    <RouteErrorBoundary resetKey={pathname}>
       <Suspense fallback={<RouteLoading />}>
         <Outlet />
         <RouteEffects />
@@ -273,6 +302,11 @@ const friendsRoute = createRoute({
   },
   component: FriendsPage
 });
+const friendLifeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/friends/$inviteCode",
+  component: FriendLifePage
+});
 const intentRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/intent",
@@ -294,6 +328,7 @@ const routeTree = rootRoute.addChildren([
   memoriesRoute,
   lifeRoute,
   friendsRoute,
+  friendLifeRoute,
   intentRoute
 ]);
 

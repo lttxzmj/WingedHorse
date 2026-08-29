@@ -20,6 +20,19 @@
   margin: 0;
 }
 
+.companion-composer__consent-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+}
+
+.companion-composer__consent button.companion-composer__consent-decline {
+  background: transparent;
+  border: 1px solid rgb(212 162 28 / 38%);
+  font-weight: 640;
+  padding: 0 0.85rem;
+}
+
 .companion-composer__consent button {
   min-height: 2.75rem;
   border: 0;
@@ -121,13 +134,16 @@
 .companion-composer__tool {
   display: grid;
   place-items: center;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border: 0;
   border-radius: 0.7rem;
   color: #6b5318;
   background: transparent;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
   transition: all 150ms ease;
 }
 
@@ -200,7 +216,7 @@
   color: var(--color-ink-900);
   background: transparent;
   font: inherit;
-  font-size: 0.84rem;
+  font-size: 1rem;
 }
 
 .companion-composer__form input {
@@ -272,7 +288,7 @@
 
 .companion-composer--detail .companion-composer__form textarea {
   grid-area: input;
-  font-size: 0.96rem;
+  font-size: 1rem;
 }
 
 .companion-composer--detail .companion-composer__send {

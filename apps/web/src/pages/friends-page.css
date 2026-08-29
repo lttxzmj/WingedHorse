@@ -109,6 +109,37 @@
   font-weight: 750;
 }
 
+.friends-page__actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.friends-page__feed {
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.65rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-900);
+  background: var(--color-brand-50);
+  font-size: var(--font-small);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.friends-page__feed:focus {
+  outline: none;
+}
+
+.friends-page__feed:focus-visible {
+  outline: 3px solid var(--color-focus-600);
+  outline-offset: 2px;
+}
+
 .friends-page__avatar {
   display: grid;
   width: 2.25rem;
@@ -192,5 +223,5 @@
   color: var(--color-ink-900);
   background: var(--color-surface-0);
   font: inherit;
-  font-size: var(--font-small);
+  font-size: 1rem;
 }

@@ -14,9 +14,11 @@ import {
 import {
   lifeEventCreateSchema,
   lifeEventInteractionSchema,
+  lifeEventVisibilityUpdateSchema,
   lifeSyncRequestSchema,
   visitorTokenSchema
 } from "@wingedhorse/contracts";
+import { FriendsService } from "../friends/friends.service.js";
 import { LifeService } from "./life.service.js";
 import { PlayerService } from "../player/player.service.js";
 
@@ -24,7 +26,8 @@ import { PlayerService } from "../player/player.service.js";
 export class LifeController {
   constructor(
     @Inject(LifeService) private readonly life: LifeService,
-    @Inject(PlayerService) private readonly player: PlayerService
+    @Inject(PlayerService) private readonly player: PlayerService,
+    @Inject(FriendsService) private readonly friends: FriendsService
   ) {}
 
   private token(value: string | undefined): string {
@@ -89,12 +92,28 @@ export class LifeController {
     return this.life.interact(this.token(token), id, parsed.data);
   }
 
+  @Post("life/events/:id/visibility")
+  visibility(
+    @Headers("x-wingedhorse-visitor-token") token: string | undefined,
+    @Param("id") id: string,
+    @Body() body: unknown
+  ) {
+    const parsed = lifeEventVisibilityUpdateSchema.safeParse(body);
+    if (!parsed.success || id.length < 1 || id.length > 80)
+      throw new BadRequestException({
+        code: "INVALID_LIFE_VISIBILITY",
+        message: "可见范围格式不正确"
+      });
+    return this.life.setVisibility(this.token(token), id, parsed.data);
+  }
+
   @Delete("account/data")
   async deleteData(@Headers("x-wingedhorse-visitor-token") token: string | undefined) {
     const visitorToken = this.token(token);
     const [{ deleted }] = await Promise.all([
       this.life.deleteAll(visitorToken),
-      this.player.deleteAll(visitorToken)
+      this.player.deleteAll(visitorToken),
+      this.friends.deleteAll(visitorToken)
     ]);
     return { deleted };
   }

@@ -211,9 +211,9 @@ export function DigitalLifeHomePage() {
             <AppIcon icon={Hand} size={20} />
             <span>家园养成</span>
           </button>
-          <Link className="digital-life-actions__journal" to="/life" aria-label="打开共同生活簿">
+          <Link className="digital-life-actions__journal" to="/life" aria-label="打开朋友圈">
             <AppIcon icon={BookHeart} size={20} />
-            <span>生活簿</span>
+            <span>朋友圈</span>
           </Link>
         </div>
       </section>
@@ -335,7 +335,7 @@ export function DigitalLifeHomePage() {
               )}
             </div>
             <Link className="interaction-sheet__journal" to="/life">
-              去共同生活簿看看
+              去朋友圈看看
               <AppIcon icon={ChevronRight} size={17} />
             </Link>
           </section>

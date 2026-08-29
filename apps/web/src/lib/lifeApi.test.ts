@@ -11,6 +11,7 @@ const event: LifeEvent = {
   body: "它绕着帐篷看了一圈。",
   typeId: "chosen",
   source: "user-action",
+  visibility: "private",
   liked: true,
   saved: false
 };

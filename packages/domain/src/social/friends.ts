@@ -75,3 +75,8 @@ export function decideAcceptInvite(input: {
 export function isPlaceholderFriendNickname(nickname: string): boolean {
   return /^密友\s*\d+$/u.test(nickname.trim());
 }
+
+/** 无向密友边：字典序较小的 actor_hash 在前，避免 A-B / B-A 重复。 */
+export function friendshipActorPair(actorA: string, actorB: string): [string, string] {
+  return actorA < actorB ? [actorA, actorB] : [actorB, actorA];
+}

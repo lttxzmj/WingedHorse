@@ -11,7 +11,9 @@ import {
   INITIAL_PET_VITALS,
   ITEM_CATALOG,
   isPlaceholderFriendNickname,
+  normalizeLifeEventVisibility,
   parseInviteCode,
+  setLifeEventVisibility as applyLifeEventVisibility,
   advanceDigitalLife,
   type AcceptInviteResult,
   type AssessmentAnswers,
@@ -20,6 +22,7 @@ import {
   type Inventory,
   type ItemId,
   type LifeEvent,
+  type LifeEventVisibility,
   type PetVitals,
   type WorldContext
 } from "@wingedhorse/domain";
@@ -74,6 +77,7 @@ interface AppState {
   comfortPet: () => boolean;
   toggleLifeEventLike: (id: string) => void;
   toggleLifeEventSaved: (id: string) => void;
+  setLifeEventVisibility: (id: string, visibility: LifeEventVisibility) => void;
   mergeLifeEvents: (events: LifeEvent[]) => void;
   advanceLife: (now: string, timezoneOffsetMinutes: number) => void;
   applyLifeSync: (plan: DailyPlan, world: WorldContext, events: LifeEvent[]) => void;
@@ -84,6 +88,7 @@ interface AppState {
   ensureInviteCode: () => string;
   acceptInvite: (code: string, nickname?: string) => AcceptInviteResult;
   removeFriend: (id: string) => void;
+  mergeFriends: (friends: Array<{ id: string; nickname: string }>) => void;
   clockIn: () => void;
   clockOut: () => void;
   resetAll: () => void;
@@ -129,7 +134,12 @@ export function migratePersistedAppState(persistedState: unknown): Partial<AppSt
   return {
     ...state,
     relationshipXp: typeof state.relationshipXp === "number" ? state.relationshipXp : 0,
-    lifeEvents: Array.isArray(state.lifeEvents) ? (state.lifeEvents as LifeEvent[]) : [],
+    lifeEvents: Array.isArray(state.lifeEvents)
+      ? (state.lifeEvents as LifeEvent[]).map((event) => ({
+          ...event,
+          visibility: normalizeLifeEventVisibility(event.visibility)
+        }))
+      : [],
     dailyPlan: state.dailyPlan ?? null,
     worldContext: state.worldContext ?? null,
     lifeSyncEnabled: state.lifeSyncEnabled === true,
@@ -351,6 +361,10 @@ export const useAppStore = create<AppState>()(
             event.id === id ? { ...event, saved: !event.saved } : event
           )
         })),
+      setLifeEventVisibility: (id, visibility) =>
+        set((state) => ({
+          lifeEvents: applyLifeEventVisibility(state.lifeEvents, id, visibility)
+        })),
       mergeLifeEvents: (events) =>
         set((state) => {
           const merged = new Map(state.lifeEvents.map((event) => [event.eventKey, event]));
@@ -409,6 +423,21 @@ export const useAppStore = create<AppState>()(
       },
       removeFriend: (id) =>
         set((state) => ({ friends: state.friends.filter((friend) => friend.id !== id) })),
+      mergeFriends: (incoming) =>
+        set((state) => {
+          const merged = new Map(state.friends.map((friend) => [friend.id, friend]));
+          for (const friend of incoming) {
+            const existing = merged.get(friend.id);
+            merged.set(friend.id, {
+              id: friend.id,
+              nickname:
+                existing?.nickname && existing.nickname !== "新朋友"
+                  ? existing.nickname
+                  : friend.nickname
+            });
+          }
+          return { friends: [...merged.values()].slice(0, DEFAULT_FRIEND_LIMITS.maxFriends) };
+        }),
       clockIn: () => {
         const dateKey = new Date().toISOString().slice(0, 10);
         set((state) => ({

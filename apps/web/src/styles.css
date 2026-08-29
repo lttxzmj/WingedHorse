@@ -1538,6 +1538,14 @@ h1 {
   font-weight: 700;
 }
 
+/* 落地页的次级链接：视觉位置不变，用内边距把触控热区拉到 44px；
+   不动全局 .quiet-link，避免改变游戏开场等紧凑布局的尺寸 */
+.quiz-landing .quiet-link {
+  display: inline-block;
+  margin-top: var(--space-2);
+  padding: 0.72rem 0.6rem;
+}
+
 .vitals-card:not(.vitals-card--human) {
   display: grid;
   gap: var(--space-3);
@@ -2082,6 +2090,9 @@ h1 {
 .settings-card > a,
 .settings-links a,
 .settings-links button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   color: var(--color-brand-700);
   font-weight: 800;
 }

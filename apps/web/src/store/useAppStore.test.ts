@@ -62,6 +62,9 @@ describe("game settlement and cultivation state", () => {
     useAppStore.getState().toggleLifeEventLike(event!.id);
     useAppStore.getState().toggleLifeEventSaved(event!.id);
     expect(useAppStore.getState().lifeEvents[0]).toMatchObject({ liked: true, saved: true });
+    expect(useAppStore.getState().lifeEvents[0]?.visibility).toBe("private");
+    useAppStore.getState().setLifeEventVisibility(event!.id, "friends");
+    expect(useAppStore.getState().lifeEvents[0]?.visibility).toBe("friends");
   });
 
   it("keeps existing progress when persisted state is upgraded", () => {

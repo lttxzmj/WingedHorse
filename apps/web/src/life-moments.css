@@ -412,10 +412,45 @@
   font-size: 0.64rem;
 }
 
-.life-post__meta span {
+.life-post__meta span,
+.life-post__visibility {
   display: inline-flex;
   align-items: center;
   gap: 0.18rem;
+}
+
+.life-post__visibility {
+  min-height: 2.75rem;
+  padding: 0 0.55rem;
+  border: 1px solid rgb(90 69 50 / 12%);
+  border-radius: 999px;
+  color: #7a6c5c;
+  background: #f6f1e9;
+  font: inherit;
+  font-size: 0.64rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.life-post__visibility.is-friends {
+  color: #684e12;
+  border-color: rgb(201 149 25 / 28%);
+  background: #fff6de;
+}
+
+.life-post__visibility:focus {
+  outline: none;
+}
+
+.life-post__visibility:focus-visible {
+  outline: 3px solid var(--color-focus-600);
+  outline-offset: 2px;
+}
+
+.life-feed__hint {
+  margin: 0 0 0.75rem;
+  color: #8e6915;
+  font-size: 0.78rem;
 }
 
 .life-page .life-post footer,

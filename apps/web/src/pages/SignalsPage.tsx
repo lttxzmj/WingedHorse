@@ -42,11 +42,7 @@ export function SignalsPage() {
   const backTo =
     search.from === "home" ? "/home" : search.from === "companion" ? "/companion" : "/settings";
   const backLabel =
-    search.from === "home"
-      ? "回到草原"
-      : search.from === "companion"
-        ? "回到对话"
-        : "返回设置";
+    search.from === "home" ? "回到草原" : search.from === "companion" ? "回到对话" : "返回设置";
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);

@@ -4,6 +4,7 @@ import type {
   LifeEventInteractionRequest,
   LifeEventListResponse,
   LifeEventResponse,
+  LifeEventVisibilityUpdateRequest,
   LifeSyncRequest,
   LifeSyncResponse
 } from "@wingedhorse/contracts";
@@ -26,9 +27,11 @@ export class LifeService {
     return createHash("sha256").update(visitorToken).digest("hex");
   }
 
-  create(visitorToken: string, request: LifeEventCreateRequest): Promise<LifeEventResponse> {
+  async create(visitorToken: string, request: LifeEventCreateRequest): Promise<LifeEventResponse> {
     const event = createLifeEvent({ ...request, source: "user-action" });
-    return this.repository.upsert(this.actorHash(visitorToken), event);
+    const stored = await this.repository.upsert(this.actorHash(visitorToken), event);
+    if (event.visibility === stored.visibility) return stored;
+    return this.setVisibility(visitorToken, stored.id, { visibility: event.visibility });
   }
 
   list(visitorToken: string, cursor?: string, limit = 20): Promise<LifeEventListResponse> {
@@ -54,6 +57,24 @@ export class LifeService {
     return event;
   }
 
+  async setVisibility(
+    visitorToken: string,
+    id: string,
+    request: LifeEventVisibilityUpdateRequest
+  ): Promise<LifeEventResponse> {
+    const event = await this.repository.setVisibility(
+      this.actorHash(visitorToken),
+      id,
+      request.visibility
+    );
+    if (!event)
+      throw new NotFoundException({
+        code: "LIFE_EVENT_NOT_FOUND",
+        message: "没有找到这条生活记录"
+      });
+    return event;
+  }
+
   async sync(
     visitorToken: string,
     request: LifeSyncRequest,
@@ -69,9 +90,12 @@ export class LifeService {
         occurredAt: event.occurredAt,
         typeId: event.typeId,
         ...(event.itemId ? { itemId: event.itemId } : {}),
-        source: "user-action"
+        source: "user-action",
+        visibility: event.visibility === "friends" ? "friends" : "private"
       });
       const stored = await this.repository.upsert(actorHash, canonical);
+      if (stored.visibility !== canonical.visibility)
+        await this.repository.setVisibility(actorHash, stored.id, canonical.visibility);
       if (stored.liked !== event.liked)
         await this.repository.setInteraction(actorHash, stored.id, "liked", event.liked);
       if (stored.saved !== event.saved)

@@ -6,6 +6,7 @@ import {
   createInviteShare,
   decideAcceptInvite,
   DEFAULT_FRIEND_LIMITS,
+  friendshipActorPair,
   isPlaceholderFriendNickname,
   parseInviteCode
 } from "./friends.js";
@@ -72,6 +73,11 @@ describe("invite share loop", () => {
         currentCount: 2
       })
     ).toBe("ok");
+  });
+
+  it("normalizes an undirected friendship pair", () => {
+    expect(friendshipActorPair("bbb", "aaa")).toEqual(["aaa", "bbb"]);
+    expect(friendshipActorPair("aaa", "bbb")).toEqual(["aaa", "bbb"]);
   });
 
   it("recognizes the old fake placeholder nicknames", () => {

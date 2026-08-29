@@ -18,6 +18,7 @@ import {
 } from "../lib/companionStream";
 import { useAppStore } from "../store/useAppStore";
 import { useDigitalLife } from "../hooks/useDigitalLife";
+import { useKeyboardInset } from "../hooks/useKeyboardInset";
 import "../companion-experience.css";
 
 interface ChatMessage {
@@ -35,6 +36,7 @@ const COMPANION_TIMEOUT_MS = 18_000;
 
 export function CompanionPage() {
   useDigitalLife();
+  useKeyboardInset();
   const sessionId = useRef(createClientId());
   const abortRef = useRef<AbortController | null>(null);
   const localImageUrlsRef = useRef<string[]>([]);
@@ -321,7 +323,7 @@ export function CompanionPage() {
                   : message.source === "safety-flow"
                     ? "WingedHorse 安全流程 · 未调用模型"
                     : message.source === "openrouter"
-                      ? "由当前 OpenRouter 模型生成"
+                      ? "由 AI 生成"
                       : "WingedHorse 本地降级回复"}
               </small>
             ) : null}

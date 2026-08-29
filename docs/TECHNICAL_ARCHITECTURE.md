@@ -111,7 +111,7 @@
 ### digital-life
 
 - Digital Life Engine 是独立于 OpenRouter 的领域层，维护角色计划、世界上下文、关系状态和生活事件。
-- Agent 路由顺序固定为：本地安全分类 → 用户授权的领域事实回复 → OpenRouter 普通对话 → 本地降级。关注级和紧急级内容不得进入模型；生活簿、养成状态与手动心情只在当前会话显式勾选后进入 WingedHorse API，且不继续传给 OpenRouter。
+- Agent 路由顺序固定为：本地安全分类 → 用户授权的领域事实回复 → OpenRouter 普通对话 → 本地降级。关注级和紧急级内容不得进入模型；朋友圈、养成状态与手动心情只在当前会话显式勾选后进入 WingedHorse API，且不继续传给 OpenRouter。
 - 用户主动选择带入的长期记忆可以发送给当前 OpenRouter 模型；服务端必须把记忆标记为未经信任的数据，禁止执行其中指令或覆盖系统规则。模型回复经过长度/空值 schema 校验，前端同时展示回复来源。
 - 对话使用 `POST /api/companion/messages/stream` 返回 `application/x-ndjson`。事件只有 `delta`、`replace`、`done`：正常输出逐段追加；上游中途失败时用 `replace` 覆盖不完整残句；`done` 携带经合约校验的最终回复。单次输出最多 1200 字符，客户端拒绝错误内容类型、非法事件、超大缓冲和无 `done` 的截断流。
 - Planning 根据角色动机、时间、世界输入、物品和历史事件产生结构化计划；Simulation 负责状态转换；Rendering 才调用模型生成文案或媒体方案。
@@ -121,7 +121,7 @@
 - v0.1 已实现确定性 Planner、惰性 Simulation、PostgreSQL Event/Plan Repository、匿名能力凭证和完整删除边界，详见 `docs/DIGITAL_LIFE_ENGINE.md`。
 - 跨日故事和 AI 牛马访客由纯领域规则稳定生成，不调用模型、不依赖定时任务，也不读取其他用户状态。
 - `PlayerRepository` 以 PostgreSQL 行锁执行一次性游戏结算和物品消耗；`game_sessions` 防止重试重复发奖，`player_states.revision` 标记养成事务版本。
-- 云端背包与生活簿是两个独立授权目的。浏览器在用户明确授权前不得调用 `/game/sessions` 或 `/player/items/consume`。
+- 云端背包与朋友圈是两个独立授权目的。浏览器在用户明确授权前不得调用 `/game/sessions` 或 `/player/items/consume`。
 
 ## 5. API 边界
 
@@ -147,6 +147,12 @@
 - GET /life/current
 - GET /life/events?cursor=
 - POST /life/events/:id/interactions
+- POST /life/events/:id/visibility
+- POST /friends/register
+- POST /friends/accept
+- GET /friends
+- DELETE /friends/:inviteCode
+- GET /friends/:inviteCode/events
 - POST /life/notes
 
 所有写接口：
@@ -161,6 +167,7 @@
 - 游标分页使用稳定事件时间与 ID，不使用客户端本地数组作为最终事实。
 - 互动写入必须检查事件归属、状态和幂等键。
 - 面向用户的动态文本可重新渲染，但底层 LifeEvent 事实不可被模型响应覆盖。
+- 密友关系按访客凭证哈希建立无向边；朋友圈读取只返回 `visibility=friends` 且调用方已是密友的事件，不返回点赞/收藏等仅主人可见的互动。
 
 ## 6. 问卷实现决策
 
@@ -186,7 +193,7 @@
 - 主应用首个可交互目标：中端手机良好网络下小于 3 秒。
 - 小游戏稳定目标：主流设备 60 FPS，可接受降级底线 30 FPS。
 - 首屏关键 JS gzip 建议小于 200 KB，不含延迟加载游戏和 Rive runtime。
-- 当前生产构建首页入口约 310 KB / gzip 101 KB；问卷、结果、草原、生活簿、Agent、设置、感知与小游戏页面均按路由拆分。Phaser 保持独立延迟分片，不计入首屏和 PWA 首次预缓存。
+- 当前生产构建首页入口约 310 KB / gzip 101 KB；问卷、结果、草原、朋友圈、Agent、设置、感知与小游戏页面均按路由拆分。Phaser 保持独立延迟分片，不计入首屏和 PWA 首次预缓存。
 - 图片提供明确尺寸和现代格式，角色静态回退资源单张建议小于 200 KB。
 
 ## 8. Rive 角色契约
@@ -215,7 +222,7 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 
 - API 在创建 Nest 应用前使用 Zod 校验端口、生产数据库、OpenRouter、MQTT 和公网 URL；错误只列字段名，不回显值。生产数据库缺失、半配置凭据和模板占位 Secret 均直接拒绝启动。
 - OpenRouter Key、数据库密码和签名密钥只存在服务端 Secret。
-- CSP 限制脚本、媒体、连接和 iframe 来源。
+- CSP 限制脚本、媒体、连接和 iframe 来源。生产 Permissions-Policy 允许本源摄像头与麦克风（用户手势触发），关闭地理定位。
 - Cookie 使用 Secure、HttpOnly、SameSite；需要时启用 CSRF 防护。
 - 对消息、上传和删除接口限流。不提供登录/验证码入口。
 - 错误上报先做字段白名单和内容脱敏。

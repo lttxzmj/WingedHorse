@@ -61,14 +61,15 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
   await expect(page.locator(".result-moyu-cta__label")).toHaveText("开始摸鱼");
   await page.getByRole("button", { name: "开始摸鱼：去接补给" }).click();
-  await expect(page.getByRole("heading", { name: "接住今天的补给" })).toBeVisible({
+  // 结果页 CTA 直接自动开局（倒计时/游玩阶段页头隐藏），以进入游戏为准
+  await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({
     timeout: 8_000
   });
   await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 6_000 });
   await expect(page.locator(".drop-game-canvas canvas")).toBeVisible({ timeout: 6_000 });
   await page.waitForTimeout(900);
   const remaining = Number(
-    await page.locator(".game-hud > span").first().locator("strong").textContent()
+    await page.locator(".game-hud__pill--time strong").first().textContent()
   );
   expect(remaining).toBeGreaterThanOrEqual(27);
   if (process.env.VISUAL_QA)
@@ -86,8 +87,8 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   expect(overflow).toBeLessThanOrEqual(1);
   await page.getByRole("button", { name: "暂停" }).click();
   await page.getByRole("link", { name: "结束并回草原" }).click();
-  await expect(page.getByRole("heading", { name: /牛马/ })).toBeVisible();
-  await page.getByRole("link", { name: "打开生活簿" }).click();
+  await expect(page.getByRole("heading", { name: "来来" })).toBeVisible();
+  await page.getByRole("link", { name: "打开朋友圈" }).click();
   await expect(page.getByRole("heading", { name: "它的朋友圈" })).toBeVisible();
   await expect(page.getByText("新住客到达草原")).toBeVisible();
   await page.locator(".life-pinned-story > summary").click();
@@ -218,7 +219,7 @@ test("care happens in the prairie and advances the same relationship", async ({
     );
   });
   await page.goto("/home");
-  await expect(page.getByRole("link", { name: "打开生活簿" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开朋友圈" })).toBeVisible();
   await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
@@ -495,7 +496,12 @@ test("game loading failure offers a usable retry path", async ({ page }) => {
   await page.route(/phaser/i, (route) => route.abort());
   await page.goto("/game");
   await page.getByRole("button", { name: "开始接补给" }).click();
-  await expect(page.getByRole("alert")).toContainText("补给雨还没打开", { timeout: 10_000 });
+  await expect(page.getByRole("alert")).toContainText(
+    "补给雨暂时没能打开，请检查网络后再试一次。",
+    {
+      timeout: 10_000
+    }
+  );
   await expect(page.getByRole("button", { name: "再试一次" })).toBeEnabled();
   await expect(page.locator(".game-recovery a", { hasText: "回到草原" })).toBeVisible();
 });
@@ -735,7 +741,7 @@ test("companion sends life facts and manual mood only after session consent", as
   await page.goto("/companion");
   await expect(page.getByText("疲惫的牛马 · 想和你说说话")).toBeVisible();
   await page.getByText("本次发送范围").click();
-  const lifeConsent = page.getByLabel(/生活簿、养成状态与手动心情 → 仅 WingedHorse 服务端/u);
+  const lifeConsent = page.getByLabel(/朋友圈、养成状态与手动心情 → 仅 WingedHorse 服务端/u);
   await expect(lifeConsent).toBeEnabled();
   await lifeConsent.check();
   await page.getByRole("button", { name: "我们接下来做什么？" }).click();
@@ -804,7 +810,7 @@ test("camera experiment is optional and manual mood works without permission", a
 
 test("life backup cannot silently authorize cloud game and inventory data", async ({ page }) => {
   await page.goto("/settings");
-  const lifeBackup = page.getByLabel("允许备份私密生活簿");
+  const lifeBackup = page.getByLabel("允许备份朋友圈");
   const playerCloud = page.getByLabel("尚未授权：保持本地模式");
   await expect(lifeBackup).not.toBeChecked();
   await expect(playerCloud).toBeDisabled();

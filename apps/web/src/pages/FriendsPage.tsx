@@ -6,11 +6,18 @@ import {
   type AcceptInviteResult
 } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
-import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { Share2, User, UserPlus, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
+import {
+  acceptFriendInvite,
+  friendApiMessage,
+  listFriends,
+  registerFriendProfile,
+  removeRemoteFriend
+} from "../lib/friendsApi";
 import { shareOrCopyInvite } from "../lib/shareInvite";
 import { useAppStore } from "../store/useAppStore";
 import "./friends-page.css";
@@ -32,14 +39,30 @@ export function FriendsPage() {
   const ensureInviteCode = useAppStore((state) => state.ensureInviteCode);
   const acceptInvite = useAppStore((state) => state.acceptInvite);
   const removeFriend = useAppStore((state) => state.removeFriend);
+  const mergeFriends = useAppStore((state) => state.mergeFriends);
   const [status, setStatus] = useState("");
   const [sharing, setSharing] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
   const [pendingJoin, setPendingJoin] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
 
   useEffect(() => {
-    ensureInviteCode();
-  }, [ensureInviteCode]);
+    const code = ensureInviteCode();
+    const localFriends = useAppStore.getState().friends;
+    void registerFriendProfile(code)
+      .then(() =>
+        Promise.all(
+          localFriends.map((friend) => acceptFriendInvite(friend.id).catch(() => undefined))
+        )
+      )
+      .then(() => listFriends())
+      .then((remote) => {
+        mergeFriends(
+          remote.friends.map((friend) => ({ id: friend.inviteCode, nickname: friend.nickname }))
+        );
+      })
+      .catch(() => undefined);
+  }, [ensureInviteCode, mergeFriends]);
 
   useEffect(() => {
     setPendingJoin(from ?? null);
@@ -66,6 +89,7 @@ export function FriendsPage() {
     setInviteUrl(payload.url);
     setSharing(true);
     try {
+      await registerFriendProfile(code).catch(() => undefined);
       const result = await shareOrCopyInvite(payload);
       if (result === "shared") setStatus("邀请已发出。");
       else if (result === "copied") setStatus("链接已复制，发给对方即可。");
@@ -79,8 +103,31 @@ export function FriendsPage() {
   const joinInvite = () => {
     if (!pendingJoin) return;
     const result = acceptInvite(pendingJoin);
-    setStatus(joinMessages[result]);
-    if (result === "ok" || result === "exists" || result === "self") clearInviteQuery();
+    if (result !== "ok" && result !== "exists") {
+      setStatus(joinMessages[result]);
+      return;
+    }
+    setJoining(true);
+    void registerFriendProfile(ensureInviteCode())
+      .then(() => acceptFriendInvite(pendingJoin))
+      .then(() => {
+        setStatus(
+          result === "exists"
+            ? joinMessages.exists
+            : "加入了小圈。现在可以看对方设为密友可见的朋友圈。"
+        );
+        clearInviteQuery();
+      })
+      .catch((error: unknown) => {
+        setStatus(`${joinMessages[result]} ${friendApiMessage(error)}`);
+        if (result === "ok" || result === "exists") clearInviteQuery();
+      })
+      .finally(() => setJoining(false));
+  };
+
+  const onRemove = (id: string) => {
+    removeFriend(id);
+    void removeRemoteFriend(id).catch(() => undefined);
   };
 
   return (
@@ -100,10 +147,12 @@ export function FriendsPage() {
         <section className="friends-page__invite" aria-label="待处理邀请">
           <div>
             <strong>有人请你来坐坐</strong>
-            <p>{CHARACTER_NAME}的小圈只彼此可见。</p>
+            <p>加入后可互看设为「密友可见」的朋友圈动态。</p>
           </div>
           <div className="friends-page__invite-actions">
-            <Button onClick={joinInvite}>加入</Button>
+            <Button loading={joining} onClick={joinInvite}>
+              加入
+            </Button>
             <Button variant="tertiary" onClick={clearInviteQuery}>
               先不了
             </Button>
@@ -117,7 +166,10 @@ export function FriendsPage() {
             <AppIcon icon={Users} size={28} />
           </span>
           <h2>还没有密友</h2>
-          <p>最多 {DEFAULT_FRIEND_LIMITS.maxFriends} 人，只你们彼此看见。</p>
+          <p>
+            最多 {DEFAULT_FRIEND_LIMITS.maxFriends}{" "}
+            人。加入后可打开对方朋友圈；每条动态需对方设为密友可见。
+          </p>
           <Button loading={sharing} disabled={!canInvite} onClick={() => void shareInvite()}>
             <AppIcon icon={Share2} size={18} />
             邀请
@@ -134,13 +186,22 @@ export function FriendsPage() {
                   </span>
                   {friend.nickname}
                 </span>
-                <button
-                  type="button"
-                  className="friends-page__remove"
-                  onClick={() => removeFriend(friend.id)}
-                >
-                  移除
-                </button>
+                <span className="friends-page__actions">
+                  <Link
+                    className="friends-page__feed"
+                    to="/friends/$inviteCode"
+                    params={{ inviteCode: friend.id }}
+                  >
+                    朋友圈
+                  </Link>
+                  <button
+                    type="button"
+                    className="friends-page__remove"
+                    onClick={() => onRemove(friend.id)}
+                  >
+                    移除
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
@@ -173,7 +234,7 @@ export function FriendsPage() {
       ) : (
         <p className="friends-page__hint">
           <AppIcon icon={UserPlus} size={16} />
-          用系统分享或复制链接发出去。
+          用系统分享或复制链接发出去。{CHARACTER_NAME} 不会公开广场。
         </p>
       )}
     </main>

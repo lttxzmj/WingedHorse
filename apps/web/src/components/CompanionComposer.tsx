@@ -1,8 +1,17 @@
 import { Camera, ImagePlus, Mic, MicOff, Plus, Send, Smile, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type PointerEvent,
+  type ReactNode
+} from "react";
 import { AppIcon } from "./AppIcon";
 import { useSpeechInput } from "../hooks/useSpeechInput";
+import { restoreDocumentViewport, syncKeyboardInset } from "../lib/viewport";
 import { WAKE_PHRASE_LABEL } from "../lib/speechRecognition";
 import { buildCompanionOutboundText } from "../lib/companionOutbound";
 import "../companion-composer.css";
@@ -46,9 +55,12 @@ export function CompanionComposer({
   const interimBaseRef = useRef(value);
   const longPressTimerRef = useRef<number | null>(null);
   const longPressFiredRef = useRef(false);
+  const pointerHandledRef = useRef(false);
+  const lastVoiceTapAtRef = useRef(0);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageName, setImageName] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
+  const [voiceHint, setVoiceHint] = useState("");
 
   const handleDictation = useCallback(
     (text: string, meta: { isFinal: boolean }) => {
@@ -134,24 +146,73 @@ export function CompanionComposer({
     }
   };
 
-  const onVoicePointerDown = () => {
-    if (disabled || !speech.supported || speech.consentNeeded) return;
+  const activateVoiceTap = () => {
+    const now = Date.now();
+    if (now - lastVoiceTapAtRef.current < 320) return;
+    lastVoiceTapAtRef.current = now;
+    setVoiceHint("");
+    if (disabled) return;
+    if (!speech.supported) {
+      setVoiceHint(
+        window.isSecureContext === false
+          ? "当前访问方式暂不支持语音（需要 HTTPS），可以打字或从 + 里选图说明。"
+          : "这台浏览器暂不支持语音，可以打字或从 + 里选图说明。"
+      );
+      return;
+    }
+    if (!speech.consented) {
+      speech.requestConsent();
+      return;
+    }
+    speech.toggleDictation();
+  };
+
+  const onVoicePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+    pointerHandledRef.current = false;
     longPressFiredRef.current = false;
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is unavailable in some test / older WebViews.
+    }
     clearLongPress();
+    if (!speech.supported) return;
     longPressTimerRef.current = window.setTimeout(() => {
       longPressFiredRef.current = true;
+      setVoiceHint("");
+      if (!speech.consented) {
+        speech.requestConsent();
+        return;
+      }
       speech.toggleWake();
     }, 480);
   };
 
   const onVoicePointerUp = () => {
-    if (disabled || !speech.supported || speech.consentNeeded) {
+    if (disabled) {
       clearLongPress();
       return;
     }
     clearLongPress();
+    pointerHandledRef.current = true;
     if (longPressFiredRef.current) return;
-    speech.toggleDictation();
+    activateVoiceTap();
+  };
+
+  const onVoiceClick = () => {
+    if (pointerHandledRef.current) {
+      pointerHandledRef.current = false;
+      return;
+    }
+    activateVoiceTap();
+  };
+
+  const onComposerBlur = () => {
+    window.setTimeout(() => {
+      syncKeyboardInset();
+      restoreDocumentViewport();
+    }, 280);
   };
 
   const canSend = Boolean(value.trim() || imageUrl) && !disabled;
@@ -173,9 +234,24 @@ export function CompanionComposer({
             麦克风只在这台设备上听写和听唤醒词「{WAKE_PHRASE_LABEL}
             」，原音频不会上传。点一下开始听写，按住可开启唤醒。拒绝后仍可打字和选图说明。
           </p>
-          <button type="button" onClick={speech.acceptConsent}>
-            好，开始用语音
-          </button>
+          <div className="companion-composer__consent-actions">
+            <button
+              type="button"
+              onClick={() => {
+                speech.acceptConsent();
+                speech.startDictation();
+              }}
+            >
+              好，开始用语音
+            </button>
+            <button
+              type="button"
+              className="companion-composer__consent-decline"
+              onClick={speech.declineConsent}
+            >
+              暂不需要
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -192,12 +268,14 @@ export function CompanionComposer({
         </div>
       ) : null}
 
-      {(speech.status || speech.interimText || speech.error) && !speech.consentNeeded ? (
+      {(speech.status || speech.interimText || speech.error || voiceHint) &&
+      !speech.consentNeeded ? (
         <p
-          className={`companion-composer__status${speech.error ? " is-error" : ""}${speech.listening ? " is-live" : ""}`}
+          className={`companion-composer__status${speech.error || voiceHint ? " is-error" : ""}${speech.listening ? " is-live" : ""}`}
           role="status"
         >
-          {speech.error ||
+          {voiceHint ||
+            speech.error ||
             speech.status ||
             (wakeActive
               ? `正在听「${WAKE_PHRASE_LABEL}」…`
@@ -299,11 +377,12 @@ export function CompanionComposer({
                   : `语音：点一下听写，按住唤醒「${WAKE_PHRASE_LABEL}」`
             }
             aria-pressed={voiceActive}
-            disabled={disabled || !speech.supported || speech.consentNeeded}
+            disabled={disabled}
             onPointerDown={onVoicePointerDown}
             onPointerUp={onVoicePointerUp}
-            onPointerLeave={clearLongPress}
             onPointerCancel={clearLongPress}
+            onClick={onVoiceClick}
+            onContextMenu={(event) => event.preventDefault()}
           >
             <AppIcon icon={voiceActive ? MicOff : Mic} size={20} />
           </button>
@@ -314,21 +393,29 @@ export function CompanionComposer({
             id={inputId}
             value={value}
             onChange={(event) => onChange(event.target.value)}
+            onBlur={onComposerBlur}
             maxLength={maxLength}
             rows={1}
             placeholder={placeholder}
             aria-label={ariaLabel}
             disabled={disabled}
+            enterKeyHint="send"
+            autoCapitalize="sentences"
+            autoCorrect="on"
           />
         ) : (
           <input
             id={inputId}
             value={value}
             onChange={(event) => onChange(event.target.value)}
+            onBlur={onComposerBlur}
             maxLength={maxLength}
             placeholder={placeholder}
             aria-label={ariaLabel}
             disabled={disabled}
+            enterKeyHint="send"
+            autoCapitalize="sentences"
+            autoCorrect="on"
           />
         )}
 

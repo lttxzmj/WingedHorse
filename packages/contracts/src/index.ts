@@ -154,6 +154,7 @@ export const lifeEventItemIdSchema = z.enum([
   "sponsored-liberlive-aqua",
   "sponsored-liberlive-sun"
 ]);
+export const lifeEventVisibilitySchema = z.enum(["private", "friends"]);
 export const lifeEventCreateSchema = z.object({
   eventKey: z.string().trim().min(1).max(180),
   kind: lifeEventKindSchema,
@@ -164,19 +165,52 @@ export const lifeEventCreateSchema = z.object({
   motive: lifeMotiveSchema.optional(),
   visitorTypeId: horseTypeIdSchema.optional(),
   storyChapter: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
-  source: z.enum(["user-action", "daily-plan", "life-engine"]).optional()
+  source: z.enum(["user-action", "daily-plan", "life-engine"]).optional(),
+  visibility: lifeEventVisibilitySchema.optional()
 });
 export const lifeEventSchema = lifeEventCreateSchema.extend({
   id: z.string().min(1).max(100),
   title: z.string().min(1).max(120),
   body: z.string().min(1).max(500),
   source: z.enum(["user-action", "daily-plan", "life-engine"]).default("user-action"),
+  visibility: lifeEventVisibilitySchema.default("private"),
   liked: z.boolean(),
   saved: z.boolean()
 });
 export const lifeEventInteractionSchema = z.object({
   interaction: z.enum(["liked", "saved"]),
   value: z.boolean()
+});
+export const lifeEventVisibilityUpdateSchema = z.object({
+  visibility: lifeEventVisibilitySchema
+});
+export const friendInviteCodeSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z0-9]{8,12}$/);
+export const friendRegisterSchema = z.object({
+  inviteCode: friendInviteCodeSchema,
+  displayName: z.string().trim().min(1).max(24).optional()
+});
+export const friendAcceptSchema = z.object({
+  inviteCode: friendInviteCodeSchema,
+  nickname: z.string().trim().min(1).max(24).optional()
+});
+export const friendSummarySchema = z.object({
+  inviteCode: friendInviteCodeSchema,
+  nickname: z.string().trim().min(1).max(24),
+  since: z.iso.datetime()
+});
+export const friendListSchema = z.object({
+  friends: z.array(friendSummarySchema).max(6)
+});
+export const friendFeedEventSchema = lifeEventSchema.omit({ liked: true, saved: true }).extend({
+  ownerInviteCode: friendInviteCodeSchema
+});
+export const friendFeedSchema = z.object({
+  events: z.array(friendFeedEventSchema).max(50),
+  nextCursor: z.string().nullable()
 });
 export const lifeEventListSchema = z.object({
   events: z.array(lifeEventSchema),
@@ -219,7 +253,14 @@ export type LifeSyncResponse = z.infer<typeof lifeSyncResponseSchema>;
 export type LifeEventCreateRequest = z.infer<typeof lifeEventCreateSchema>;
 export type LifeEventResponse = z.infer<typeof lifeEventSchema>;
 export type LifeEventInteractionRequest = z.infer<typeof lifeEventInteractionSchema>;
+export type LifeEventVisibilityUpdateRequest = z.infer<typeof lifeEventVisibilityUpdateSchema>;
 export type LifeEventListResponse = z.infer<typeof lifeEventListSchema>;
+export type FriendRegisterRequest = z.infer<typeof friendRegisterSchema>;
+export type FriendAcceptRequest = z.infer<typeof friendAcceptSchema>;
+export type FriendSummary = z.infer<typeof friendSummarySchema>;
+export type FriendListResponse = z.infer<typeof friendListSchema>;
+export type FriendFeedEvent = z.infer<typeof friendFeedEventSchema>;
+export type FriendFeedResponse = z.infer<typeof friendFeedSchema>;
 
 export const inventorySchema = z.partialRecord(
   lifeEventItemIdSchema,
