@@ -312,7 +312,11 @@ export function GamePage() {
                   <div className="game-loading" role="status">
                     <span className="game-loading__pill">
                       正在打开补给雨…
-                      {loadProgress > 0 ? ` ${Math.round(loadProgress * 100)}%` : ""}
+                      {loadProgress > 0 ? (
+                        <span className="game-loading__pct" aria-hidden="true">
+                          {Math.round(loadProgress * 100)}%
+                        </span>
+                      ) : null}
                     </span>
                   </div>
                 ) : null}

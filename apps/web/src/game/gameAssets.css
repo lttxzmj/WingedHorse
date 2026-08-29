@@ -1201,6 +1201,16 @@
   letter-spacing: 0.01em;
 }
 
+/* 百分比定宽，避免数字变化时胶囊宽度抖动 */
+.game-loading__pct {
+  display: inline-block;
+  min-width: 4.6ch;
+  margin-left: 0.4ch;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-500, #6b5b4a);
+}
+
 @keyframes game-character-idle {
   0%,
   100% {
