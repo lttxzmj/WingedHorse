@@ -83,12 +83,14 @@ self.addEventListener("fetch", (event) => {
       .catch(() =>
         activeCacheName().then((cacheName) => {
           if (!cacheName) return Response.error();
-          return caches.open(cacheName).then((cache) =>
-            cache
-              .match(request, { ignoreVary: true })
-              .then(async (cached) => cached || (await cache.match("/", { ignoreVary: true })))
-              .then((cached) => cached || Response.error())
-          );
+          return caches.open(cacheName).then(async (cache) => {
+            const cached = await cache.match(request, { ignoreVary: true });
+            if (cached) return cached;
+            if (request.mode === "navigate") {
+              return (await cache.match("/", { ignoreVary: true })) || Response.error();
+            }
+            return Response.error();
+          });
         })
       )
   );

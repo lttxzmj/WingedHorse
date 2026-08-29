@@ -5,18 +5,8 @@ import {
   getResultProfile,
   toCharacterSpeech
 } from "@wingedhorse/domain";
-import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
-import {
-  BookHeart,
-  ChevronDown,
-  Heart,
-  LockKeyhole,
-  Map,
-  MessageCircle,
-  Save,
-  ShieldCheck
-} from "lucide-react";
+import { BookHeart, ChevronDown, Heart, LockKeyhole, Map, MessageCircle, Save } from "lucide-react";
 import { useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
@@ -39,10 +29,7 @@ function characterVoice(title: string, body: string, kind: string) {
   if (kind === "visitor") {
     return {
       title: "今天有位朋友来草原坐了坐",
-      body: body.replace(
-        "聊完便自己回去了",
-        "我们聊了一会儿，它就慢悠悠地回去了"
-      )
+      body: body.replace("聊完便自己回去了", "我们聊了一会儿，它就慢悠悠地回去了")
     };
   }
   return { title: toCharacterSpeech(title), body: toCharacterSpeech(body) };
@@ -75,7 +62,7 @@ export function LifePage() {
   const relationshipXp = useAppStore((state) => state.relationshipXp);
   const toggleLike = useAppStore((state) => state.toggleLifeEventLike);
   const toggleSaved = useAppStore((state) => state.toggleLifeEventSaved);
-  const { lifeSyncEnabled, syncState } = useDigitalLife();
+  const { lifeSyncEnabled } = useDigitalLife();
 
   function interact(eventId: string, interaction: "liked" | "saved", value: boolean) {
     if (interaction === "liked") toggleLike(eventId);
@@ -114,22 +101,6 @@ export function LifePage() {
           <h1>{view === "feed" ? "它的朋友圈" : "一起走过的地方"}</h1>
         </div>
       </header>
-      <aside className="life-boundary life-boundary--compact life-moments-privacy">
-        <AppIcon icon={ShieldCheck} size={18} />
-        <span role="status">
-          {lifeSyncEnabled
-            ? syncState === "synced"
-              ? "动态已备份 · 照片仍在本机"
-              : syncState === "offline"
-                ? "暂时离线 · 仍保存在本机"
-                : "正在同步 · 照片不上传"
-            : "只保存在这台设备"}
-        </span>
-        <Link to="/settings" aria-label="打开朋友圈隐私设置">
-          <AppIcon icon={LockKeyhole} size={16} />
-          <span>隐私</span>
-        </Link>
-      </aside>
       <div className="life-view-switch" role="tablist" aria-label="生活记录视图">
         <button
           role="tab"
@@ -161,7 +132,10 @@ export function LifePage() {
                 <strong id="journey-title">{journey.title}</strong>
               </div>
               <div className="life-pinned-story__action-wrap">
-                <span className="life-pinned-story__counter" aria-label={`已完成 ${journey.completedCount} 项，共 ${journey.totalCount} 项`}>
+                <span
+                  className="life-pinned-story__counter"
+                  aria-label={`已完成 ${journey.completedCount} 项，共 ${journey.totalCount} 项`}
+                >
                   {journey.completedCount}/{journey.totalCount}
                 </span>
                 <AppIcon icon={ChevronDown} size={16} />
@@ -178,10 +152,18 @@ export function LifePage() {
                 aria-valuenow={journey.completedCount}
               >
                 {journey.milestones.map((milestone, idx) => (
-                  <div className={`journey-node ${milestone.completed ? "is-complete" : ""}`} key={milestone.id}>
+                  <div
+                    className={`journey-node ${milestone.completed ? "is-complete" : ""}`}
+                    key={milestone.id}
+                  >
                     <div className="journey-node__dot">
                       {milestone.completed ? (
-                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="journey-node__check">
+                        <svg
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          aria-hidden="true"
+                          className="journey-node__check"
+                        >
                           <path
                             d="M3.5 8.5L6.5 11.5L12.5 4.5"
                             stroke="currentColor"
@@ -209,7 +191,9 @@ export function LifePage() {
               <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />
               <h2>草原刚安静下来</h2>
               <p>玩一局或送份补给，新动态会出现在这里。</p>
-              <Button onClick={() => history.back()}>回草原看看</Button>
+              <Link className="ui-button ui-button--primary inline-link-button" to="/home">
+                回草原看看
+              </Link>
             </section>
           ) : (
             <section className="life-feed" aria-label="来来最近动态">
@@ -240,7 +224,9 @@ export function LifePage() {
                             ? `${profile.name}和${visitorProfile.name}`
                             : eventProfile.name}
                         </strong>
-                        {eventMoodLabel(event.kind) ? <span>{eventMoodLabel(event.kind)}</span> : null}
+                        {eventMoodLabel(event.kind) ? (
+                          <span>{eventMoodLabel(event.kind)}</span>
+                        ) : null}
                       </div>
                     </header>
                     <div className="life-post__content">
@@ -248,65 +234,65 @@ export function LifePage() {
                         <strong>{voice.title}</strong>
                         <span>{voice.body}</span>
                       </p>
-                    {index === 0 ? (
-                      <div
-                        className={`life-post__scene life-post__scene--${event.kind}`}
-                        aria-hidden="true"
-                      >
-                        <div className="life-post__characters">
-                          <WingedHorseCharacter
-                            typeId={event.typeId}
-                            mood={eventProfile.mood}
-                            alt=""
-                          />
-                          {visitorProfile && event.visitorTypeId ? (
+                      {index === 0 ? (
+                        <div
+                          className={`life-post__scene life-post__scene--${event.kind}`}
+                          aria-hidden="true"
+                        >
+                          <div className="life-post__characters">
                             <WingedHorseCharacter
-                              typeId={event.visitorTypeId}
-                              mood={visitorProfile.mood}
+                              typeId={event.typeId}
+                              mood={eventProfile.mood}
                               alt=""
                             />
-                          ) : null}
+                            {visitorProfile && event.visitorTypeId ? (
+                              <WingedHorseCharacter
+                                typeId={event.visitorTypeId}
+                                mood={visitorProfile.mood}
+                                alt=""
+                              />
+                            ) : null}
+                          </div>
                         </div>
+                      ) : null}
+                      <div className="life-post__meta">
+                        <time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time>
+                        <span>
+                          <AppIcon icon={LockKeyhole} size={13} />
+                          {event.kind === "visitor" ? "AI 访客 · 仅你可见" : "仅你可见"}
+                        </span>
                       </div>
-                    ) : null}
-                    <div className="life-post__meta">
-                      <time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time>
-                      <span>
-                        <AppIcon icon={LockKeyhole} size={13} />
-                        {event.kind === "visitor" ? "AI 访客 · 仅你可见" : "仅你可见"}
-                      </span>
-                    </div>
-                    <footer>
-                      <button
-                        className={event.liked ? "is-active" : ""}
-                        aria-pressed={event.liked}
-                        aria-label={event.liked ? "已抱住" : "抱住"}
-                        onClick={() => interact(event.id, "liked", !event.liked)}
-                      >
-                        <AppIcon icon={Heart} size={17} />
-                        {event.liked ? "已抱住" : "抱住"}
-                      </button>
-                      <button
-                        className={event.saved ? "is-active" : ""}
-                        aria-pressed={event.saved}
-                        aria-label={event.saved ? "已存进共同记忆" : "存进共同记忆"}
-                        onClick={() => interact(event.id, "saved", !event.saved)}
-                      >
-                        <AppIcon icon={Save} size={17} />
-                        {event.saved ? "已收藏" : "收藏"}
-                      </button>
-                      <Link to="/companion" aria-label="回它一句">
-                        <AppIcon icon={MessageCircle} size={17} />
-                        回一句
-                      </Link>
-                    </footer>
-                    {event.liked || event.saved ? (
-                      <p className="life-post__reactions" aria-live="polite">
-                        {event.liked ? "抱住了" : null}
-                        {event.liked && event.saved ? " · " : null}
-                        {event.saved ? "已收藏" : null}
-                      </p>
-                    ) : null}
+                      <footer>
+                        <button
+                          className={event.liked ? "is-active" : ""}
+                          aria-pressed={event.liked}
+                          aria-label={event.liked ? "已抱住" : "抱住"}
+                          onClick={() => interact(event.id, "liked", !event.liked)}
+                        >
+                          <AppIcon icon={Heart} size={17} />
+                          {event.liked ? "已抱住" : "抱住"}
+                        </button>
+                        <button
+                          className={event.saved ? "is-active" : ""}
+                          aria-pressed={event.saved}
+                          aria-label={event.saved ? "已存进共同记忆" : "存进共同记忆"}
+                          onClick={() => interact(event.id, "saved", !event.saved)}
+                        >
+                          <AppIcon icon={Save} size={17} />
+                          {event.saved ? "已收藏" : "收藏"}
+                        </button>
+                        <Link to="/companion" aria-label="回它一句">
+                          <AppIcon icon={MessageCircle} size={17} />
+                          回一句
+                        </Link>
+                      </footer>
+                      {event.liked || event.saved ? (
+                        <p className="life-post__reactions" aria-live="polite">
+                          {event.liked ? "抱住了" : null}
+                          {event.liked && event.saved ? " · " : null}
+                          {event.saved ? "已收藏" : null}
+                        </p>
+                      ) : null}
                     </div>
                   </article>
                 );

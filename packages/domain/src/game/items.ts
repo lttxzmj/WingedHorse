@@ -11,7 +11,9 @@ export type ItemId =
   | "compass"
   | "mentor-card"
   | "sponsored-tent-skin"
-  | "sponsored-coffee-coupon";
+  | "sponsored-coffee-coupon"
+  | "sponsored-liberlive-aqua"
+  | "sponsored-liberlive-sun";
 
 export type ItemKind =
   | "energy-supply"
@@ -20,6 +22,8 @@ export type ItemKind =
   | "navigation"
   | "decoration"
   | "sponsored-supply";
+
+export type InventoryCategory = "recovery" | "action" | "release" | "wool" | "keepsake";
 
 export interface ItemEffect {
   energy?: number;
@@ -219,7 +223,56 @@ export const ITEM_CATALOG: Record<ItemId, ItemDefinition> = {
     24,
     null,
     true
+  ),
+  // Marks taken from brands/liberlive/logo.webp + product-aqua.webp only.
+  "sponsored-liberlive-aqua": item(
+    "sponsored-liberlive-aqua",
+    "LiberLive",
+    "LiberLive",
+    "琴",
+    "sponsored-supply",
+    "uncommon",
+    { energy: 5 },
+    24,
+    null,
+    true
+  ),
+  // Marks taken from brands/liberlive/logo.webp + product-sun.webp only.
+  "sponsored-liberlive-sun": item(
+    "sponsored-liberlive-sun",
+    "LiberLive",
+    "LiberLive",
+    "琴",
+    "sponsored-supply",
+    "uncommon",
+    { energy: 5 },
+    24,
+    null,
+    true
   )
 };
 
 export const ITEM_IDS = Object.keys(ITEM_CATALOG) as ItemId[];
+
+/**
+ * Inventory categories describe what the player uses an item for rather than
+ * exposing implementation-oriented item kinds in the UI.
+ */
+export function inventoryCategoryForItem(itemId: ItemId): InventoryCategory {
+  const item = ITEM_CATALOG[itemId];
+  if (item.sponsored) return "wool";
+
+  switch (item.kind) {
+    case "energy-supply":
+      return "recovery";
+    case "engine-tool":
+    case "navigation":
+      return "action";
+    case "pressure-release":
+      return "release";
+    case "decoration":
+      return "keepsake";
+    case "sponsored-supply":
+      return "wool";
+  }
+}

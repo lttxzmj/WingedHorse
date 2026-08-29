@@ -1,6 +1,13 @@
-import { createRootRoute, createRoute, createRouter, Link, Outlet } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Link,
+  Outlet,
+  useRouterState
+} from "@tanstack/react-router";
 import { Feather } from "lucide-react";
-import { Component, lazy, Suspense, type ReactNode } from "react";
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { AppIcon } from "./components/AppIcon";
 import { GlobalHardwareListener } from "./components/GlobalHardwareListener";
 import { LandingPage } from "./pages/LandingPage";
@@ -47,6 +54,72 @@ const IntentPage = lazy(() =>
   import("./pages/IntentPage").then((module) => ({ default: module.IntentPage }))
 );
 
+const ROUTE_TITLES: Record<string, string> = {
+  "/": "你是什么牛马",
+  "/assessment": "测测此刻的你",
+  "/result": "我的飞升报告",
+  "/home": "来来的草原",
+  "/game": "接住今天的补给",
+  "/inventory": "来来的背包",
+  "/companion": "和来来说说话",
+  "/signals": "状态线索",
+  "/settings": "设置与边界",
+  "/privacy": "隐私说明",
+  "/terms": "用户协议",
+  "/ai-notice": "AI 使用说明",
+  "/memories": "长期记忆",
+  "/life": "私密生活簿",
+  "/friends": "密友小圈",
+  "/intent": "把来来带回家"
+};
+
+function RouteEffects() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const [announcement, setAnnouncement] = useState("");
+
+  useEffect(() => {
+    const pageTitle = ROUTE_TITLES[pathname] ?? "页面未找到";
+    document.title = `${pageTitle} · 牛马飞升`;
+    setAnnouncement(`已进入${pageTitle}`);
+  }, [pathname]);
+
+  useEffect(() => {
+    const ownerDocument = document;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const previousMain = ownerDocument.querySelector("main");
+    const focusHeading = () => {
+      const heading = ownerDocument.querySelector<HTMLElement>("main h1");
+      if (!heading) return;
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    };
+    const observer = new ownerWindow.MutationObserver(() => {
+      if (ownerDocument.querySelector("main") === previousMain) return;
+      observer.disconnect();
+      ownerWindow.setTimeout(focusHeading, 0);
+    });
+    observer.observe(ownerDocument.getElementById("root") ?? ownerDocument.body, {
+      childList: true,
+      subtree: true
+    });
+    const timer = ownerWindow.setTimeout(() => {
+      observer.disconnect();
+      focusHeading();
+    }, 300);
+    return () => {
+      observer.disconnect();
+      ownerWindow.clearTimeout(timer);
+    };
+  }, [pathname]);
+
+  return (
+    <p className="route-announcer" aria-live="polite" aria-atomic="true">
+      {announcement}
+    </p>
+  );
+}
+
 class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   override state = { failed: false };
 
@@ -92,6 +165,7 @@ function RootLayout() {
     <RouteErrorBoundary>
       <Suspense fallback={<RouteLoading />}>
         <Outlet />
+        <RouteEffects />
         <GlobalHardwareListener />
       </Suspense>
     </RouteErrorBoundary>
@@ -154,6 +228,10 @@ const companionRoute = createRoute({
 const signalsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/signals",
+  validateSearch: (search: Record<string, unknown>): { from?: "home" | "companion" } => {
+    if (search.from === "home" || search.from === "companion") return { from: search.from };
+    return {};
+  },
   component: SignalsPage
 });
 const settingsRoute = createRoute({

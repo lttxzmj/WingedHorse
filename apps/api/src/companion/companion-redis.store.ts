@@ -144,6 +144,16 @@ export class CompanionRedisStore implements OnModuleDestroy {
     }
   }
 
+  async checkHealth(): Promise<boolean> {
+    if (!this.configured) return true;
+    try {
+      const client = await this.getClient();
+      return client ? (await client.ping()) === "PONG" : false;
+    } catch {
+      return false;
+    }
+  }
+
   async onModuleDestroy() {
     if (this.client?.isOpen) await this.client.close();
   }
@@ -152,11 +162,19 @@ export class CompanionRedisStore implements OnModuleDestroy {
     const url = process.env.REDIS_URL;
     if (!url) return null;
     if (this.client?.isReady) return this.client;
+    if (this.client) {
+      if (this.client.isOpen) this.client.destroy();
+      this.client = null;
+    }
     if (!this.connecting) {
       const client = createClient({
         url,
         ...(process.env.REDIS_PASSWORD ? { password: process.env.REDIS_PASSWORD } : {}),
-        socket: { connectTimeout: 1_500, reconnectStrategy: false }
+        socket: {
+          connectTimeout: 1_500,
+          reconnectStrategy: (retries) =>
+            retries >= 8 ? false : Math.min(100 * 2 ** retries, 2_000)
+        }
       });
       client.on("error", () => undefined);
       this.connecting = client

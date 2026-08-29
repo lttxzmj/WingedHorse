@@ -369,27 +369,6 @@
   font-weight: 720;
 }
 
-.game-play-guide {
-  position: absolute;
-  z-index: 8;
-  right: 50%;
-  bottom: 5.25rem;
-  width: max-content;
-  max-width: calc(100% - 8rem);
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  transform: translateX(50%);
-  border: 1px solid rgb(255 255 255 / 76%);
-  border-radius: 999px;
-  color: #4c493e;
-  background: rgb(255 255 255 / 84%);
-  box-shadow: 0 7px 20px rgb(70 51 35 / 9%);
-  font-size: 0.72rem;
-  text-align: center;
-  pointer-events: none;
-  backdrop-filter: blur(10px);
-}
-
 .life-view-switch {
   display: flex;
   margin: 0 0 0.7rem;
@@ -795,11 +774,6 @@
     right: 0.55rem;
     bottom: 9.1rem;
     font-size: 0.64rem;
-  }
-
-  .game-play-guide {
-    max-width: calc(100% - 7.5rem);
-    font-size: 0.66rem;
   }
 
   .prairie-task-dock strong {

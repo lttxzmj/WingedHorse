@@ -1,9 +1,9 @@
 import {
-  DEFAULT_SPONSORED_CAMPAIGN,
   ITEM_CATALOG,
   createSeededRandom,
+  getSponsoredCampaignByItemId,
   selectDrop,
-  shouldSpawnSponsoredDrop,
+  selectSponsoredCampaign,
   sponsoredDropDefinition,
   type ItemId
 } from "@wingedhorse/domain";
@@ -31,7 +31,7 @@ interface DropGameCanvasProps {
   sessionId: string;
   characterType: WingedHorseType;
   gamesPlayed?: number;
-  hasReceivedSponsored?: boolean;
+  receivedSponsoredItemIds?: readonly ItemId[];
   durationSeconds?: number;
   paused: boolean;
   controlDirection: -1 | 0 | 1;
@@ -66,7 +66,7 @@ export function DropGameCanvas({
   sessionId,
   characterType,
   gamesPlayed = 0,
-  hasReceivedSponsored = false,
+  receivedSponsoredItemIds = [],
   durationSeconds = 30,
   paused,
   controlDirection,
@@ -192,9 +192,7 @@ export function DropGameCanvas({
             }
 
             this.catcherBaseY = height - 72;
-            this.catcherShadow = this.add
-              .ellipse(0, 52, 96, 18, 0x496530, 0.2)
-              .setScale(1, 0.72);
+            this.catcherShadow = this.add.ellipse(0, 52, 96, 18, 0x496530, 0.2).setScale(1, 0.72);
             this.catcherSprite = this.add.image(0, 0, "player-character").setOrigin(0.5, 0.63);
             const displayHeight = 158;
             if (hostRef.current)
@@ -256,17 +254,20 @@ export function DropGameCanvas({
           }
 
           private spawnDrop(elapsed: number) {
-            const forceSponsored = shouldSpawnSponsoredDrop({
+            const sponsoredCampaign = selectSponsoredCampaign({
               gamesPlayed,
               spawnedCount: this.spawnedCount,
               sponsoredSpawned: this.sponsoredSpawned,
-              random: this.random,
-              hasReceivedSponsored
+              receivedSponsoredItemIds,
+              random: this.random
             });
-            const drop = forceSponsored ? sponsoredDropDefinition() : selectDrop(this.random);
+            const drop = sponsoredCampaign
+              ? sponsoredDropDefinition(sponsoredCampaign)
+              : selectDrop(this.random);
             const isFirstDrop = this.spawnedCount === 0;
             const item = ITEM_CATALOG[drop.itemId];
             const isSponsored = Boolean(item.sponsored);
+            const campaign = sponsoredCampaign ?? getSponsoredCampaignByItemId(drop.itemId);
             // Sponsored boxes offset from the catcher so the slow showcase is readable
             // before the dive; ordinary first drops still land on the player for onboarding.
             const x = isSponsored
@@ -351,10 +352,7 @@ export function DropGameCanvas({
             const glyph = this.add
               .image(0, isSponsored ? -6 : -8, iconTexture)
               .setTint(isSponsored && iconTexture === brandTexture ? 0xffffff : kindPalette.icon)
-              .setDisplaySize(
-                isSponsored ? 52 : rare ? 34 : 31,
-                isSponsored ? 28 : rare ? 34 : 31
-              );
+              .setDisplaySize(isSponsored ? 52 : rare ? 34 : 31, isSponsored ? 28 : rare ? 34 : 31);
             const partnerTag = isSponsored
               ? this.add
                   .text(0, -34, "品牌合作", {
@@ -365,14 +363,15 @@ export function DropGameCanvas({
                   })
                   .setOrigin(0.5)
               : null;
-            // Product code from pillow asset only — logo already carries 蓝盒子 / BLUE BOX.
+            // Sponsored caption uses printed marks only (product code or partner name).
+            const sponsoredCaption = campaign
+              ? campaign.productCode.trim() || campaign.partnerName
+              : item.name;
             const name = this.add
               .text(
                 0,
                 isSponsored ? 28 : rare ? 26 : 24,
-                isSponsored
-                  ? DEFAULT_SPONSORED_CAMPAIGN.productCode
-                  : item.name.replace("补给", ""),
+                isSponsored ? sponsoredCaption : item.name.replace("补给", ""),
                 {
                   align: "center",
                   color: isSponsored ? "#175b99" : rare ? "#7a5a12" : "#59483b",
@@ -467,8 +466,12 @@ export function DropGameCanvas({
             const item = ITEM_CATALOG[itemId];
             const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
             const x = this.catcher.x;
-            const y = this.catcher.y - 102;
-            const catchGlowColor = item.sponsored ? 0x3b83c9 : item.rarity === "rare" ? 0xe2a91f : 0xffd058;
+            const y = this.catcher.y - 124;
+            const catchGlowColor = item.sponsored
+              ? 0x3b83c9
+              : item.rarity === "rare"
+                ? 0xe2a91f
+                : 0xffd058;
             const glow = this.add.circle(
               x,
               this.catcher.y - 28,
@@ -477,19 +480,41 @@ export function DropGameCanvas({
               item.sponsored ? 0.2 : 0.22
             );
             const panel = this.add.graphics();
-            panel.fillStyle(0xfffdf5, 0.96);
-            panel.fillRoundedRect(-66, -18, 132, 36, 18);
-            panel.lineStyle(2, 0xffd057, 0.9);
-            panel.strokeRoundedRect(-66, -18, 132, 36, 18);
-            const label = this.add
-              .text(0, 0, item.sponsored ? `+${earnedPoints}` : `${item.name}  +${earnedPoints}`, {
+            const panelWidth = item.sponsored ? 120 : 156;
+            const panelHeight = 44;
+            const radius = 22;
+            const halfW = panelWidth / 2;
+            const halfH = panelHeight / 2;
+
+            // Warm subtle drop shadow for depth
+            panel.fillStyle(0x3b2e24, 0.12);
+            panel.fillRoundedRect(-halfW, -halfH + 3, panelWidth, panelHeight, radius);
+
+            // Main pill background with warm frosted feel
+            panel.fillStyle(0xfffdf5, 0.98);
+            panel.fillRoundedRect(-halfW, -halfH, panelWidth, panelHeight, radius);
+            panel.lineStyle(2, item.sponsored ? 0x5aa2e8 : 0xffd057, 0.95);
+            panel.strokeRoundedRect(-halfW, -halfH, panelWidth, panelHeight, radius);
+
+            const title = this.add
+              .text(0, -9, item.sponsored ? "接住了 · 合作补给" : `接住了 · ${item.name}`, {
                 color: "#4b3b2e",
-                fontFamily: "PingFang SC, system-ui",
-                fontSize: item.sponsored ? "18px" : "13px",
+                fontFamily: "PingFang SC, -apple-system, system-ui, sans-serif",
+                fontSize: "12px",
                 fontStyle: "bold"
               })
               .setOrigin(0.5);
-            const feedback = this.add.container(x, y, [panel, label]);
+
+            const scoreText = this.add
+              .text(0, 9, `+${earnedPoints}`, {
+                color: item.sponsored ? "#1a6cb8" : "#8c5600",
+                fontFamily: "PingFang SC, -apple-system, system-ui, sans-serif",
+                fontSize: "15px",
+                fontStyle: "bold"
+              })
+              .setOrigin(0.5);
+
+            const feedback = this.add.container(x, y, [panel, title, scoreText]);
             this.world.add([glow, feedback]);
             feedback.setScale(0.76).setAlpha(0);
 
@@ -533,13 +558,13 @@ export function DropGameCanvas({
 
             if (this.combo >= 2) {
               const comboText = this.add
-                .text(390 / 2, 174, `${this.combo} 连击  ×${Math.min(this.combo, 10)}`, {
+                .text(390 / 2, 210, `${this.combo} 连击  ×${Math.min(this.combo, 10)}`, {
                   color: "#fff8de",
-                  fontFamily: "PingFang SC, system-ui",
-                  fontSize: "24px",
+                  fontFamily: "PingFang SC, -apple-system, system-ui, sans-serif",
+                  fontSize: "22px",
                   fontStyle: "bold",
                   stroke: "#9b6913",
-                  strokeThickness: 5
+                  strokeThickness: 4
                 })
                 .setOrigin(0.5)
                 .setScale(0.68);
@@ -547,7 +572,7 @@ export function DropGameCanvas({
               this.tweens.add({
                 targets: comboText,
                 scale: 1,
-                y: 160,
+                y: 196,
                 alpha: 0,
                 duration: 620,
                 ease: "Back.Out",
@@ -586,7 +611,8 @@ export function DropGameCanvas({
             );
             if (!this.pointerActive && keyboardDirection !== 0) this.targetX = this.catcher.x;
             const motionStrength = Math.min(1, Math.abs(this.velocityX) / 0.32);
-            this.catcher.y = this.catcherBaseY + Math.sin(this.motionClock * 0.006) * (2 + motionStrength * 2);
+            this.catcher.y =
+              this.catcherBaseY + Math.sin(this.motionClock * 0.006) * (2 + motionStrength * 2);
             this.catcherSprite.rotation = Phaser.Math.Linear(
               this.catcherSprite.rotation,
               this.velocityX * 0.12,
@@ -640,7 +666,10 @@ export function DropGameCanvas({
               }
               drop.label.y += delta * 0.13 * drop.speed * verticalScale * fallFactor;
               drop.label.x +=
-                Math.sin(this.motionClock * 0.0024 + drop.phase) * drop.drift * swayBoost * (delta / 1000);
+                Math.sin(this.motionClock * 0.0024 + drop.phase) *
+                drop.drift *
+                swayBoost *
+                (delta / 1000);
               drop.label.rotation += drop.rotationSpeed * delta;
               const catchHalfWidth = drop.sponsored ? 72 : 62;
               const catchDepth = drop.sponsored ? 82 : 74;
@@ -737,7 +766,7 @@ export function DropGameCanvas({
       game?.destroy(true);
       gameRef.current = undefined;
     };
-  }, [characterType, durationSeconds, gamesPlayed, hasReceivedSponsored, sessionId]);
+  }, [characterType, durationSeconds, gamesPlayed, receivedSponsoredItemIds, sessionId]);
 
   return (
     <div

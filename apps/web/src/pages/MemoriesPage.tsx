@@ -18,7 +18,7 @@ export function MemoriesPage() {
         <BackLink to="/settings" label="返回设置" />
         <div>
           <p className="eyebrow">本机长期记忆</p>
-          <h1>飞马记住了什么</h1>
+          <h1>来来记住了什么</h1>
         </div>
         <span>{memories.length}/20</span>
       </header>

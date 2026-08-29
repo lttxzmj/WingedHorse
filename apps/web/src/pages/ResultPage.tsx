@@ -1,8 +1,8 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { CHARACTER_NAME, DIMENSIONS, dimensionLabels, getResultProfile } from "@wingedhorse/domain";
+import { DIMENSIONS, dimensionLabels, getResultProfile } from "@wingedhorse/domain";
 import { Button, Card } from "@wingedhorse/ui";
 import { useNavigate } from "@tanstack/react-router";
-import { SunMedium } from "lucide-react";
+import { House, RotateCcw, Share2, SunMedium } from "lucide-react";
 import { useRef, useState, type CSSProperties } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { createResultShareCard } from "../lib/resultShareCard";
@@ -29,8 +29,8 @@ export function ResultPage() {
       <main className="centered-page">
         <section className="empty-state">
           <h1>还没有测评结果</h1>
-          <p>先走完这一天，再来看看来来今天的状态。</p>
-          <Button onClick={() => void navigate({ to: "/assessment" })}>开始测评</Button>
+          <p>先走完这一天，再来看看你是哪种牛马。</p>
+          <Button onClick={() => void navigate({ to: "/assessment" })}>开始测测</Button>
         </section>
       </main>
     );
@@ -48,17 +48,17 @@ export function ResultPage() {
     if (isSharingRef.current) return;
     isSharingRef.current = true;
     setIsSharing(true);
-    setShareMessage("正在生成分享卡…");
+    setShareMessage("正在生成牛马类型海报…");
     try {
       const blob = await createResultShareCard(currentResult, profile);
-      const file = new File([blob], `我的飞升报告-${profile.name}.png`, { type: "image/png" });
+      const file = new File([blob], `我的牛马类型-${profile.name}.png`, { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
-          title: `${CHARACTER_NAME}今天是${profile.name}`,
-          text: `${CHARACTER_NAME}今天是${profile.name}。${profile.tagline}`,
+          title: `我的牛马类型：${profile.name}`,
+          text: `测出来了，我的牛马类型是「${profile.name}」。${profile.tagline}`,
           files: [file]
         });
-        setShareMessage("飞升海报已准备好。");
+        setShareMessage("牛马类型海报已准备好。");
       } else {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -66,10 +66,10 @@ export function ResultPage() {
         link.download = file.name;
         link.click();
         URL.revokeObjectURL(url);
-        setShareMessage("飞升海报已保存，可以发给朋友了。");
+        setShareMessage("牛马类型海报已保存，可以发给朋友了。");
       }
     } catch {
-      setShareMessage("暂时没能生成飞升海报，请稍后再试。");
+      setShareMessage("暂时没能生成牛马类型海报，请稍后再试。");
     } finally {
       isSharingRef.current = false;
       setIsSharing(false);
@@ -85,10 +85,10 @@ export function ResultPage() {
         <WingedHorseCharacter
           mood={profile.mood}
           typeId={result.typeId}
-          alt={`${CHARACTER_NAME}，今天是${profile.name}状态`}
+          alt={`你的牛马形象：${profile.name}`}
         />
         <div className="result-hero__copy">
-          <p className="eyebrow">{CHARACTER_NAME}今天的状态</p>
+          <p className="eyebrow">你的牛马类型</p>
           <h1 className={typeTitleClass}>{profile.name}</h1>
           <p className="result-rarity">{profile.rarity}</p>
           <p className="result-tagline">{profile.tagline}</p>
@@ -210,25 +210,42 @@ export function ResultPage() {
         >
           <span className="result-moyu-cta__swirl" aria-hidden="true" />
           <span className="result-moyu-cta__ripple" aria-hidden="true" />
-          <span className="result-moyu-cta__ripple result-moyu-cta__ripple--late" aria-hidden="true" />
+          <span
+            className="result-moyu-cta__ripple result-moyu-cta__ripple--late"
+            aria-hidden="true"
+          />
           <span className="result-moyu-cta__glow" aria-hidden="true" />
           <span className="result-moyu-cta__label">开始摸鱼</span>
         </button>
+        <div className="result-actions__secondary">
+          <Button
+            className="result-actions__button"
+            variant="secondary"
+            onClick={() => void navigate({ to: "/home" })}
+          >
+            <AppIcon icon={House} size={18} />
+            <span>回到草原</span>
+          </Button>
+          <Button
+            className="result-actions__button"
+            variant="secondary"
+            disabled={isSharing}
+            onClick={() => void shareResultCard()}
+          >
+            <AppIcon icon={Share2} size={18} />
+            <span>{isSharing ? "生成中…" : "生成海报"}</span>
+          </Button>
+        </div>
         <Button
-          variant="secondary"
-          disabled={isSharing}
-          onClick={() => void shareResultCard()}
-        >
-          {isSharing ? "正在生成海报…" : "生成我的飞升海报"}
-        </Button>
-        <Button
+          className="result-actions__restart"
           variant="tertiary"
           onClick={() => {
             reset();
             void navigate({ to: "/assessment" });
           }}
         >
-          重新测一次
+          <AppIcon icon={RotateCcw} size={16} />
+          <span>重新测一次</span>
         </Button>
       </div>
       <p className="share-message" aria-live="polite">

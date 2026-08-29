@@ -200,7 +200,7 @@
 
 .digital-life-stage {
   --digital-life-header-space: max(6.2rem, calc(env(safe-area-inset-top) + 5.6rem));
-  --digital-life-composer-space: max(6.4rem, calc(env(safe-area-inset-bottom) + 5.8rem));
+  --digital-life-composer-space: max(4.9rem, calc(env(safe-area-inset-bottom) + 4.4rem));
   --digital-life-character-size: clamp(14rem, min(72vw, 40dvh), 20rem);
   width: 100%;
   min-height: calc(100% - var(--digital-life-header-space));
@@ -586,7 +586,7 @@
 .digital-life-stage__tent-link {
   position: absolute;
   z-index: 2;
-  right: 0;
+  right: max(0.7rem, env(safe-area-inset-right));
   bottom: var(--digital-life-composer-space);
   width: min(42%, 12.5rem);
   color: var(--color-ink-700);
@@ -600,21 +600,33 @@
   filter: drop-shadow(0 0.5rem 0.45rem rgb(66 78 40 / 14%));
 }
 
-.digital-life-stage__tent-link > span {
+.digital-life-stage__tent-link > span,
+.digital-life-stage__tent-badge {
   position: absolute;
-  right: 18%;
+  right: 0;
   bottom: 0.15rem;
-  display: inline-flex;
-  min-height: 2rem;
-  padding: 0 0.55rem;
-  align-items: center;
-  gap: 0.25rem;
-  border: 1px solid rgb(255 255 255 / 82%);
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  min-width: 3rem;
+  min-height: 3rem;
+  border: 1px solid rgb(255 255 255 / 72%);
   border-radius: 999px;
-  background: rgb(255 255 255 / 88%);
-  box-shadow: 0 0.2rem 0.6rem rgb(59 46 36 / 10%);
-  font-size: 0.65rem;
-  font-weight: 750;
+  color: #6b5318;
+  background: rgb(255 253 246 / 94%);
+  box-shadow: 0 8px 22px rgb(55 73 43 / 12%);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.digital-life-stage__tent-link:hover .digital-life-stage__tent-badge {
+  background: #fff;
+}
+
+.digital-life-stage__tent-link:active .digital-life-stage__tent-badge {
+  transform: translateY(1px);
 }
 
 .digital-life-stage__tent-link:focus-visible {
@@ -626,53 +638,69 @@
 .digital-life-actions {
   position: absolute;
   z-index: 7;
-  right: max(0.85rem, env(safe-area-inset-right));
-  bottom: max(0.85rem, env(safe-area-inset-bottom));
-  left: max(0.85rem, env(safe-area-inset-left));
+  right: max(0.7rem, env(safe-area-inset-right));
+  bottom: max(0.7rem, env(safe-area-inset-bottom));
+  left: max(0.7rem, env(safe-area-inset-left));
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 3rem;
   align-items: end;
-  gap: 0.42rem;
-  padding: 0.42rem;
-  border: 1px solid rgb(255 255 255 / 65%);
-  border-radius: 1rem;
-  background: rgb(255 253 246 / 84%);
-  box-shadow: 0 8px 24px rgb(55 73 43 / 12%);
-  backdrop-filter: blur(16px);
+  gap: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .digital-life-actions .companion-composer--home .companion-composer__form {
-  background: rgb(255 255 255 / 96%);
+  min-height: 2.85rem;
+  padding: 0.2rem 0.35rem 0.2rem 0.35rem;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 1.35rem;
+  background: rgb(255 253 246 / 94%);
+  box-shadow: 0 8px 22px rgb(55 73 43 / 12%);
+  backdrop-filter: blur(14px);
+}
+
+.digital-life-actions .companion-composer__tool {
+  width: 2.35rem;
+  height: 2.35rem;
+}
+
+.digital-life-actions .companion-composer__send {
+  width: 2.55rem;
+  height: 2.55rem;
+  min-width: 2.55rem;
+  min-height: 2.55rem;
+  padding: 0;
+  border-radius: 999px;
 }
 
 .digital-life-actions .companion-composer__hint {
   display: none;
 }
 
-.digital-life-actions__supply {
-  display: inline-flex;
-  min-width: 5.4rem;
+.digital-life-actions__moyu {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  min-width: 3rem;
   min-height: 3rem;
-  padding: 0 0.85rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.32rem;
-  border: 0;
-  border-radius: 0.85rem;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 999px;
   color: #6b5318;
-  background: rgb(255 255 255 / 92%);
-  box-shadow: inset 0 0 0 1.5px rgb(212 162 28 / 42%);
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 780;
+  background: rgb(255 253 246 / 94%);
+  box-shadow: 0 8px 22px rgb(55 73 43 / 12%);
+  backdrop-filter: blur(14px);
   cursor: pointer;
 }
 
-.digital-life-actions__supply:hover {
+.digital-life-actions__moyu:hover {
   background: #fff;
 }
 
-.digital-life-actions__supply:active {
+.digital-life-actions__moyu:active {
   transform: translateY(1px);
 }
 
@@ -833,7 +861,7 @@
     box-shadow: none;
     overflow: visible;
     background: transparent;
-    --digital-life-composer-space: max(6.4rem, calc(env(safe-area-inset-bottom) + 5.8rem));
+    --digital-life-composer-space: max(4.9rem, calc(env(safe-area-inset-bottom) + 4.4rem));
     --digital-life-character-size: min(40vw, 24rem);
     min-height: calc(100% - var(--digital-life-header-space));
     margin-top: var(--digital-life-header-space);
@@ -873,26 +901,18 @@
     width: 100%;
   }
 
-  .digital-life-stage__tent-link {
-    right: 12%;
-    bottom: var(--digital-life-composer-space);
-    width: min(22vw, 13rem);
-  }
-
-  .digital-life-stage__drops {
-    right: 0;
-    left: 0;
-    top: 0.8rem;
-    max-width: 24rem;
-    margin: 0 auto;
-  }
-
   .digital-life-actions {
     position: absolute;
     width: min(100% - 2rem, 640px);
     left: 50%;
     transform: translateX(-50%);
     bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .digital-life-stage__tent-link {
+    right: calc(50% - min(100% - 2rem, 640px) / 2);
+    bottom: var(--digital-life-composer-space);
+    width: min(22vw, 13rem);
   }
 
   .interaction-sheet,
@@ -928,7 +948,7 @@
 
 @media (max-height: 700px) and (max-width: 759px) {
   .digital-life-stage {
-    --digital-life-composer-space: max(6.1rem, calc(env(safe-area-inset-bottom) + 5.5rem));
+    --digital-life-composer-space: max(4.7rem, calc(env(safe-area-inset-bottom) + 4.2rem));
     --digital-life-character-size: clamp(11.5rem, min(62vw, 33dvh), 15rem);
   }
 
@@ -957,18 +977,17 @@
 
   .digital-life-actions {
     gap: 0.3rem;
-    padding: 0.32rem;
   }
 
   .digital-life-actions .companion-composer__form,
-  .digital-life-actions__supply {
+  .digital-life-actions__moyu {
     min-height: 2.75rem;
   }
 
-  .digital-life-actions__supply {
-    min-width: 5rem;
-    padding-inline: 0.7rem;
-    font-size: 0.78rem;
+  .digital-life-actions__moyu {
+    width: 2.75rem;
+    height: 2.75rem;
+    min-width: 2.75rem;
   }
 }
 

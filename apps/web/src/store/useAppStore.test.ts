@@ -51,7 +51,9 @@ describe("game settlement and cultivation state", () => {
     expect(useAppStore.getState().comfortPet()).toBe(true);
     expect(useAppStore.getState().comfortPet()).toBe(false);
     expect(useAppStore.getState().relationshipXp).toBe(1);
-    expect(useAppStore.getState().lifeEvents.filter((event) => event.kind === "quiet-moment")).toHaveLength(1);
+    expect(
+      useAppStore.getState().lifeEvents.filter((event) => event.kind === "quiet-moment")
+    ).toHaveLength(1);
   });
 
   it("persists explicit life-event interactions", () => {

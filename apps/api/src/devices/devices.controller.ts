@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Inject,
+  NotFoundException,
   Param,
   Post,
   Sse,
@@ -17,8 +18,18 @@ import { DevicesService } from "./devices.service.js";
 export class DevicesController {
   constructor(@Inject(DevicesService) private readonly devices: DevicesService) {}
 
+  private assertHardwareEnabled() {
+    if (process.env.HARDWARE_API_ENABLED !== "true" || process.env.NODE_ENV === "production") {
+      throw new NotFoundException({
+        code: "HARDWARE_NOT_AVAILABLE",
+        message: "硬件联动当前未开放"
+      });
+    }
+  }
+
   @Get(":deviceId/status")
   status(@Param("deviceId") deviceId: string) {
+    this.assertHardwareEnabled();
     const id = deviceId.trim();
     if (!id || id.length > 64)
       throw new BadRequestException({
@@ -30,6 +41,7 @@ export class DevicesController {
 
   @Post(":deviceId/effects")
   applyEffect(@Param("deviceId") deviceId: string, @Body() body: unknown) {
+    this.assertHardwareEnabled();
     const parsed = deviceEffectRequestSchema.safeParse({
       deviceId,
       ...(body as Record<string, unknown>)
@@ -48,7 +60,14 @@ export class DevicesController {
    */
   @Sse(":deviceId/events")
   streamEvents(@Param("deviceId") deviceId: string): Observable<MessageEvent> {
-    return this.devices.getEventsStream(deviceId).pipe(
+    this.assertHardwareEnabled();
+    const id = deviceId.trim();
+    if (!id || id.length > 64)
+      throw new BadRequestException({
+        code: "INVALID_DEVICE_ID",
+        message: "设备 ID 格式不正确"
+      });
+    return this.devices.getEventsStream(id).pipe(
       map((item) => ({
         data: item
       }))

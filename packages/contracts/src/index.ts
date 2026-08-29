@@ -26,7 +26,13 @@ export const analyticsEventSchema = z.object({
     "intent_submit"
   ]),
   occurredAt: z.iso.datetime(),
-  props: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional()
+  props: z
+    .record(
+      z.string().trim().min(1).max(40),
+      z.union([z.string().trim().max(160), z.number().finite(), z.boolean()])
+    )
+    .refine((props) => Object.keys(props).length <= 20, "TOO_MANY_EVENT_PROPS")
+    .optional()
 });
 
 export type AnalyticsEventPayload = z.infer<typeof analyticsEventSchema>;
@@ -144,7 +150,9 @@ export const lifeEventItemIdSchema = z.enum([
   "compass",
   "mentor-card",
   "sponsored-tent-skin",
-  "sponsored-coffee-coupon"
+  "sponsored-coffee-coupon",
+  "sponsored-liberlive-aqua",
+  "sponsored-liberlive-sun"
 ]);
 export const lifeEventCreateSchema = z.object({
   eventKey: z.string().trim().min(1).max(180),
@@ -224,10 +232,11 @@ export const playerStateSchema = z.object({
   relationshipXp: z.number().int().min(0).max(999),
   revision: z.number().int().min(0)
 });
-export const gameSessionStartSchema = z.object({
-  typeId: horseTypeIdSchema,
-  bootstrap: playerStateSchema.omit({ revision: true }).optional()
-});
+export const gameSessionStartSchema = z
+  .object({
+    typeId: horseTypeIdSchema
+  })
+  .strict();
 export const gameSessionSchema = z.object({
   sessionId: z.string().min(16).max(80),
   startedAt: z.iso.datetime(),

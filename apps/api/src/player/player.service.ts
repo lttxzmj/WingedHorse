@@ -26,8 +26,7 @@ export class PlayerService {
       this.actorHash(visitorToken),
       sessionId,
       request.typeId,
-      now,
-      request.bootstrap
+      now
     );
     return {
       sessionId: started.sessionId,
@@ -54,7 +53,7 @@ export class PlayerService {
     now = new Date().toISOString()
   ) {
     const points = new Map(DROP_TABLE.map((drop) => [drop.itemId, drop.points]));
-    let maximumScore = 0;
+    let expectedScore = 0;
     for (const [itemId, quantity] of Object.entries(request.caught)) {
       const itemPoints = points.get(itemId as keyof typeof request.caught);
       if (!itemPoints)
@@ -62,9 +61,9 @@ export class PlayerService {
           code: "INVALID_GAME_REWARD",
           message: "结算包含不会掉落的物品"
         });
-      maximumScore += itemPoints * quantity * 10;
+      expectedScore += itemPoints * quantity;
     }
-    if (request.score > maximumScore)
+    if (request.score !== expectedScore)
       throw new BadRequestException({
         code: "INVALID_GAME_SCORE",
         message: "结算分数与物品不一致"

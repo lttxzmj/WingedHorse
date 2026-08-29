@@ -37,19 +37,19 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   for (let index = 0; index < 17; index += 1) {
     await page.getByRole("radio").first().click();
   }
-  await expect(page.getByText("测评完成 · 17/17")).toBeVisible();
+  await expect(page.getByText("你的牛马类型")).toBeVisible();
   await expect(page.getByRole("heading", { name: "类型构成" })).toBeVisible();
   await expect(page.getByText("为什么是这个结果")).toHaveCount(0);
   await expect(page.getByText("这次像你吗？")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "生成我的飞升海报" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "生成海报" })).toBeVisible();
   await page.evaluate(() =>
     Object.defineProperty(navigator, "canShare", { configurable: true, value: () => false })
   );
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "生成我的飞升海报" }).click();
+  await page.getByRole("button", { name: "生成海报" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^我的飞升报告-.*\.png$/);
-  await expect(page.getByText("飞升海报已保存，可以发给朋友了。")).toBeVisible();
+  expect(download.suggestedFilename()).toMatch(/^我的牛马类型-.*\.png$/);
+  await expect(page.getByText("牛马类型海报已保存，可以发给朋友了。")).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-result-${testInfo.project.name}.png`,
@@ -61,7 +61,9 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
   await expect(page.locator(".result-moyu-cta__label")).toHaveText("开始摸鱼");
   await page.getByRole("button", { name: "开始摸鱼：去接补给" }).click();
-  await expect(page.getByRole("heading", { name: "接住今天的补给" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "接住今天的补给" })).toBeVisible({
+    timeout: 8_000
+  });
   await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 6_000 });
   await expect(page.locator(".drop-game-canvas canvas")).toBeVisible({ timeout: 6_000 });
   await page.waitForTimeout(900);
@@ -112,8 +114,8 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   );
   await page.getByRole("button", { name: "关闭照片编辑" }).click();
   await page.getByRole("tab", { name: "生活动态" }).click();
-  await page.getByRole("button", { name: "接住这刻" }).first().click();
-  await expect(page.getByRole("button", { name: "已接住" }).first()).toHaveAttribute(
+  await page.getByRole("button", { name: "抱住" }).first().click();
+  await expect(page.getByRole("button", { name: "已抱住" }).first()).toHaveAttribute(
     "aria-pressed",
     "true"
   );
@@ -141,7 +143,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
       path: `/private/tmp/wingedhorse-home-${testInfo.project.name}.png`,
       fullPage: true
     });
-  await expect(page.getByRole("button", { name: "接补给：去玩补给雨" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
 });
 
 test("question option order stays stable and a quick answer can be undone", async ({ page }) => {
@@ -217,7 +219,7 @@ test("care happens in the prairie and advances the same relationship", async ({
   });
   await page.goto("/home");
   await expect(page.getByRole("link", { name: "打开生活簿" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "接补给：去玩补给雨" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-digital-life-home-${testInfo.project.name}.png`,
@@ -289,6 +291,12 @@ test("the bag recommends a real need and keeps items in a selectable grid", asyn
     );
   });
   await page.goto("/inventory");
+  await expect(page.getByRole("button", { name: "全部，6 种" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "恢复，2 种" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "行动，2 种" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "解压，2 种" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /收藏/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /牛毛/ })).toHaveCount(0);
   await expect(page.locator(".inventory-slot")).toHaveCount(6);
   await expect(page.locator(".inventory-slot__count").first()).toContainText("持有");
   await expect(page.getByRole("button", { name: "给来来使用" })).toHaveCount(0);
@@ -340,7 +348,7 @@ test("game start and companion entry survive an HTTP context without randomUUID"
   await page.getByRole("button", { name: "开始接补给" }).click();
   await expect(page.getByRole("button", { name: "暂停" })).toBeVisible({ timeout: 8_000 });
   await page.goto("/companion");
-  await expect(page.getByRole("heading", { name: "说两句也好" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "来来" })).toBeVisible();
 });
 
 test("game intro and countdown stay inside the same prairie scene", async ({ page }, testInfo) => {
@@ -557,7 +565,7 @@ test("a real game finishes, settles once, enters the bag and changes the life st
     });
 
   await page.getByRole("link", { name: "带着补给回草原" }).click();
-  await expect(page.getByRole("button", { name: "接补给：去玩补给雨" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
   await page.getByRole("link", { name: /打开背包，共 [1-9]\d* 件/ }).click();
   await expect(page.getByRole("heading", { name: "今天接住的东西" })).toBeVisible();
   if (process.env.VISUAL_QA)
@@ -725,7 +733,7 @@ test("companion sends life facts and manual mood only after session consent", as
     });
   });
   await page.goto("/companion");
-  await expect(page.getByText("天选牛马状态 · 来来")).toBeVisible();
+  await expect(page.getByText("疲惫的牛马 · 想和你说说话")).toBeVisible();
   await page.getByText("本次发送范围").click();
   const lifeConsent = page.getByLabel(/生活簿、养成状态与手动心情 → 仅 WingedHorse 服务端/u);
   await expect(lifeConsent).toBeEnabled();
@@ -803,7 +811,7 @@ test("life backup cannot silently authorize cloud game and inventory data", asyn
   await lifeBackup.check();
   await expect(lifeBackup).toBeChecked();
   await expect(playerCloud).toBeDisabled();
-  await expect(page.getByText("需要你明确同意后才会接通")).toBeVisible();
+  await expect(page.getByText("需要你单独同意")).toBeVisible();
 });
 
 test("local data export downloads a readable whitelist without internal ids", async ({ page }) => {

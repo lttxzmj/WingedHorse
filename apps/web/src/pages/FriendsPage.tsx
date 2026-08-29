@@ -86,9 +86,11 @@ export function FriendsPage() {
   return (
     <main className="friends-page">
       <header className="subpage-header">
-        <BackLink to="/home" label="回到草原" />
+        <BackLink to="/settings" label="返回设置" />
         <div>
-          <p className="eyebrow">密友 · {friends.length}/{DEFAULT_FRIEND_LIMITS.maxFriends}</p>
+          <p className="eyebrow">
+            密友 · {friends.length}/{DEFAULT_FRIEND_LIMITS.maxFriends}
+          </p>
           <h1>小圈</h1>
         </div>
         <span aria-hidden="true" />

@@ -21,49 +21,6 @@
   color: #8e6915;
 }
 
-.life-page .life-moments-privacy {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.45rem;
-  margin-bottom: 0.5rem;
-  padding: 0.38rem 0.55rem 0.38rem 0.65rem;
-  border-color: rgb(90 69 50 / 8%);
-  border-radius: 0.8rem;
-  background: rgb(255 251 240 / 72%);
-}
-
-.life-moments-privacy > svg {
-  flex-shrink: 0;
-  color: #846e52;
-}
-
-.life-moments-privacy > span[role="status"] {
-  min-width: 0;
-  overflow: hidden;
-  color: #8b7e6f;
-  font-size: 0.72rem;
-  line-height: 1.3;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.life-moments-privacy > a {
-  position: relative;
-  display: inline-flex;
-  width: 2rem;
-  height: 2rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.22rem;
-  border-radius: 0.7rem;
-}
-
-.life-moments-privacy > a::before {
-  position: absolute;
-  inset: -0.4rem;
-  content: "";
-}
-
 .life-page .life-view-switch {
   position: relative;
   display: flex;

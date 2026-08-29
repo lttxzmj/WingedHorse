@@ -3,11 +3,13 @@ import {
   classifyVisualActivity,
   estimatePulse,
   EXPRESSION_LABEL,
+  expressionToMood,
   type ColorSample,
   type ExpressionTag,
   type PulseEstimate
 } from "@wingedhorse/domain";
 import { Button, Card } from "@wingedhorse/ui";
+import { getRouteApi } from "@tanstack/react-router";
 import { BatteryLow, CircleMinus, CloudRain, SunMedium, Wind } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
@@ -15,6 +17,8 @@ import { BackLink } from "../components/BackLink";
 import { detectFaceLandmarks } from "../lib/faceLandmarker";
 import { sendMoodToDevice } from "../lib/devices";
 import { useAppStore } from "../store/useAppStore";
+
+const signalsRouteApi = getRouteApi("/signals");
 
 const MOODS = [
   { id: "good", icon: SunMedium, label: "还不错" },
@@ -34,6 +38,15 @@ interface SignalResult {
 }
 
 export function SignalsPage() {
+  const search = signalsRouteApi.useSearch();
+  const backTo =
+    search.from === "home" ? "/home" : search.from === "companion" ? "/companion" : "/settings";
+  const backLabel =
+    search.from === "home"
+      ? "回到草原"
+      : search.from === "companion"
+        ? "回到对话"
+        : "返回设置";
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -48,6 +61,7 @@ export function SignalsPage() {
   const manualMood = useAppStore((state) => state.manualMood);
   const setManualMood = useAppStore((state) => state.setManualMood);
   const deviceId = useAppStore((state) => state.deviceId);
+  const hardwareLink = useAppStore((state) => state.hardwareLink);
   const [consented, setConsented] = useState(false);
   const [active, setActive] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -137,12 +151,18 @@ export function SignalsPage() {
         setElapsed(seconds);
         if (seconds >= 15) {
           const samples = samplesRef.current;
+          const finalExpression = expressionRef.current;
           setResult({
             pulse: pulseEnabled ? estimatePulse(samples) : null,
             activity:
               classifyVisualActivity(samples) === "steady" ? "画面比较稳定" : "画面移动较多",
-            expression: expressionRef.current
+            expression: finalExpression
           });
+          if (finalExpression) {
+            const mood = expressionToMood(finalExpression);
+            setManualMood(mood);
+            void sendMoodToDevice(deviceId, mood, { linked: hardwareLink });
+          }
           stop();
           return;
         }
@@ -190,16 +210,18 @@ export function SignalsPage() {
   return (
     <main className="signals-page">
       <header className="subpage-header">
-        <BackLink to="/home" label="回到草原" />
+        <BackLink to={backTo} label={backLabel} />
         <div>
-          <p className="eyebrow">端侧状态实验室</p>
-          <h1>让飞马多懂一点此刻</h1>
+          <p className="eyebrow">端侧状态线索</p>
+          <h1>说说此刻的你</h1>
         </div>
         <span>可跳过</span>
       </header>
       <section>
         <h2>你自己最清楚</h2>
-        <p className="section-intro">摄像头不能真正读懂情绪，先由你选择更可靠。</p>
+        <p className="section-intro">
+          摄像头不能真正读懂情绪。先由你点选心情；开启硬件联动后，也会同步到心情灯。
+        </p>
         <div className="mood-grid">
           {MOODS.map((mood) => (
             <button
@@ -207,9 +229,7 @@ export function SignalsPage() {
               key={mood.id}
               onClick={() => {
                 setManualMood(mood.id);
-                // 只要填写了设备ID或开启了联动，自动触发下发（若未填则静默降级）
-                const targetId = deviceId || "lamp-001";
-                void sendMoodToDevice(targetId, mood.id);
+                void sendMoodToDevice(deviceId, mood.id, { linked: hardwareLink });
               }}
             >
               <AppIcon icon={mood.icon} size={26} />

@@ -54,9 +54,7 @@ export function deriveCompanionGrowth(relationshipXp: number): CompanionGrowthSt
   const safeXp = Math.max(0, Math.min(999, Math.floor(relationshipXp)));
   const stage = [...stages].reverse().find((candidate) => safeXp >= candidate.minimumXp)!;
   const progressPercent = stage.nextThreshold
-    ? Math.round(
-        ((safeXp - stage.minimumXp) / (stage.nextThreshold - stage.minimumXp)) * 100
-      )
+    ? Math.round(((safeXp - stage.minimumXp) / (stage.nextThreshold - stage.minimumXp)) * 100)
     : 100;
 
   return { ...stage, progressPercent };

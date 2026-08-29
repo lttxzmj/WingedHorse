@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { gameSettlementSchema, inventorySchema, playerStateSchema } from "./index.js";
+import {
+  gameSessionStartSchema,
+  gameSettlementSchema,
+  inventorySchema,
+  playerStateSchema
+} from "./index.js";
 
 describe("player contracts", () => {
   it("accepts a sparse inventory instead of requiring every catalog item", () => {
@@ -19,6 +24,20 @@ describe("player contracts", () => {
     expect(inventorySchema.safeParse({ mystery: 1 }).success).toBe(false);
     expect(
       gameSettlementSchema.safeParse({ score: 10, caught: { "iced-americano": 51 } }).success
+    ).toBe(false);
+  });
+
+  it("rejects client-provided bootstrap player state", () => {
+    expect(
+      gameSessionStartSchema.safeParse({
+        typeId: "chosen",
+        bootstrap: {
+          inventory: { "mentor-card": 99 },
+          vitals: { energy: 100, engine: 100, chaos: 0, direction: 100 },
+          gamesPlayed: 999,
+          relationshipXp: 99999
+        }
+      }).success
     ).toBe(false);
   });
 });

@@ -3,21 +3,11 @@ import { PlayerRepository } from "./player.repository.js";
 import { PlayerService } from "./player.service.js";
 
 const token = "G".repeat(43);
-const bootstrap = {
-  inventory: {},
-  vitals: { energy: 50, engine: 50, chaos: 50, direction: 50 },
-  gamesPlayed: 0,
-  relationshipXp: 0
-};
 
 describe("PlayerService", () => {
   it("settles one server-issued session exactly once", async () => {
     const service = new PlayerService(new PlayerRepository());
-    const session = await service.start(
-      token,
-      { typeId: "chosen", bootstrap },
-      "2026-08-28T10:00:00.000Z"
-    );
+    const session = await service.start(token, { typeId: "chosen" }, "2026-08-28T10:00:00.000Z");
     const first = await service.settle(
       token,
       session.sessionId,
@@ -39,27 +29,15 @@ describe("PlayerService", () => {
 
   it("returns the same active session instead of issuing parallel reward claims", async () => {
     const service = new PlayerService(new PlayerRepository());
-    const first = await service.start(
-      token,
-      { typeId: "chosen", bootstrap },
-      "2026-08-28T10:00:00.000Z"
-    );
-    const retry = await service.start(
-      token,
-      { typeId: "chosen", bootstrap },
-      "2026-08-28T10:00:03.000Z"
-    );
+    const first = await service.start(token, { typeId: "chosen" }, "2026-08-28T10:00:00.000Z");
+    const retry = await service.start(token, { typeId: "chosen" }, "2026-08-28T10:00:03.000Z");
     expect(retry.sessionId).toBe(first.sessionId);
     expect(retry.startedAt).toBe(first.startedAt);
   });
 
   it("rejects early, impossible and non-drop settlements", async () => {
     const service = new PlayerService(new PlayerRepository());
-    const early = await service.start(
-      token,
-      { typeId: "chosen", bootstrap },
-      "2026-08-28T10:00:00.000Z"
-    );
+    const early = await service.start(token, { typeId: "chosen" }, "2026-08-28T10:00:00.000Z");
     await expect(
       service.settle(
         token,
@@ -80,6 +58,14 @@ describe("PlayerService", () => {
       service.settle(
         token,
         early.sessionId,
+        { score: 0, caught: { "iced-americano": 1 } },
+        "2026-08-28T10:00:30.000Z"
+      )
+    ).rejects.toMatchObject({ response: { code: "INVALID_GAME_SCORE" } });
+    await expect(
+      service.settle(
+        token,
+        early.sessionId,
         { score: 0, caught: { "sponsored-coffee-coupon": 1 } },
         "2026-08-28T10:00:30.000Z"
       )
@@ -88,11 +74,7 @@ describe("PlayerService", () => {
 
   it("consumes inventory transactionally and isolates anonymous actors", async () => {
     const service = new PlayerService(new PlayerRepository());
-    const session = await service.start(
-      token,
-      { typeId: "chosen", bootstrap },
-      "2026-08-28T10:00:00.000Z"
-    );
+    const session = await service.start(token, { typeId: "chosen" }, "2026-08-28T10:00:00.000Z");
     await service.settle(
       token,
       session.sessionId,
@@ -110,7 +92,7 @@ describe("PlayerService", () => {
 
   it("removes player state and sessions through account deletion", async () => {
     const service = new PlayerService(new PlayerRepository());
-    await service.start(token, { typeId: "saving", bootstrap });
+    await service.start(token, { typeId: "saving" });
     await service.deleteAll(token);
 
     await expect(service.state(token)).rejects.toMatchObject({

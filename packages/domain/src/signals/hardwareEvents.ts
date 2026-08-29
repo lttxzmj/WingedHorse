@@ -7,14 +7,18 @@ export type HardwareTelemetryInput = {
   hasPress?: boolean | undefined;
   led1?: string | undefined;
   led2?: string | undefined;
-  dht?: {
-    temperature?: number | null | undefined;
-    humidity?: number | null | undefined;
-  } | undefined;
-  env?: {
-    temperatureC?: number | null | undefined;
-    humidityPct?: number | null | undefined;
-  } | undefined;
+  dht?:
+    | {
+        temperature?: number | null | undefined;
+        humidity?: number | null | undefined;
+      }
+    | undefined;
+  env?:
+    | {
+        temperatureC?: number | null | undefined;
+        humidityPct?: number | null | undefined;
+      }
+    | undefined;
   timestamp?: number | undefined;
 };
 
@@ -91,10 +95,10 @@ export type HardwareInteractionEvent =
  * 将 FSR 压力值映射为压力等级 (0 ~ 4095)
  */
 export function evaluateStressLevel(pressureValue: number): StressLevel {
-  if (pressureValue > 3000) return "intense";   // 紧紧按压/狠狠捏：压力爆表，极度需要释放
-  if (pressureValue > 1800) return "high";      // 较重按压：有点上火/紧绷
-  if (pressureValue > 500) return "moderate";   // 中度按压：日常摸摸
-  return "calm";                                // 轻柔抚摸：平静安心
+  if (pressureValue > 3000) return "intense"; // 紧紧按压/狠狠捏：压力爆表，极度需要释放
+  if (pressureValue > 1800) return "high"; // 较重按压：有点上火/紧绷
+  if (pressureValue > 500) return "moderate"; // 中度按压：日常摸摸
+  return "calm"; // 轻柔抚摸：平静安心
 }
 
 /**
@@ -103,39 +107,52 @@ export function evaluateStressLevel(pressureValue: number): StressLevel {
 export function getTouchReaction(typeId: string | undefined, stress: StressLevel): string {
   switch (typeId) {
     case "explosive": // 易燃易爆牛马
-      if (stress === "intense") return "（感受到你捏得好用力）高压锅快顶不住啦？深呼吸十秒，咱们不跟离谱需求置气！";
-      if (stress === "high") return "（蹭蹭你的手心）谁又惹你上头了？先喝口水，我随时替你把怨气顶回去。";
+      if (stress === "intense")
+        return "（感受到你捏得好用力）高压锅快顶不住啦？深呼吸十秒，咱们不跟离谱需求置气！";
+      if (stress === "high")
+        return "（蹭蹭你的手心）谁又惹你上头了？先喝口水，我随时替你把怨气顶回去。";
       return "（乖乖贴着你）平时火急火燎的，偶尔这么温柔摸摸我，心里好暖呀～";
 
     case "veteran": // 金牌老黄牛
-      if (stress === "intense") return "（轻轻靠着你）今天是不是又把所有人的活儿都扛下了？别硬撑，留 20% 力气给自己。";
-      if (stress === "high") return "（揉揉你的指尖）靠谱是你的底色，但也允许你今天做个准点交差的凡人。";
+      if (stress === "intense")
+        return "（轻轻靠着你）今天是不是又把所有人的活儿都扛下了？别硬撑，留 20% 力气给自己。";
+      if (stress === "high")
+        return "（揉揉你的指尖）靠谱是你的底色，但也允许你今天做个准点交差的凡人。";
       return "（安静陪着你）辛苦啦，工位之光。有我在，你不用时刻保持万无一失。";
 
     case "perpetual": // 永动疯牛
-      if (stress === "intense") return "（按住你的手）发动机转速超标啦！先挂空挡滑行五分钟，天塌不下来！";
-      if (stress === "high") return "（晃晃尾巴）知道你又想把三件事一起干完，但先缓缓，别把自己榨干啦。";
+      if (stress === "intense")
+        return "（按住你的手）发动机转速超标啦！先挂空挡滑行五分钟，天塌不下来！";
+      if (stress === "high")
+        return "（晃晃尾巴）知道你又想把三件事一起干完，但先缓缓，别把自己榨干啦。";
       return "（兴奋地蹭蹭）满电的永动机也需要加点爱意润滑油，冲呀！";
 
     case "saving": // 节能牛马
-      if (stress === "intense") return "（心疼地贴贴）连低功耗大师都被逼得用力按我了…快进入极限省电模式，谁叫都不理！";
-      if (stress === "high") return "（懒洋洋挨着你）能量槽见底了吧？今天余额不足，拒绝非必要营业。";
+      if (stress === "intense")
+        return "（心疼地贴贴）连低功耗大师都被逼得用力按我了…快进入极限省电模式，谁叫都不理！";
+      if (stress === "high")
+        return "（懒洋洋挨着你）能量槽见底了吧？今天余额不足，拒绝非必要营业。";
       return "（舒服地眯起眼）还是你懂松弛感，就这样轻轻摸摸，一起慢慢蓄电～";
 
     case "overthinker": // 内耗牛马
-      if (stress === "intense") return "（抱住你的手）脑子里的马拉松又开跑了对不对？把那些假设都清空，此刻你最安全。";
-      if (stress === "high") return "（晃了晃脑袋）不要去预演还没发生的困难，切成10分钟小目标，做完咱们就歇着。";
+      if (stress === "intense")
+        return "（抱住你的手）脑子里的马拉松又开跑了对不对？把那些假设都清空，此刻你最安全。";
+      if (stress === "high")
+        return "（晃了晃脑袋）不要去预演还没发生的困难，切成10分钟小目标，做完咱们就歇着。";
       return "（温顺地蹭你）不用想那么周全，做你自己就好，小马一直站在你这边。";
 
     case "tired": // 疲惫的牛马
-      if (stress === "intense") return "（紧紧贴着你）好累好累对不对…没关系，靠着我歇会儿，你已经很棒了。";
+      if (stress === "intense")
+        return "（紧紧贴着你）好累好累对不对…没关系，靠着我歇会儿，你已经很棒了。";
       if (stress === "high") return "（抱住你的指头）日报周报都先丢一边，今晚只准对自己好一点。";
       return "（轻轻呼吸）被你抚摸的感觉真安心，愿你的电量一格一格悄悄回满。";
 
     case "chosen": // 天选牛马
     default:
-      if (stress === "intense") return "（稳稳顶住你的掌心）连天选打工人都有压力大的时候，卸下铠甲，今天你不需要当英雄。";
-      if (stress === "high") return "（轻轻蹭手）节奏稍微乱了也没关系，稳稳呼吸，你依然掌控着全局。";
+      if (stress === "intense")
+        return "（稳稳顶住你的掌心）连天选打工人都有压力大的时候，卸下铠甲，今天你不需要当英雄。";
+      if (stress === "high")
+        return "（轻轻蹭手）节奏稍微乱了也没关系，稳稳呼吸，你依然掌控着全局。";
       return "（开心地扬起翅膀）感受到你的鼓励啦！一起把续航和好心情拉满～";
   }
 }
@@ -205,7 +222,10 @@ export function deriveHardwareEvent(
 
     return {
       type: "touch_comfort",
-      title: stressLevel === "intense" || stressLevel === "high" ? "❤️ 感受到你的压力释放" : "❤️ 收到实体轻抚",
+      title:
+        stressLevel === "intense" || stressLevel === "high"
+          ? "❤️ 感受到你的压力释放"
+          : "❤️ 收到实体轻抚",
       message,
       stressLevel,
       pressureValue: pressureVal,
@@ -215,14 +235,8 @@ export function deriveHardwareEvent(
   }
 
   // 3. DHT 温湿度传感器环境判定与补给包派生
-  const temperature =
-    telemetry.dht?.temperature ??
-    telemetry.env?.temperatureC ??
-    null;
-  const humidity =
-    telemetry.dht?.humidity ??
-    telemetry.env?.humidityPct ??
-    null;
+  const temperature = telemetry.dht?.temperature ?? telemetry.env?.temperatureC ?? null;
+  const humidity = telemetry.dht?.humidity ?? telemetry.env?.humidityPct ?? null;
 
   // 3.1 干燥判断（湿度 < 38%）-> 润燥补水包
   if (humidity !== null && humidity > 0 && humidity < 38) {

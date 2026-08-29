@@ -26,7 +26,12 @@ export function WorkdayComicSheet({
         aria-labelledby="workday-comic-title"
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <button type="button" className="workday-comic__close" aria-label="关闭漫画" onClick={onClose}>
+        <button
+          type="button"
+          className="workday-comic__close"
+          aria-label="关闭漫画"
+          onClick={onClose}
+        >
           <AppIcon icon={X} size={20} />
         </button>
         <header className="workday-comic__masthead">

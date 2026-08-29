@@ -14,8 +14,10 @@ ReactDOM.createRoot(root).render(
   </React.StrictMode>
 );
 
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
+if ("serviceWorker" in navigator && import.meta.env.PROD && window.isSecureContext) {
   window.addEventListener("load", () => {
-    void navigator.serviceWorker.register("/sw.js");
+    void navigator.serviceWorker.register("/sw.js").catch(() => {
+      // Online use remains available if the browser rejects service worker registration.
+    });
   });
 }

@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy } from "@nestjs/common";
 import type { DailyPlan, LifeEvent } from "@wingedhorse/domain";
-import { Pool } from "pg";
+import { createPostgresPool } from "../database/postgres.js";
 
 interface Cursor {
   occurredAt: string;
@@ -69,9 +69,7 @@ function rowToEvent(row: Record<string, unknown>): LifeEvent {
 
 @Injectable()
 export class LifeRepository implements OnModuleDestroy {
-  private readonly pool = process.env.DATABASE_URL
-    ? new Pool({ connectionString: process.env.DATABASE_URL, max: 8 })
-    : null;
+  private readonly pool = createPostgresPool(4);
   private readonly memory = new Map<string, Map<string, LifeEvent>>();
   private readonly memoryPlans = new Map<string, DailyPlan>();
 

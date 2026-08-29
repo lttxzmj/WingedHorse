@@ -1,13 +1,7 @@
 import { CHARACTER_NAME, getStandFace, type StandFaceMood } from "@wingedhorse/domain";
 import "./stand-face.css";
 
-export function LailaiStandFace({
-  mood,
-  onClose
-}: {
-  mood: StandFaceMood;
-  onClose: () => void;
-}) {
+export function LailaiStandFace({ mood, onClose }: { mood: StandFaceMood; onClose: () => void }) {
   const face = getStandFace(mood);
   return (
     <div

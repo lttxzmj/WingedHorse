@@ -1,6 +1,7 @@
 import {
   DEFAULT_SPONSORED_CAMPAIGN,
   ITEM_CATALOG,
+  getSponsoredCampaignByItemId,
   sponsoredProductLabel,
   type ItemId
 } from "@wingedhorse/domain";
@@ -17,12 +18,13 @@ interface WelfareSheetProps {
 
 export function WelfareSheet({ itemId, onClose }: WelfareSheetProps) {
   const item = ITEM_CATALOG[itemId];
-  const campaign = DEFAULT_SPONSORED_CAMPAIGN;
+  const campaign = getSponsoredCampaignByItemId(itemId) ?? DEFAULT_SPONSORED_CAMPAIGN;
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [qrFailed, setQrFailed] = useState(false);
   const productLabel = sponsoredProductLabel(campaign);
   const disclosure = campaign.welfare.disclosure.trim();
+  const productMeta = [campaign.partnerNameEn, campaign.productCode].filter(Boolean).join(" ");
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -70,9 +72,7 @@ export function WelfareSheet({ itemId, onClose }: WelfareSheetProps) {
           />
           <div>
             <strong>{item.sponsored ? productLabel : item.name}</strong>
-            <span>
-              {campaign.partnerNameEn} {campaign.productCode}
-            </span>
+            <span>{productMeta}</span>
           </div>
         </div>
         <figure className={`welfare-sheet__qr ${qrFailed ? "is-failed" : ""}`.trim()}>

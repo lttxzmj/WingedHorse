@@ -128,9 +128,7 @@ export function useSpeechInput({ enabled = true, onDictation, onWake }: UseSpeec
       ignoreEndRef.current = false;
       setMode(nextMode);
       setError("");
-      setStatus(
-        nextMode === "wake" ? `正在听唤醒词「${WAKE_PHRASE_LABEL}」…` : "正在听你说…"
-      );
+      setStatus(nextMode === "wake" ? `正在听唤醒词「${WAKE_PHRASE_LABEL}」…` : "正在听你说…");
 
       recognition.onresult = (event) => {
         let interim = "";

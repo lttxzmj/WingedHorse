@@ -2,7 +2,7 @@ import { Injectable, OnModuleDestroy } from "@nestjs/common";
 import type { AnalyticsEventPayload } from "@wingedhorse/contracts";
 import { visitorTokenSchema } from "@wingedhorse/contracts";
 import { createHash } from "node:crypto";
-import { Pool } from "pg";
+import { createPostgresPool } from "../database/postgres.js";
 
 const MEMORY_CAP = 10_000;
 
@@ -27,9 +27,7 @@ function hashVisitor(token: string | undefined): string | null {
 
 @Injectable()
 export class AnalyticsRepository implements OnModuleDestroy {
-  private readonly pool = process.env.DATABASE_URL
-    ? new Pool({ connectionString: process.env.DATABASE_URL, max: 4 })
-    : null;
+  private readonly pool = createPostgresPool(2);
   private readonly events: StoredAnalyticsEvent[] = [];
   private readonly intents: StoredPurchaseIntent[] = [];
 
@@ -78,6 +76,16 @@ export class AnalyticsRepository implements OnModuleDestroy {
   /** Test helper: inspect in-memory intents when PostgreSQL is not configured. */
   listIntents(): readonly StoredPurchaseIntent[] {
     return this.intents;
+  }
+
+  async checkHealth(): Promise<boolean> {
+    if (!this.pool) return true;
+    try {
+      await this.pool.query("SELECT 1");
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async onModuleDestroy() {

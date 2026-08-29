@@ -26,7 +26,7 @@ describe("DevicesService", () => {
     await service.applyMood("d-a", "good");
     await service.applyMood("d-b", "sad");
     expect(publish.mock.calls[0]![0]).toBe("devices/d-a/effect");
-    expect(publish.mock.calls[4]![0]).toBe("devices/d-b/effect");
+    expect(publish.mock.calls[1]![0]).toBe("devices/d-b/effect");
   });
 
   it("handles incoming telemetry and publishes derived events with nested hardware format", () => {
@@ -48,7 +48,13 @@ describe("DevicesService", () => {
 
     expect(emitted).toHaveLength(1);
     const item = emitted[0] as {
-      telemetry: { obstacle: boolean; pressure: number; hasPress: boolean; led1: string; led2: string };
+      telemetry: {
+        obstacle: boolean;
+        pressure: number;
+        hasPress: boolean;
+        led1: string;
+        led2: string;
+      };
       event: { type: string };
     };
     expect(item.telemetry.obstacle).toBe(true);
@@ -108,6 +114,72 @@ describe("DevicesService", () => {
     expect(status.online).toBe(true);
     expect(status.lastSeenAt).toEqual(expect.any(String));
     expect(service.getStatus("lamp-001", Date.now() + 91_000).online).toBe(false);
+  });
+
+  it("never forwards one device telemetry to a different device stream", () => {
+    const { service } = makeService();
+    const emitted: unknown[] = [];
+    service.getEventsStream("d-other").subscribe((data) => emitted.push(data));
+
+    service.handleIncomingTelemetry(
+      "devices/lamp-001/telemetry",
+      Buffer.from(
+        JSON.stringify({
+          device_id: "lamp-001",
+          led1: { state: "off" },
+          led2: { state: "off" }
+        })
+      )
+    );
+
+    expect(emitted).toHaveLength(0);
+  });
+
+  it("maps firmware interaction tap/rest_on to touch events and reads env climate", () => {
+    const { service } = makeService();
+    const emitted: unknown[] = [];
+    service.getEventsStream("lamp-001").subscribe((data) => emitted.push(data));
+
+    service.handleIncomingTelemetry(
+      "devices/lamp-001/telemetry",
+      Buffer.from(JSON.stringify({ deviceId: "lamp-001", interaction: "tap" }))
+    );
+    expect(emitted).toHaveLength(1);
+    const tap = emitted[0] as {
+      telemetry: { hasPress: boolean; pressure: number };
+      event: { type: string };
+    };
+    expect(tap.telemetry.hasPress).toBe(true);
+    expect(tap.telemetry.pressure).toBe(1200);
+    expect(tap.event.type).toBe("touch_comfort");
+
+    service.handleIncomingTelemetry(
+      "devices/lamp-001/telemetry",
+      Buffer.from(JSON.stringify({ deviceId: "lamp-001", interaction: "rest_on" }))
+    );
+    const rest = emitted[1] as { event: { type: string; stressLevel: string } };
+    expect(rest.event.type).toBe("touch_comfort");
+    expect(rest.event.stressLevel).toBe("calm");
+
+    service.handleIncomingTelemetry(
+      "devices/lamp-001/telemetry",
+      Buffer.from(JSON.stringify({ deviceId: "lamp-001", interaction: "rest_off" }))
+    );
+    const restOff = emitted[2] as { event: null };
+    expect(restOff.event).toBeNull();
+
+    service.handleIncomingTelemetry(
+      "devices/lamp-001/telemetry",
+      Buffer.from(
+        JSON.stringify({
+          deviceId: "lamp-001",
+          env: { temperatureC: 24, humidityPct: 30 }
+        })
+      )
+    );
+    const climate = emitted[3] as { event: { type: string; humidity: number } };
+    expect(climate.event.type).toBe("climate_dry");
+    expect(climate.event.humidity).toBe(30);
   });
 
   it("handles high temperature (>27C) with blinking LED1 and null-safe telemetry", () => {

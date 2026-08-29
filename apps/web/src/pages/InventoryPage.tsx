@@ -5,9 +5,11 @@ import {
   ITEM_IDS,
   deriveCompanionGrowth,
   getResultProfile,
+  inventoryCategoryForItem,
   recommendCareItem,
   type ItemEffect,
-  type ItemId
+  type ItemId,
+  type InventoryCategory
 } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
@@ -28,7 +30,7 @@ const EFFECT_LABELS = {
   direction: "方向感"
 } as const;
 
-type InventoryFilter = "all" | "care" | "release" | "direction" | "keepsake";
+type InventoryFilter = "all" | InventoryCategory;
 
 type ItemUseFeedback = {
   itemId: ItemId;
@@ -37,19 +39,16 @@ type ItemUseFeedback = {
 
 const FILTERS: Array<{ id: InventoryFilter; label: string }> = [
   { id: "all", label: "全部" },
-  { id: "care", label: "照顾" },
-  { id: "release", label: "放松" },
-  { id: "direction", label: "方向" },
-  { id: "keepsake", label: "收藏" }
+  { id: "recovery", label: "恢复" },
+  { id: "action", label: "行动" },
+  { id: "release", label: "解压" },
+  { id: "wool", label: "牛毛" },
+  { id: "keepsake", label: "纪念" }
 ];
 
 function itemMatchesFilter(itemId: ItemId, filter: InventoryFilter) {
-  const item = ITEM_CATALOG[itemId];
   if (filter === "all") return true;
-  if (filter === "care") return item.kind === "energy-supply" || item.kind === "engine-tool";
-  if (filter === "release") return item.kind === "pressure-release";
-  if (filter === "direction") return item.kind === "navigation";
-  return !item.consumable || item.kind === "decoration" || item.kind === "sponsored-supply";
+  return inventoryCategoryForItem(itemId) === filter;
 }
 
 function vitalState(key: keyof typeof EFFECT_LABELS, value: number) {
@@ -63,12 +62,14 @@ function vitalState(key: keyof typeof EFFECT_LABELS, value: number) {
   return "想被照顾";
 }
 
-function describeEffect(effect: ItemEffect) {
+function describeEffect(effect: ItemEffect, itemId?: ItemId) {
   const parts = Object.entries(effect).map(([key, value]) => {
     const label = EFFECT_LABELS[key as keyof typeof EFFECT_LABELS];
     return `${label} ${value && value > 0 ? "+" : ""}${value}`;
   });
-  return parts.length ? parts.join(" · ") : "收藏物品，不改变状态";
+  if (parts.length) return parts.join(" · ");
+  if (itemId && ITEM_CATALOG[itemId].sponsored) return "牛毛纪念物，不改变状态";
+  return "纪念物品，不改变状态";
 }
 
 export function InventoryPage() {
@@ -84,6 +85,9 @@ export function InventoryPage() {
   const [welfareItem, setWelfareItem] = useState<ItemId | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const owned = ITEM_IDS.filter((id) => (inventory[id] ?? 0) > 0);
+  const availableFilters = FILTERS.filter(
+    (option) => option.id === "all" || owned.some((id) => itemMatchesFilter(id, option.id))
+  );
   const visibleItems = owned.filter((id) => itemMatchesFilter(id, filter));
   const recommendedItem = recommendCareItem(inventory, vitals);
   const orderedVisibleItems =
@@ -122,9 +126,7 @@ export function InventoryPage() {
     const previousCount = inventory[id] ?? 0;
     const okay = useItem(id);
     setNotice(
-      okay
-        ? `它收下了${item.name}。${describeEffect(item.effect)}。`
-        : "现在还不能使用它。"
+      okay ? `它收下了${item.name}。${describeEffect(item.effect, id)}。` : "现在还不能使用它。"
     );
     if (okay) setUseFeedback({ itemId: id, remaining: Math.max(0, previousCount - 1) });
     return okay;
@@ -133,7 +135,7 @@ export function InventoryPage() {
   return (
     <main className="inventory-page">
       <header className="subpage-header">
-        <BackLink to="/home" label="回到草原" />
+        <BackLink to={result ? "/home" : "/"} label={result ? "回到草原" : "回到首页"} />
         <div>
           <p className="eyebrow">{CHARACTER_NAME}的背包</p>
           <h1>今天接住的东西</h1>
@@ -153,9 +155,7 @@ export function InventoryPage() {
                 <i aria-hidden="true" />
                 {growth.relationshipLabel}
               </span>
-              <span className="inventory-companion-card__stage">
-                {growth.name}阶段
-              </span>
+              <span className="inventory-companion-card__stage">{growth.name}阶段</span>
             </div>
             <h2 id="inventory-companion-title">
               {profile ? `${profile.name}正在整理补给` : "先看看它今天需要什么"}
@@ -198,54 +198,61 @@ export function InventoryPage() {
           <p>{notice}</p>
         </div>
       ) : null}
-      {useFeedback ? (() => {
-        const usedItem = ITEM_CATALOG[useFeedback.itemId];
-        return (
-          <section
-            className="inventory-use-feedback"
-            aria-label="物品已使用"
-            role="status"
-            aria-live="polite"
-          >
-            <button
-              type="button"
-              className="inventory-use-feedback__close"
-              aria-label="关闭使用反馈"
-              onClick={() => {
-                setNotice("");
-                setUseFeedback(null);
-              }}
-            >
-              <AppIcon icon={X} size={18} />
-            </button>
-            <span className="inventory-use-feedback__icon" data-kind={usedItem.kind} aria-hidden="true">
-              <ItemIcon itemId={useFeedback.itemId} size={36} />
-            </span>
-            <div className="inventory-use-feedback__copy">
-              <p className="eyebrow">它收下了</p>
-              <h2>{usedItem.name}</h2>
-              <p>背包还剩 {useFeedback.remaining} 件</p>
-            </div>
-            <div className="inventory-use-feedback__effects" aria-label="本次变化">
-              {Object.entries(usedItem.effect).map(([key, value]) => (
-                <span key={key}>
-                  {EFFECT_LABELS[key as keyof typeof EFFECT_LABELS]} {value && value > 0 ? "+" : ""}
-                  {value}
+      {useFeedback
+        ? (() => {
+            const usedItem = ITEM_CATALOG[useFeedback.itemId];
+            return (
+              <section
+                className="inventory-use-feedback"
+                aria-label="物品已使用"
+                role="status"
+                aria-live="polite"
+              >
+                <button
+                  type="button"
+                  className="inventory-use-feedback__close"
+                  aria-label="关闭使用反馈"
+                  onClick={() => {
+                    setNotice("");
+                    setUseFeedback(null);
+                  }}
+                >
+                  <AppIcon icon={X} size={18} />
+                </button>
+                <span
+                  className="inventory-use-feedback__icon"
+                  data-kind={usedItem.kind}
+                  aria-hidden="true"
+                >
+                  <ItemIcon itemId={useFeedback.itemId} size={36} />
                 </span>
-              ))}
-              <span>默契 +2</span>
-            </div>
-            <div className="inventory-use-feedback__actions">
-              <Link to="/home" onClick={() => setUseFeedback(null)}>
-                去草原看看它
-              </Link>
-              <button type="button" onClick={() => setUseFeedback(null)}>
-                继续整理
-              </button>
-            </div>
-          </section>
-        );
-      })() : null}
+                <div className="inventory-use-feedback__copy">
+                  <p className="eyebrow">它收下了</p>
+                  <h2>{usedItem.name}</h2>
+                  <p>背包还剩 {useFeedback.remaining} 件</p>
+                </div>
+                <div className="inventory-use-feedback__effects" aria-label="本次变化">
+                  {Object.entries(usedItem.effect).map(([key, value]) => (
+                    <span key={key}>
+                      {EFFECT_LABELS[key as keyof typeof EFFECT_LABELS]}{" "}
+                      {value && value > 0 ? "+" : ""}
+                      {value}
+                    </span>
+                  ))}
+                  <span>默契 +2</span>
+                </div>
+                <div className="inventory-use-feedback__actions">
+                  <Link to="/home" onClick={() => setUseFeedback(null)}>
+                    去草原看看它
+                  </Link>
+                  <button type="button" onClick={() => setUseFeedback(null)}>
+                    继续整理
+                  </button>
+                </div>
+              </section>
+            );
+          })()
+        : null}
       <section className="inventory-workspace" aria-labelledby="inventory-items-title">
         <div className="inventory-toolbar">
           <div>
@@ -256,19 +263,27 @@ export function InventoryPage() {
         </div>
         {owned.length ? (
           <div className="inventory-filters" aria-label="筛选背包物品">
-            {FILTERS.map((option) => (
-              <button
-                key={option.id}
-                className={filter === option.id ? "is-active" : ""}
-                aria-pressed={filter === option.id}
-                onClick={() => {
-                  setFilter(option.id);
-                  setSelectedItem(null);
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
+            {availableFilters.map((option) => {
+              const count =
+                option.id === "all"
+                  ? owned.length
+                  : owned.filter((id) => itemMatchesFilter(id, option.id)).length;
+              return (
+                <button
+                  key={option.id}
+                  className={filter === option.id ? "is-active" : ""}
+                  aria-pressed={filter === option.id}
+                  aria-label={`${option.label}，${count} 种`}
+                  onClick={() => {
+                    setFilter(option.id);
+                    setSelectedItem(null);
+                  }}
+                >
+                  {option.label}
+                  <small aria-hidden="true">{count}</small>
+                </button>
+              );
+            })}
           </div>
         ) : null}
         <div className="inventory-grid">
@@ -373,7 +388,7 @@ export function InventoryPage() {
                   <p className="inventory-item-sheet__description">{item.description}</p>
                   <div className="inventory-item-sheet__effect">
                     <span>使用后</span>
-                    <strong>{describeEffect(item.effect)}</strong>
+                    <strong>{describeEffect(item.effect, selectedItem)}</strong>
                   </div>
                   {item.sponsored ? (
                     <small className="sponsor-label">品牌合作 · 与购买无关</small>
@@ -401,7 +416,7 @@ export function InventoryPage() {
                         if (useAndRespond(selectedItem)) setSelectedItem(null);
                       }}
                     >
-                      {item.consumable ? `给${CHARACTER_NAME}使用` : "收藏品，无需使用"}
+                      {item.consumable ? `给${CHARACTER_NAME}使用` : "纪念物，无需使用"}
                     </Button>
                     <Button variant="tertiary" onClick={() => setSelectedItem(null)}>
                       先留着
@@ -412,7 +427,9 @@ export function InventoryPage() {
             );
           })()
         : null}
-      {welfareItem ? <WelfareSheet itemId={welfareItem} onClose={() => setWelfareItem(null)} /> : null}
+      {welfareItem ? (
+        <WelfareSheet itemId={welfareItem} onClose={() => setWelfareItem(null)} />
+      ) : null}
     </main>
   );
 }

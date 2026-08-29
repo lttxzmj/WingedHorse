@@ -43,6 +43,8 @@ with open(path, "w") as f:
     json.dump(data, f, indent=2)
 '
 fi
+systemctl enable --now docker
+systemctl reload docker || systemctl restart docker
 
 echo "=== 2. 配置 Systemd Journal 日志上限 ==="
 if [[ -f /etc/systemd/journald.conf ]]; then
@@ -63,21 +65,25 @@ watchdog_script="/opt/wingedhorse/scripts/disk-watchdog.sh"
 cat > "$watchdog_script" << 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+exec 9>/run/lock/wingedhorse-disk-watchdog.lock
+flock -n 9 || exit 0
 # 检查根目录使用率
 usage=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
 if [ "$usage" -gt 75 ]; then
   echo "$(date): Disk usage at ${usage}%, triggering automated cleanup..." >> /var/log/wingedhorse-disk.log
-  docker builder prune --keep-storage 1GB --force >> /var/log/wingedhorse-disk.log 2>&1 || true
-  docker image prune --force >> /var/log/wingedhorse-disk.log 2>&1 || true
-  journalctl --vacuum-size=200M >> /var/log/wingedhorse-disk.log 2>&1 || true
+  timeout 300 docker builder prune --all --keep-storage 1GB --force >> /var/log/wingedhorse-disk.log 2>&1 || true
+  timeout 120 docker image prune --force >> /var/log/wingedhorse-disk.log 2>&1 || true
+  timeout 60 journalctl --vacuum-size=200M >> /var/log/wingedhorse-disk.log 2>&1 || true
+  remaining=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+  if [ "$remaining" -gt 85 ]; then
+    echo "$(date): CRITICAL disk usage remains at ${remaining}%; manual intervention required." >> /var/log/wingedhorse-disk.log
+  fi
 fi
 EOF
 chmod +x "$watchdog_script"
 
-# 添加至 crontab（每 2 小时检查一次）
-if ! crontab -l 2>/dev/null | grep -q "disk-watchdog.sh"; then
-  (crontab -l 2>/dev/null || true; echo "0 */2 * * * /opt/wingedhorse/scripts/disk-watchdog.sh >/dev/null 2>&1") | crontab -
-fi
+# 添加至 crontab（每小时检查一次），并替换旧计划避免重复任务
+(crontab -l 2>/dev/null | grep -v "disk-watchdog.sh" || true; echo "17 * * * * /opt/wingedhorse/scripts/disk-watchdog.sh >/dev/null 2>&1") | crontab -
 
 echo "=== 5. 配置交换空间（防止构建期 OOM 拖垮 sshd 与全部容器） ==="
 if ! swapon --show | grep -q .; then

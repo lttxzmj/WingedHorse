@@ -15,7 +15,6 @@ import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   BatteryCharging,
-  BookImage,
   ChevronRight,
   Coffee,
   Droplets,
@@ -24,7 +23,9 @@ import {
   Package,
   Settings,
   Smartphone,
+  Fish,
   Sparkles,
+  Users,
   Waves,
   Wind,
   X
@@ -73,7 +74,15 @@ export function DigitalLifeExperiencePage() {
   const [chatReply, setChatReply] = useState("");
   const [chatSending, setChatSending] = useState(false);
   const [collectingId, setCollectingId] = useState<string | null>(null);
-  const [collectedKeys, setCollectedKeys] = useState<string[]>([]);
+  const [collectedKeys, setCollectedKeys] = useState<string[]>(() => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const raw = localStorage.getItem(`wingedhorse-collected-drops:${today}`);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const characterButtonRef = useRef<HTMLButtonElement>(null);
   const interactionTriggerRef = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -98,6 +107,8 @@ export function DigitalLifeExperiencePage() {
   const comfortPet = useAppStore((state) => state.comfortPet);
   const addMemory = useAppStore((state) => state.addMemory);
   const deviceId = useAppStore((state) => state.deviceId);
+  const hardwareLink = useAppStore((state) => state.hardwareLink);
+  const manualMood = useAppStore((state) => state.manualMood);
   const workShift = useAppStore((state) => state.workShift);
   const clockIn = useAppStore((state) => state.clockIn);
   const clockOut = useAppStore((state) => state.clockOut);
@@ -120,7 +131,8 @@ export function DigitalLifeExperiencePage() {
 
   // 监听硬件实体交互，深度融入家园气泡与互动
   useEffect(() => {
-    const targetDeviceId = deviceId || "lamp-001";
+    const targetDeviceId = deviceId.trim();
+    if (!hardwareLink || !targetDeviceId) return;
     const unsubscribe = subscribeDeviceEvents(targetDeviceId, (event) => {
       // 1. 实体触摸/按压 -> 触发角色抚摸与气泡对话，写入长期生活记忆
       if (event.type === "touch_comfort") {
@@ -129,7 +141,7 @@ export function DigitalLifeExperiencePage() {
         if (event.memoryFact) addMemory(event.memoryFact);
         // 如果按压力度很大，联动灯效为舒缓暖光以安抚用户
         if (event.stressLevel === "intense" || event.stressLevel === "high") {
-          void sendMoodToDevice(targetDeviceId, "tired");
+          void sendMoodToDevice(targetDeviceId, "tired", { linked: true });
         }
       } else if (event.type === "worker_presence") {
         // 2. 超声波检测到打工人来到工位
@@ -147,7 +159,7 @@ export function DigitalLifeExperiencePage() {
     });
 
     return unsubscribe;
-  }, [deviceId, comfortPet, addMemory]);
+  }, [addMemory, comfortPet, deviceId, hardwareLink]);
 
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
@@ -185,7 +197,7 @@ export function DigitalLifeExperiencePage() {
         <section className="empty-state">
           <h1>先认识来来</h1>
           <p>做完测评，它才知道该用什么方式接住你。</p>
-          <Button onClick={() => void navigate({ to: "/assessment" })}>开始测评</Button>
+          <Button onClick={() => void navigate({ to: "/assessment" })}>开始测测</Button>
         </section>
       </main>
     );
@@ -193,12 +205,14 @@ export function DigitalLifeExperiencePage() {
 
   const profile = getResultProfile(result.typeId);
   const growth = deriveCompanionGrowth(relationshipXp);
-  const latestMemory = memories.length > 0 ? (memories[memories.length - 1]?.content ?? null) : null;
+  const latestMemory =
+    memories.length > 0 ? (memories[memories.length - 1]?.content ?? null) : null;
   const latestEvent = lifeEvents.length > 0 ? (lifeEvents[0] ?? null) : null;
   const prairieState = deriveCompanionPrairieState({
     typeId: result.typeId,
     vitals: petVitals,
     relationshipXp,
+    manualMood,
     latestEvent,
     recentMemory: latestMemory,
     isInteracting: interactionOpen || chatSending
@@ -225,6 +239,9 @@ export function DigitalLifeExperiencePage() {
     };
   }
   const sceneDrops = sceneDropsRef.current.items;
+  const remainingDrops = sceneDrops
+    .map((itemId, index) => ({ itemId, index, dropKey: `${sceneDropKey}:${index}:${itemId}` }))
+    .filter((drop) => !collectedKeys.includes(drop.dropKey));
   const moodLabel = getMoodLabel(petVitals.energy, petVitals.chaos, profile.mood);
   const onDuty = workShift.status === "on";
   const comic = createWorkdayComic({
@@ -328,14 +345,23 @@ export function DigitalLifeExperiencePage() {
     const item = ITEM_CATALOG[itemId];
     showReaction(`捡到了${item.name.replace("补给", "")}！已放进背包～`);
     window.setTimeout(() => {
-      setCollectedKeys((prev) => [...prev, key]);
+      setCollectedKeys((prev) => {
+        const next = [...prev, key];
+        try {
+          const today = new Date().toISOString().slice(0, 10);
+          localStorage.setItem(`wingedhorse-collected-drops:${today}`, JSON.stringify(next));
+        } catch {
+          // Ignore local storage write errors
+        }
+        return next;
+      });
       setCollectingId((curr) => (curr === key ? null : curr));
     }, 450);
   };
 
   const handleClaimClimateDrop = () => {
     if (!climateDrop) return;
-    const targetDeviceId = deviceId || "lamp-001";
+    const targetDeviceId = deviceId.trim();
     if (climateDrop.itemId) {
       collectItem(climateDrop.itemId, 1);
     }
@@ -343,10 +369,13 @@ export function DigitalLifeExperiencePage() {
     if (climateDrop.memoryFact) {
       addMemory(climateDrop.memoryFact);
     }
-    const itemName = climateDrop.itemId ? ITEM_CATALOG[climateDrop.itemId].name.replace("补给", "") : "清爽能量";
+    const itemName = climateDrop.itemId
+      ? ITEM_CATALOG[climateDrop.itemId].name.replace("补给", "")
+      : "清爽能量";
     showReaction(`（开心收下）收到了${itemName}！${climateDrop.message}`);
-    // 领完后下发指令熄灭/恢复硬件联动灯效
-    void sendMoodToDevice(targetDeviceId, "good");
+    if (hardwareLink && targetDeviceId) {
+      void sendMoodToDevice(targetDeviceId, "good", { linked: true });
+    }
     setClimateDrop(null);
   };
 
@@ -448,46 +477,44 @@ export function DigitalLifeExperiencePage() {
         className={`lawn-stage lawn-stage--alive digital-life-stage digital-life-stage--${prairieState.ambientTheme}`}
         aria-label="来来生活草原"
       >
-        <div className="digital-life-stage__drops" aria-label="来来刚带回来的补给">
-          <div className="digital-life-stage__drops-heading">
-            <span>
-              <AppIcon icon={Sparkles} size={15} />
-              刚带回来的补给
-            </span>
-            <small>点一下收进背包</small>
-          </div>
-          <div className="digital-life-stage__drop-list">
-            {sceneDrops.map((itemId, index) => {
-              const item = ITEM_CATALOG[itemId];
-              const dropKey = `${sceneDropKey}:${index}:${itemId}`;
-              const isCollected = collectedKeys.includes(dropKey);
-              const isCollecting = collectingId === dropKey;
+        {remainingDrops.length > 0 ? (
+          <div className="digital-life-stage__drops" aria-label="来来刚带回来的补给">
+            <div className="digital-life-stage__drops-heading">
+              <span>
+                <AppIcon icon={Sparkles} size={15} />
+                刚带回来的补给
+              </span>
+              <small>点一下收进背包</small>
+            </div>
+            <div className="digital-life-stage__drop-list">
+              {remainingDrops.map(({ itemId, index, dropKey }) => {
+                const item = ITEM_CATALOG[itemId];
+                const isCollecting = collectingId === dropKey;
 
-              if (isCollected) return null;
-
-              return (
-                <button
-                  className={`digital-life-stage__drop ${
-                    isCollecting ? "is-collecting" : ""
-                  }`.trim()}
-                  key={dropKey}
-                  type="button"
-                  onClick={() => handleCollectDrop(itemId, index)}
-                  aria-label={`收集掉落的${item.name}`}
-                  disabled={isCollecting}
-                >
-                  {isCollecting ? (
-                    <span className="digital-life-stage__drop-badge" aria-hidden="true">
-                      +1
-                    </span>
-                  ) : null}
-                  <ItemIcon itemId={itemId} size={25} />
-                  <span>{item.name.replace("补给", "")}</span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    className={`digital-life-stage__drop ${
+                      isCollecting ? "is-collecting" : ""
+                    }`.trim()}
+                    key={dropKey}
+                    type="button"
+                    onClick={() => handleCollectDrop(itemId, index)}
+                    aria-label={`收集掉落的${item.name}`}
+                    disabled={isCollecting}
+                  >
+                    {isCollecting ? (
+                      <span className="digital-life-stage__drop-badge" aria-hidden="true">
+                        +1
+                      </span>
+                    ) : null}
+                    <ItemIcon itemId={itemId} size={25} />
+                    <span>{item.name.replace("补给", "")}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {climateDrop ? (
           <div
@@ -581,9 +608,8 @@ export function DigitalLifeExperiencePage() {
             alt=""
             aria-hidden="true"
           />
-          <span>
-            <AppIcon icon={BookImage} size={15} />
-            生活簿
+          <span className="digital-life-stage__tent-badge">
+            <AppIcon icon={Users} size={22} />
           </span>
         </Link>
         <div className="digital-life-actions" aria-label="和来来互动">
@@ -597,15 +623,15 @@ export function DigitalLifeExperiencePage() {
             maxLength={200}
             placeholder="说一句…"
             ariaLabel="和来来说一句"
+            signalsReturnTo="/home"
           />
           <button
             type="button"
-            className="digital-life-actions__supply"
-            aria-label="接补给：去玩补给雨"
+            className="digital-life-actions__moyu"
+            aria-label="开始摸鱼：去接补给"
             onClick={() => void navigate({ to: "/game", hash: "start" })}
           >
-            <AppIcon icon={Sparkles} size={18} />
-            <span>接补给</span>
+            <AppIcon icon={Fish} size={22} />
           </button>
         </div>
       </section>

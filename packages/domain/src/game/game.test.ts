@@ -58,12 +58,12 @@ describe("inventory transactions", () => {
       "screaming-chicken": 1,
       "emotion-valve": 1
     } as const;
-    expect(
-      recommendCareItem(inventory, { energy: 80, engine: 70, chaos: 92, direction: 70 })
-    ).toBe("screaming-chicken");
-    expect(
-      recommendCareItem(inventory, { energy: 12, engine: 70, chaos: 10, direction: 70 })
-    ).toBe("nap-mask");
+    expect(recommendCareItem(inventory, { energy: 80, engine: 70, chaos: 92, direction: 70 })).toBe(
+      "screaming-chicken"
+    );
+    expect(recommendCareItem(inventory, { energy: 12, engine: 70, chaos: 10, direction: 70 })).toBe(
+      "nap-mask"
+    );
     expect(recommendCareItem({ "emotion-valve": 1 }, INITIAL_PET_VITALS)).toBeNull();
     expect(recommendCareItem({}, INITIAL_PET_VITALS)).toBeNull();
   });

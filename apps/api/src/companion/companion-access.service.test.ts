@@ -68,7 +68,11 @@ describe("CompanionAccessService", () => {
     const first = await access.acquireModel("device-a-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "s1", now);
     expect(first.granted).toBe(true);
     if (first.granted) await first.release();
-    const second = await access.acquireModel("device-b-cccccccccccccccccccccccccccccccc", "s2", now + 1);
+    const second = await access.acquireModel(
+      "device-b-cccccccccccccccccccccccccccccccc",
+      "s2",
+      now + 1
+    );
     expect(second.granted).toBe(true);
     if (second.granted) await second.release();
     await expect(

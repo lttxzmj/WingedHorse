@@ -16,11 +16,17 @@ export interface InviteSharePayload {
   url: string;
 }
 
-export function clampFriendCount(count: number, limits: FriendLimits = DEFAULT_FRIEND_LIMITS): number {
+export function clampFriendCount(
+  count: number,
+  limits: FriendLimits = DEFAULT_FRIEND_LIMITS
+): number {
   return Math.max(0, Math.min(limits.maxFriends, Math.floor(count)));
 }
 
-export function canAddFriend(currentCount: number, limits: FriendLimits = DEFAULT_FRIEND_LIMITS): boolean {
+export function canAddFriend(
+  currentCount: number,
+  limits: FriendLimits = DEFAULT_FRIEND_LIMITS
+): boolean {
   return clampFriendCount(currentCount, limits) < limits.maxFriends;
 }
 

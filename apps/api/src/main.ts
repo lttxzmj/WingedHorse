@@ -7,9 +7,10 @@ import { parseEnvironment } from "./config/environment.js";
 const environment = parseEnvironment(process.env);
 const app = await NestFactory.create<NestFastifyApplication>(
   AppModule,
-  new FastifyAdapter({ trustProxy: true }),
+  new FastifyAdapter({ trustProxy: ["loopback", "linklocal", "uniquelocal"] }),
   { logger: ["error", "warn", "log"] }
 );
 app.enableCors({ origin: [/^http:\/\/localhost:\d+$/], credentials: true });
 app.setGlobalPrefix("api");
+app.enableShutdownHooks();
 await app.listen(environment.API_PORT, "0.0.0.0");

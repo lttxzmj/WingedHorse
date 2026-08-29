@@ -43,19 +43,7 @@ describe.runIf(Boolean(databaseUrl))("PlayerRepository PostgreSQL integration", 
 
   it("commits settlement and consumption once under row locks", async () => {
     const token = "P".repeat(43);
-    const session = await service.start(
-      token,
-      {
-        typeId: "chosen",
-        bootstrap: {
-          inventory: {},
-          vitals: { energy: 50, engine: 50, chaos: 50, direction: 50 },
-          gamesPlayed: 0,
-          relationshipXp: 0
-        }
-      },
-      "2026-08-28T10:00:00.000Z"
-    );
+    const session = await service.start(token, { typeId: "chosen" }, "2026-08-28T10:00:00.000Z");
     const settlement = await service.settle(
       token,
       session.sessionId,

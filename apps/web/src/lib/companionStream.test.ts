@@ -88,7 +88,10 @@ describe("fetchCompanionQuota", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        new Response(JSON.stringify(quota), { status: 200, headers: { "Content-Type": "application/json" } })
+        new Response(JSON.stringify(quota), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        })
       )
     );
     await expect(fetchCompanionQuota()).resolves.toEqual(quota);

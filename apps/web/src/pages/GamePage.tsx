@@ -1,7 +1,7 @@
 import {
   CHARACTER_NAME,
-  DEFAULT_SPONSORED_CAMPAIGN,
   ITEM_CATALOG,
+  getSponsoredCampaignByItemId,
   sponsoredProductLabel,
   type ItemId
 } from "@wingedhorse/domain";
@@ -46,17 +46,16 @@ export function GamePage() {
   const [gameError, setGameError] = useState("");
   const [controlDirection, setControlDirection] = useState<-1 | 0 | 1>(0);
   const [catchNotice, setCatchNotice] = useState("");
-  const [showGuide, setShowGuide] = useState(true);
   const [welfareItem, setWelfareItem] = useState<ItemId | null>(null);
   const autoStartHandled = useRef(false);
   const settleGame = useAppStore((state) => state.settleGame);
   const gamesPlayed = useAppStore((state) => state.gamesPlayed);
   const receivedSponsoredItemIds = useAppStore((state) => state.receivedSponsoredItemIds);
   const result = useAppStore((state) => state.result);
-  const hasReceivedSponsored = receivedSponsoredItemIds.includes(
-    DEFAULT_SPONSORED_CAMPAIGN.boxItemId
-  );
   const deviceId = useAppStore((state) => state.deviceId);
+  const hardwareLink = useAppStore((state) => state.hardwareLink);
+  const returnTarget = result ? "/home" : "/";
+  const returnLabel = result ? "回到草原" : "回到首页";
   const playing = phase === "playing";
 
   // Warm the Phaser chunk on the intro screen so countdown isn't blocked by a 1MB+ download.
@@ -68,7 +67,8 @@ export function GamePage() {
 
   // 监听硬件超声波：如果在游戏中检测到有人靠近，自动安全暂停防窥
   useEffect(() => {
-    const targetDeviceId = deviceId || "lamp-001";
+    const targetDeviceId = deviceId.trim();
+    if (!hardwareLink || !targetDeviceId) return;
     const unsubscribe = subscribeDeviceEvents(targetDeviceId, (event, telemetry) => {
       if (telemetry.obstacle && phase === "playing") {
         setPaused(true); // 自动暂停游戏，不丢分
@@ -76,10 +76,13 @@ export function GamePage() {
     });
 
     return unsubscribe;
-  }, [deviceId, phase]);
+  }, [deviceId, hardwareLink, phase]);
   const inLiveScene = phase === "countdown" || phase === "playing";
   const sponsoredCaughtId = summary
     ? (Object.keys(summary.caught) as ItemId[]).find((itemId) => ITEM_CATALOG[itemId].sponsored)
+    : undefined;
+  const sponsoredCaughtCampaign = sponsoredCaughtId
+    ? getSponsoredCampaignByItemId(sponsoredCaughtId)
     : undefined;
   const [countdownLeaving, setCountdownLeaving] = useState(false);
 
@@ -102,12 +105,6 @@ export function GamePage() {
     return () => window.clearTimeout(clearTimer);
   }, [countdownLeaving]);
 
-  useEffect(() => {
-    if (!playing || gameLoadState !== "ready" || !showGuide) return;
-    const guideTimer = window.setTimeout(() => setShowGuide(false), 3_800);
-    return () => window.clearTimeout(guideTimer);
-  }, [gameLoadState, playing, showGuide]);
-
   const start = () => {
     setSummary(null);
     setPaused(false);
@@ -116,7 +113,6 @@ export function GamePage() {
     setGameError("");
     setControlDirection(0);
     setCatchNotice("");
-    setShowGuide(true);
     setWelfareItem(null);
     setGameLoadState("loading");
     trackEvent("game_start", { round: gamesPlayed + 1 });
@@ -128,6 +124,11 @@ export function GamePage() {
   useEffect(() => {
     if (autoStartHandled.current || window.location.hash !== "#start") return;
     autoStartHandled.current = true;
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${window.location.search}`
+    );
     start();
   }, []);
 
@@ -160,7 +161,7 @@ export function GamePage() {
   return (
     <main className={`game-page game-page--${phase}`}>
       <header className={`subpage-header${phase === "summary" ? " subpage-header--summary" : ""}`}>
-        <BackLink to="/home" label="回到草原" />
+        <BackLink to={returnTarget} label={returnLabel} />
         <div>
           <p className="eyebrow">宇宙 Online · 补给雨</p>
           <h1>接住今天的补给</h1>
@@ -184,7 +185,9 @@ export function GamePage() {
                   <p>{gameError || "网络或加载遇到了一点小波动，请重试。"}</p>
                   <div className="game-recovery__actions">
                     <Button onClick={start}>再试一次</Button>
-                    <Link to="/home" className="quiet-link">回到草原</Link>
+                    <Link to={returnTarget} className="quiet-link">
+                      {returnLabel}
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -193,7 +196,7 @@ export function GamePage() {
                 sessionId={sessionId}
                 characterType={result?.typeId ?? "chosen"}
                 gamesPlayed={gamesPlayed}
-                hasReceivedSponsored={hasReceivedSponsored}
+                receivedSponsoredItemIds={receivedSponsoredItemIds}
                 paused={!playing || paused}
                 controlDirection={playing ? controlDirection : 0}
                 onStatsChange={setStats}
@@ -204,7 +207,6 @@ export function GamePage() {
                   setGameLoadState("error");
                 }}
                 onCatch={(itemId, points) => {
-                  setShowGuide(false);
                   if ("vibrate" in navigator) navigator.vibrate(18);
                   const item = ITEM_CATALOG[itemId];
                   setCatchNotice(
@@ -227,10 +229,7 @@ export function GamePage() {
               >
                 <div className="game-countdown__veil" />
                 <div className="game-countdown__character" aria-hidden="true">
-                  <img
-                    src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]}
-                    alt=""
-                  />
+                  <img src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]} alt="" />
                 </div>
                 <div className="game-countdown__stage">
                   <div className="game-countdown__content" key={countdown}>
@@ -243,9 +242,13 @@ export function GamePage() {
                     </div>
                   </div>
                   <div className="game-countdown__guide">
-                    <span className="game-countdown__guide-arrow" aria-hidden="true">‹</span>
+                    <span className="game-countdown__guide-arrow" aria-hidden="true">
+                      ‹
+                    </span>
                     <span>左右滑动移动接物</span>
-                    <span className="game-countdown__guide-arrow" aria-hidden="true">›</span>
+                    <span className="game-countdown__guide-arrow" aria-hidden="true">
+                      ›
+                    </span>
                   </div>
                 </div>
               </div>
@@ -272,7 +275,9 @@ export function GamePage() {
                     </div>
                   </div>
 
-                  <div className={`game-hud__pill game-hud__pill--combo${stats.combo >= 2 ? " is-hot" : ""}`}>
+                  <div
+                    className={`game-hud__pill game-hud__pill--combo${stats.combo >= 2 ? " is-hot" : ""}`}
+                  >
                     <span className="game-hud__label">连击</span>
                     <div className="game-hud__value">
                       <strong>×{Math.min(stats.combo, 10)}</strong>
@@ -333,25 +338,39 @@ export function GamePage() {
                     </button>
                   </div>
                 ) : null}
-                {gameLoadState === "ready" && showGuide && !countdownLeaving ? (
-                  <p className="game-play-guide" role="status">
-                    {`手指贴着${CHARACTER_NAME}左右拖动，接住第一份补给`}
-                  </p>
-                ) : null}
                 {catchNotice ? (
-                  <p
-                    className={`game-catch-notice${catchNotice.includes("合作补给") ? "" : " sr-only"}`}
-                    role="status"
-                  >
+                  <p className="sr-only" role="status">
                     {catchNotice.includes("合作补给") ? catchNotice : `接住了 · ${catchNotice}`}
                   </p>
                 ) : null}
                 {paused ? (
-                  <div className="game-pause" role="dialog" aria-modal="true" aria-label="游戏已暂停">
-                    <strong>先喘口气</strong>
-                    <p>倒计时和掉落都停住了。</p>
-                    <Button onClick={() => setPaused(false)}>继续接住</Button>
-                    <Link to="/home">结束并回草原</Link>
+                  <div
+                    className="game-pause"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="游戏已暂停"
+                  >
+                    <div
+                      className="game-pause__veil"
+                      onClick={() => setPaused(false)}
+                      aria-hidden="true"
+                    />
+                    <div className="game-pause__card">
+                      <div className="game-pause__icon" aria-hidden="true">
+                        <AppIcon icon={Pause} size={22} strokeWidth={2.5} />
+                      </div>
+                      <strong>先喘口气</strong>
+                      <p>倒计时和掉落都停住了，随时可以继续。</p>
+                      <div className="game-pause__actions">
+                        <Button onClick={() => setPaused(false)}>
+                          <AppIcon icon={Play} size={16} />
+                          <span>继续接住</span>
+                        </Button>
+                        <Link className="game-pause__quiet-link" to={returnTarget}>
+                          {result ? "结束并回草原" : "结束并回首页"}
+                        </Link>
+                      </div>
+                    </div>
                   </div>
                 ) : null}
               </>
@@ -395,18 +414,18 @@ export function GamePage() {
                     )}
                   </div>
                 </section>
-                {sponsoredCaughtId ? (
+                {sponsoredCaughtId && sponsoredCaughtCampaign ? (
                   <section className="game-summary__welfare" aria-labelledby="game-welfare-title">
                     <img
                       className="game-summary__welfare-logo"
-                      src={DEFAULT_SPONSORED_CAMPAIGN.logoImage}
+                      src={sponsoredCaughtCampaign.logoImage}
                       alt=""
                       width={54}
                       height={30}
                     />
                     <div>
                       <strong id="game-welfare-title">合作补给</strong>
-                      <p>{sponsoredProductLabel()}</p>
+                      <p>{sponsoredProductLabel(sponsoredCaughtCampaign)}</p>
                     </div>
                     <Button
                       onClick={() => {
@@ -435,8 +454,8 @@ export function GamePage() {
                   </figcaption>
                 </figure>
                 <div className="game-summary__actions">
-                  <Link className="ui-button ui-button--primary" to="/home">
-                    带着补给回草原
+                  <Link className="ui-button ui-button--primary" to={returnTarget}>
+                    {result ? "带着补给回草原" : "带着补给回首页"}
                   </Link>
                   <Button variant="secondary" onClick={start}>
                     再接一局
@@ -456,8 +475,8 @@ export function GamePage() {
                 </div>
                 <div className="game-intro__actions">
                   <Button onClick={start}>开始接补给</Button>
-                  <Link className="quiet-link" to="/home">
-                    稍后再说
+                  <Link className="quiet-link" to={returnTarget}>
+                    {result ? "稍后再说" : "回到首页"}
                   </Link>
                 </div>
               </div>
@@ -465,7 +484,9 @@ export function GamePage() {
           </div>
         )}
       </section>
-      {welfareItem ? <WelfareSheet itemId={welfareItem} onClose={() => setWelfareItem(null)} /> : null}
+      {welfareItem ? (
+        <WelfareSheet itemId={welfareItem} onClose={() => setWelfareItem(null)} />
+      ) : null}
     </main>
   );
 }

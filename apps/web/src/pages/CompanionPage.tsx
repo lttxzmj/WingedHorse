@@ -1,4 +1,8 @@
-import type { CompanionMessageRequest, CompanionMessageResponse, CompanionQuota } from "@wingedhorse/contracts";
+import type {
+  CompanionMessageRequest,
+  CompanionMessageResponse,
+  CompanionQuota
+} from "@wingedhorse/contracts";
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { CHARACTER_NAME, getResultProfile, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { BookOpen, ChevronDown, ShieldCheck } from "lucide-react";
@@ -7,7 +11,11 @@ import { BackLink } from "../components/BackLink";
 import { CompanionComposer, type CompanionComposerSubmit } from "../components/CompanionComposer";
 import { createClientId } from "../lib/clientId";
 import { subscribeDeviceEvents } from "../lib/devices";
-import { CompanionStreamError, fetchCompanionQuota, streamCompanionMessage } from "../lib/companionStream";
+import {
+  CompanionStreamError,
+  fetchCompanionQuota,
+  streamCompanionMessage
+} from "../lib/companionStream";
 import { useAppStore } from "../store/useAppStore";
 import { useDigitalLife } from "../hooks/useDigitalLife";
 import "../companion-experience.css";
@@ -35,8 +43,7 @@ export function CompanionPage() {
     {
       id: "hello",
       role: "assistant",
-      content:
-        "你回来啦。我刚在帐篷旁边看了一会儿云，想先听听你今天过得怎么样。"
+      content: "你回来啦。我刚在帐篷旁边看了一会儿云，想先听听你今天过得怎么样。"
     }
   ]);
   const [draft, setDraft] = useState("");
@@ -58,12 +65,14 @@ export function CompanionPage() {
   const manualMood = useAppStore((state) => state.manualMood);
   const addMemory = useAppStore((state) => state.addMemory);
   const deviceId = useAppStore((state) => state.deviceId);
+  const hardwareLink = useAppStore((state) => state.hardwareLink);
   const profile = result ? getResultProfile(result.typeId) : null;
   const companionName = CHARACTER_NAME;
 
   // 监听硬件实体触摸并注入对话流
   useEffect(() => {
-    const targetDeviceId = deviceId || "lamp-001";
+    const targetDeviceId = deviceId.trim();
+    if (!hardwareLink || !targetDeviceId) return;
     const unsubscribe = subscribeDeviceEvents(targetDeviceId, (event) => {
       if (event.type === "touch_comfort") {
         setMessages((current) => [
@@ -77,7 +86,7 @@ export function CompanionPage() {
       }
     });
     return unsubscribe;
-  }, [deviceId]);
+  }, [deviceId, hardwareLink]);
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView?.({ block: "end", behavior: "smooth" });
@@ -229,7 +238,7 @@ export function CompanionPage() {
       <header
         className={`subpage-header companion-header ${result ? "" : "companion-header--generic"}`}
       >
-        <BackLink to="/home" label="回到草原" />
+        <BackLink to={result ? "/home" : "/"} label={result ? "回到草原" : "回到首页"} />
         <div className="companion-header__identity">
           {result && profile ? (
             <div className="companion-header__avatar">
@@ -248,7 +257,8 @@ export function CompanionPage() {
           <div className="companion-header__titles">
             <h1 className="companion-header__name">{companionName}</h1>
             <p className="companion-presence">
-              <span aria-hidden="true" /> {profile ? `${profile.name} · 想和你说说话` : "想和你说说话"}
+              <span aria-hidden="true" />{" "}
+              {profile ? `${profile.name} · 想和你说说话` : "想和你说说话"}
             </p>
             {quota ? (
               <p className="companion-quota">
@@ -378,6 +388,7 @@ export function CompanionPage() {
         maxLength={1200}
         placeholder="和它说点什么……"
         ariaLabel="想说什么都可以"
+        signalsReturnTo="/companion"
       />
     </main>
   );

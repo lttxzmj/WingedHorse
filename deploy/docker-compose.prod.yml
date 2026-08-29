@@ -2,12 +2,14 @@ name: wingedhorse
 
 services:
   web:
+    image: wingedhorse-web:${WINGEDHORSE_IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: deploy/Dockerfile.web
       args:
         VITE_FEATURE_CAMERA_SIGNALS: ${VITE_FEATURE_CAMERA_SIGNALS:-false}
         VITE_FEATURE_RPPG: ${VITE_FEATURE_RPPG:-false}
+        VITE_HARDWARE_API_ENABLED: ${HARDWARE_API_ENABLED:-false}
     restart: unless-stopped
     ports: ["8080:8080", "8443:8443"]
     volumes: ["./cert/https:/etc/nginx/ssl:ro"]
@@ -30,14 +32,21 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
   api:
+    image: wingedhorse-api:${WINGEDHORSE_IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
     restart: unless-stopped
+    init: true
+    stop_grace_period: 20s
     env_file: ../.env.production
     environment:
       API_PORT: 3100
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
       REDIS_URL: redis://redis:6379
     expose: ["3100"]
     depends_on:
@@ -47,11 +56,16 @@ services:
     tmpfs: [/tmp]
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
-    mem_limit: 384m
+    mem_limit: 512m
     cpus: 0.5
     healthcheck:
       test:
-        ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3100/api/health"]
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3100/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -61,6 +75,18 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
+    command:
+      [
+        "postgres",
+        "-c",
+        "shared_buffers=64MB",
+        "-c",
+        "work_mem=2MB",
+        "-c",
+        "maintenance_work_mem=32MB",
+        "-c",
+        "max_connections=40"
+      ]
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -70,7 +96,7 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
-    mem_limit: 256m
+    mem_limit: 384m
     cpus: 0.25
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -84,13 +110,13 @@ services:
     restart: unless-stopped
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-    command: sh -c 'exec redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD}"'
+    command: sh -c 'exec redis-server --appendonly yes --maxmemory 96mb --maxmemory-policy noeviction --requirepass "$${REDIS_PASSWORD}"'
     volumes: ["redis_data:/data"]
     expose: ["6379"]
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
-    mem_limit: 96m
+    mem_limit: 192m
     cpus: 0.15
     healthcheck:
       test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
@@ -103,7 +129,7 @@ services:
     image: eclipse-mosquitto:2
     profiles: [hardware]
     restart: unless-stopped
-    ports: ["1883:1883"]
+    ports: ["${MQTT_BIND_ADDRESS:-127.0.0.1}:1883:1883"]
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - ./mosquitto/passwd:/mosquitto/config/passwd:ro

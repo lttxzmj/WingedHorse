@@ -27,11 +27,11 @@ describe("CompanionController access policy", () => {
       new CompanionAccessService(),
       new SafetyService()
     );
-    await expect(controller.message(body, { ip: "203.0.113.10" } as never, undefined)).rejects.toMatchObject(
-      {
-        response: { code: "VISITOR_TOKEN_REQUIRED" }
-      }
-    );
+    await expect(
+      controller.message(body, { ip: "203.0.113.10" } as never, undefined)
+    ).rejects.toMatchObject({
+      response: { code: "VISITOR_TOKEN_REQUIRED" }
+    });
     expect(companion.reply).not.toHaveBeenCalled();
   });
 

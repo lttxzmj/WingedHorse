@@ -46,7 +46,9 @@ const TIME_LABELS: Record<TimeOfDay, string> = {
   night: "深夜"
 };
 
-export function deriveCompanionPrairieState(input: CompanionPrairieStateInput): CompanionPrairieState {
+export function deriveCompanionPrairieState(
+  input: CompanionPrairieStateInput
+): CompanionPrairieState {
   const now = input.now ?? new Date();
   const timeOfDay = getTimeOfDay(now);
   const timeLabel = TIME_LABELS[timeOfDay];

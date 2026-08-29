@@ -20,6 +20,40 @@ describe("parseEnvironment", () => {
     );
   });
 
+  it("accepts separate PostgreSQL fields so passwords do not need URL encoding", () => {
+    expect(
+      parseEnvironment({
+        NODE_ENV: "production",
+        PGHOST: "postgres",
+        PGPORT: "5432",
+        PGDATABASE: "wingedhorse",
+        PGUSER: "wingedhorse",
+        PGPASSWORD: "a+b/c=#safe-as-a-field",
+        REDIS_URL: "redis://redis:6379",
+        REDIS_PASSWORD: "redis-secret",
+        COMPANION_FINGERPRINT_SECRET: "f".repeat(32)
+      })
+    ).toMatchObject({
+      PGHOST: "postgres",
+      PGPORT: 5432,
+      PGPASSWORD: "a+b/c=#safe-as-a-field",
+      HARDWARE_API_ENABLED: false
+    });
+  });
+
+  it("keeps unauthenticated hardware routes disabled in production", () => {
+    expect(() =>
+      parseEnvironment({
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://wingedhorse:safe@postgres:5432/wingedhorse",
+        REDIS_URL: "redis://redis:6379",
+        REDIS_PASSWORD: "redis-secret",
+        COMPANION_FINGERPRINT_SECRET: "f".repeat(32),
+        HARDWARE_API_ENABLED: "true"
+      })
+    ).toThrow("Invalid server configuration: HARDWARE_API_ENABLED");
+  });
+
   it("rejects a half-configured OpenRouter without exposing the key", () => {
     const secret = "sk-or-private-value";
     let message = "";

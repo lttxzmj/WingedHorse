@@ -3,9 +3,15 @@ import { currentQuestionSet, scoreAssessment, type AssessmentResult } from "@win
 import type { AssessmentResultResponse, AssessmentSubmission } from "@wingedhorse/contracts";
 import { randomUUID } from "node:crypto";
 
+const MAX_RESULTS = 5_000;
+const RESULT_TTL_MS = 24 * 60 * 60 * 1_000;
+
 @Injectable()
 export class AssessmentService {
-  private readonly results = new Map<string, AssessmentResultResponse>();
+  private readonly results = new Map<
+    string,
+    { value: AssessmentResultResponse; expiresAt: number }
+  >();
 
   getQuestionSet() {
     return {
@@ -32,14 +38,23 @@ export class AssessmentService {
     }
     const result: AssessmentResult = scoreAssessment(currentQuestionSet, submission.answers);
     const response: AssessmentResultResponse = { id: randomUUID(), ...result };
-    this.results.set(response.id, response);
+    if (this.results.size >= MAX_RESULTS) {
+      const oldestId = this.results.keys().next().value;
+      if (oldestId) this.results.delete(oldestId);
+    }
+    this.results.set(response.id, {
+      value: response,
+      expiresAt: Date.now() + RESULT_TTL_MS
+    });
     return response;
   }
 
   getResult(id: string): AssessmentResultResponse {
     const result = this.results.get(id);
-    if (!result)
+    if (!result || result.expiresAt <= Date.now()) {
+      if (result) this.results.delete(id);
       throw new NotFoundException({ code: "ASSESSMENT_NOT_FOUND", message: "没有找到这次测评" });
-    return result;
+    }
+    return result.value;
   }
 }

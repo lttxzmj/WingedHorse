@@ -109,7 +109,8 @@ function mergeReceivedSponsoredItemIds(
 function migrateReceivedSponsoredItemIds(state: Record<string, unknown>): ItemId[] {
   const fromState = Array.isArray(state.receivedSponsoredItemIds)
     ? (state.receivedSponsoredItemIds as unknown[]).filter(
-        (id): id is ItemId => typeof id === "string" && Boolean(ITEM_CATALOG[id as ItemId]?.sponsored)
+        (id): id is ItemId =>
+          typeof id === "string" && Boolean(ITEM_CATALOG[id as ItemId]?.sponsored)
       )
     : [];
   const inventory =

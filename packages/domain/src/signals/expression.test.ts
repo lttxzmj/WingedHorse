@@ -3,6 +3,7 @@ import {
   classifyExpression,
   EXPRESSION_LABEL,
   EXPRESSION_TAGS,
+  expressionToMood,
   type FaceLandmark
 } from "./expression.js";
 
@@ -78,5 +79,13 @@ describe("classifyExpression", () => {
     for (const tag of EXPRESSION_TAGS) {
       expect(EXPRESSION_LABEL[tag]).toBeTruthy();
     }
+  });
+
+  it("maps expression clues to manual moods for soft sync", () => {
+    expect(expressionToMood("smile")).toBe("good");
+    expect(expressionToMood("tired")).toBe("tired");
+    expect(expressionToMood("frown")).toBe("sad");
+    expect(expressionToMood("surprise")).toBe("anxious");
+    expect(expressionToMood("neutral")).toBe("flat");
   });
 });

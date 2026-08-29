@@ -1,4 +1,9 @@
-import { CHARACTER_NAME, PRODUCT_NAME, PRODUCT_SLOGAN, type WorkdayComic } from "@wingedhorse/domain";
+import {
+  CHARACTER_NAME,
+  PRODUCT_NAME,
+  PRODUCT_SLOGAN,
+  type WorkdayComic
+} from "@wingedhorse/domain";
 
 export async function createWorkdayComicCard(comic: WorkdayComic): Promise<Blob> {
   const canvas = document.createElement("canvas");

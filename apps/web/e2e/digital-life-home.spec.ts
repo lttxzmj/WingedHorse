@@ -60,16 +60,21 @@ test("digital life home keeps companionship primary and care functional", async 
 }, testInfo) => {
   await expect(page.getByRole("heading", { name: "来来" })).toBeVisible();
   await expect(page.getByRole("link", { name: "打开生活簿" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "接补给：去玩补给雨" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
   await expect(page.getByLabel(/^心情 /)).toBeVisible();
   await expect(page.getByLabel("元气 40")).toBeVisible();
   await expect(page.getByLabel("来来刚带回来的补给").getByRole("button")).toHaveCount(3);
   await expect(page.getByText("点一下收进背包")).toBeVisible();
   await expect(page.getByRole("heading", { name: "熟悉阶段" })).toHaveCount(0);
   await expect(page.getByLabel("和来来说一句")).toBeVisible();
-  await expect(page.getByRole("button", { name: "添加图片说明" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "语音输入" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /开启唤醒词/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "更多：相册、拍照与表情识别" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /语音：点一下听写，按住唤醒/ })
+  ).toBeVisible();
+  await page.getByRole("button", { name: "更多：相册、拍照与表情识别" }).click();
+  await expect(page.getByRole("menuitem", { name: "相册" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "拍照" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "表情识别" })).toBeVisible();
 
   await page.screenshot({
     path: `/private/tmp/wingedhorse-digital-life-home-${testInfo.project.name}.png`,
@@ -90,7 +95,9 @@ test("digital life home keeps companionship primary and care functional", async 
 
   await page.getByLabel("和来来说一句").fill("今天有点累");
   await page.getByRole("button", { name: "发送" }).click();
-  await expect(page.getByRole("button", { name: "打开聊天详情" })).toContainText("我不催你证明什么");
+  await expect(page.getByRole("button", { name: "打开聊天详情" })).toContainText(
+    "我不催你证明什么"
+  );
   await page.getByRole("button", { name: "打开聊天详情" }).click();
   await expect(page).toHaveURL(/\/companion/);
   await expect(page.getByText("今天有点累")).toBeVisible();

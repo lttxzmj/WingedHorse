@@ -57,12 +57,28 @@ export class CompanionController {
     reply.raw.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
     reply.raw.setHeader("Cache-Control", "no-store, no-transform");
     reply.raw.setHeader("X-Accel-Buffering", "no");
+    const disconnect = new AbortController();
+    const abortStream = () => disconnect.abort();
+    reply.raw.once("close", abortStream);
+    reply.raw.once("error", abortStream);
     try {
-      for await (const event of this.companion.replyStream(parsed, deviceToken)) {
-        if (reply.raw.destroyed) break;
-        reply.raw.write(`${JSON.stringify(event)}\n`);
+      for await (const event of this.companion.replyStream(
+        parsed,
+        deviceToken,
+        disconnect.signal
+      )) {
+        if (reply.raw.destroyed || disconnect.signal.aborted) break;
+        try {
+          reply.raw.write(`${JSON.stringify(event)}\n`);
+        } catch {
+          disconnect.abort();
+          break;
+        }
       }
     } finally {
+      disconnect.abort();
+      reply.raw.off("close", abortStream);
+      reply.raw.off("error", abortStream);
       if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.end();
     }
   }

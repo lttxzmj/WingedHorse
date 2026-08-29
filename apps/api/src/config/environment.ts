@@ -10,7 +10,15 @@ const optionalUrl = z.preprocess(
   z.url().optional()
 );
 
-const isPlaceholder = (value: string) => /请替换|change-?me|replace-?me/iu.test(value);
+const booleanFromString = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  if (value.toLowerCase() === "true") return true;
+  if (value.toLowerCase() === "false" || value.trim() === "") return false;
+  return value;
+}, z.boolean());
+
+const isPlaceholder = (value: string) =>
+  /请替换|change-?me|replace-?me|your-domain\.example/iu.test(value);
 
 const environmentSchema = z
   .object({
@@ -21,6 +29,11 @@ const environmentSchema = z
         value === undefined || (/^postgres(?:ql)?:\/\//u.test(value) && !isPlaceholder(value)),
       "must be a PostgreSQL URL"
     ),
+    PGHOST: optionalString,
+    PGPORT: z.coerce.number().int().min(1).max(65_535).optional(),
+    PGDATABASE: optionalString,
+    PGUSER: optionalString,
+    PGPASSWORD: optionalString,
     REDIS_URL: optionalString.refine(
       (value) => value === undefined || /^rediss?:\/\//u.test(value),
       "must be a Redis URL"
@@ -51,15 +64,40 @@ const environmentSchema = z
       "must be an MQTT URL"
     ),
     MQTT_USER: optionalString,
-    MQTT_PASSWORD: optionalString
+    MQTT_PASSWORD: optionalString,
+    HARDWARE_API_ENABLED: booleanFromString.default(false)
   })
   .superRefine((environment, context) => {
-    if (environment.NODE_ENV === "production" && !environment.DATABASE_URL) {
+    const postgresFields = [
+      environment.PGHOST,
+      environment.PGPORT,
+      environment.PGDATABASE,
+      environment.PGUSER,
+      environment.PGPASSWORD
+    ];
+    const hasCompletePostgresFields = postgresFields.every(
+      (value) => value !== undefined && value !== ""
+    );
+    if (
+      environment.NODE_ENV === "production" &&
+      !environment.DATABASE_URL &&
+      !hasCompletePostgresFields
+    ) {
       context.addIssue({
         code: "custom",
         path: ["DATABASE_URL"],
-        message: "is required in production"
+        message: "or complete PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD is required in production"
       });
+    }
+    if (!environment.DATABASE_URL && postgresFields.some((value) => value !== undefined)) {
+      for (const [index, value] of postgresFields.entries()) {
+        if (value !== undefined && value !== "") continue;
+        context.addIssue({
+          code: "custom",
+          path: [["PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD"][index]!],
+          message: "is required when PostgreSQL fields are configured"
+        });
+      }
     }
     if (environment.NODE_ENV === "production" && !environment.REDIS_URL) {
       context.addIssue({
@@ -86,7 +124,7 @@ const environmentSchema = z
         message: "must contain at least 32 characters in production"
       });
     }
-    for (const field of ["REDIS_PASSWORD", "COMPANION_FINGERPRINT_SECRET"] as const) {
+    for (const field of ["PGPASSWORD", "REDIS_PASSWORD", "COMPANION_FINGERPRINT_SECRET"] as const) {
       const value = environment[field];
       if (value && isPlaceholder(value)) {
         context.addIssue({
@@ -117,6 +155,13 @@ const environmentSchema = z
         message: "must not be a template placeholder"
       });
     }
+    if (environment.PUBLIC_APP_URL && isPlaceholder(environment.PUBLIC_APP_URL)) {
+      context.addIssue({
+        code: "custom",
+        path: ["PUBLIC_APP_URL"],
+        message: "must not be a template placeholder"
+      });
+    }
     if (
       (environment.MQTT_USER && !environment.MQTT_PASSWORD) ||
       (!environment.MQTT_USER && environment.MQTT_PASSWORD)
@@ -125,6 +170,13 @@ const environmentSchema = z
         code: "custom",
         path: [environment.MQTT_USER ? "MQTT_PASSWORD" : "MQTT_USER"],
         message: "must be configured together with the other MQTT credential"
+      });
+    }
+    if (environment.NODE_ENV === "production" && environment.HARDWARE_API_ENABLED) {
+      context.addIssue({
+        code: "custom",
+        path: ["HARDWARE_API_ENABLED"],
+        message: "must remain disabled until authenticated hardware pairing is implemented"
       });
     }
   });

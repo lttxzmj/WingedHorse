@@ -131,13 +131,12 @@ export async function createResultShareCard(
   context.fillStyle = "#75685C";
   context.textAlign = "left";
   context.font = '750 27px -apple-system, "PingFang SC", sans-serif';
-  context.fillText("来来的飞升报告", 74, 139);
+  context.fillText("我的牛马类型报告", 74, 139);
 
   context.textAlign = "left";
   context.fillStyle = "#3B2E24";
-  // Type name is the share-card headline; 来来 is only the companion framing above.
-  const typeTitleSize =
-    profile.name.length >= 6 ? 58 : profile.name.length >= 5 ? 70 : 82;
+  // Type name is the share-card headline; the card describes the user's result.
+  const typeTitleSize = profile.name.length >= 6 ? 58 : profile.name.length >= 5 ? 70 : 82;
   context.font = `800 ${typeTitleSize}px -apple-system, "PingFang SC", sans-serif`;
   context.fillText(profile.name, 74, 266);
   context.fillStyle = profile.accent;
@@ -172,7 +171,7 @@ export async function createResultShareCard(
   context.fillStyle = "#8E6A12";
   context.textAlign = "left";
   context.font = '750 25px -apple-system, "PingFang SC", sans-serif';
-  context.fillText("今日飞升提示", 116, 490);
+  context.fillText("今日状态提示", 116, 490);
   context.fillStyle = "#3B2E24";
   context.font = '800 49px -apple-system, "PingFang SC", sans-serif';
   const storyLines = wrapText(context, story.headline, 825, 2);
@@ -184,7 +183,14 @@ export async function createResultShareCard(
 
   const scores = result.normalizedScores;
   drawMetric(context, 72, 838, labelByDimension.energy, Math.round(scores.energy), profile.accent);
-  drawMetric(context, 546, 838, labelByDimension.direction, Math.round(scores.direction), profile.accent);
+  drawMetric(
+    context,
+    546,
+    838,
+    labelByDimension.direction,
+    Math.round(scores.direction),
+    profile.accent
+  );
   drawMetric(context, 72, 990, labelByDimension.engine, Math.round(scores.engine), profile.accent);
   drawMetric(context, 546, 990, labelByDimension.chaos, Math.round(scores.chaos), profile.accent);
 
@@ -195,7 +201,7 @@ export async function createResultShareCard(
   taglineLines.forEach((line, index) => context.fillText(line, 540, 1218 + index * 42));
   context.fillStyle = "#8B7A6C";
   context.font = '650 25px -apple-system, "PingFang SC", sans-serif';
-  context.fillText("你的牛马是哪一款？", 540, 1338);
+  context.fillText("测测你的牛马类型", 540, 1338);
 
   return new Promise((resolve, reject) =>
     canvas.toBlob(

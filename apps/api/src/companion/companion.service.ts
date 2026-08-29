@@ -186,7 +186,8 @@ export class CompanionService {
 
   async *replyStream(
     request: CompanionMessageRequest,
-    deviceToken: string
+    deviceToken: string,
+    disconnectSignal?: AbortSignal
   ): AsyncGenerator<CompanionStreamEvent> {
     const level = this.safety.classify(request.message);
     if (level === "urgent") {
@@ -225,6 +226,9 @@ export class CompanionService {
     }
 
     const controller = new AbortController();
+    const abortOnDisconnect = () => controller.abort();
+    if (disconnectSignal?.aborted) controller.abort();
+    else disconnectSignal?.addEventListener("abort", abortOnDisconnect, { once: true });
     const timeoutMs = Number(process.env.OPENROUTER_TIMEOUT_MS ?? 15000);
     const timeout = setTimeout(
       () => controller.abort(),
@@ -257,6 +261,7 @@ export class CompanionService {
       yield { type: "replace", content: fallback.reply };
       yield { type: "done", response: fallback };
     } finally {
+      disconnectSignal?.removeEventListener("abort", abortOnDisconnect);
       await modelAccess.release();
       controller.abort();
       clearTimeout(timeout);
@@ -376,12 +381,21 @@ export class CompanionService {
     level: "normal" | "concern"
   ): CompanionMessageResponse {
     const voice = voiceFor(resolveTypeId(request));
-    const reply =
-      level === "concern"
-        ? "我听见你已经撑很久了。先不要求马上好起来。若可以，联系一个你信任的人，说一句「我今天有点难熬，能陪我说两句吗」。我只是 AI，但可以继续听你把此刻最难的那一小块说清楚。"
-        : /累|疲惫|撑不住|没电/u.test(request.message)
-          ? voice.ventLine
-          : voice.listenLine;
+    let reply: string;
+    if (level === "concern") {
+      reply =
+        "我听见你已经撑很久了。先不要求马上好起来。若可以，联系一个你信任的人，说一句「我今天有点难熬，能陪我说两句吗」。我只是 AI，但可以继续听你把此刻最难的那一小块说清楚。";
+    } else {
+      const cleanMessage = request.message.trim().replace(/^["“'「]|["”'」]$/g, "");
+      const isShortSnippet = cleanMessage.length > 0 && cleanMessage.length <= 16;
+      if (isShortSnippet && !/累|疲惫|撑不住|没电/u.test(cleanMessage)) {
+        reply = `收到你的「${cleanMessage}」啦。${voice.listenLine}`;
+      } else if (/累|疲惫|撑不住|没电/u.test(cleanMessage)) {
+        reply = voice.ventLine;
+      } else {
+        reply = voice.listenLine;
+      }
+    }
     return {
       reply,
       source: "local-fallback",

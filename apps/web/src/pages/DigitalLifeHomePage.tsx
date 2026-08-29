@@ -90,7 +90,7 @@ export function DigitalLifeHomePage() {
         <section className="empty-state">
           <h1>先认识你的飞马</h1>
           <p>做完测评，它才知道该用什么方式接住你。</p>
-          <Button onClick={() => void navigate({ to: "/assessment" })}>开始测评</Button>
+          <Button onClick={() => void navigate({ to: "/assessment" })}>开始测测</Button>
         </section>
       </main>
     );
@@ -131,7 +131,9 @@ export function DigitalLifeHomePage() {
         <nav className="digital-life-header__toolbar" aria-label="数字生命当前状态与常用入口">
           <div className="prairie-status prairie-status--now" aria-label="飞马当前状态">
             <AppIcon icon={CloudSun} size={15} />
-            <span>{periodLabel} · {growth.relationshipLabel}</span>
+            <span>
+              {periodLabel} · {growth.relationshipLabel}
+            </span>
           </div>
           <div className="home-tool-group">
             <Link
@@ -209,11 +211,7 @@ export function DigitalLifeHomePage() {
             <AppIcon icon={Hand} size={20} />
             <span>家园养成</span>
           </button>
-          <Link
-            className="digital-life-actions__journal"
-            to="/life"
-            aria-label="打开共同生活簿"
-          >
+          <Link className="digital-life-actions__journal" to="/life" aria-label="打开共同生活簿">
             <AppIcon icon={BookHeart} size={20} />
             <span>生活簿</span>
           </Link>
@@ -277,8 +275,18 @@ export function DigitalLifeHomePage() {
             <div className="cultivation-vitals" aria-label="飞马当前状态">
               {careMeters.map(({ id, label, value, icon }) => (
                 <div className="cultivation-vitals__item" key={id}>
-                  <span><AppIcon icon={icon} size={17} />{label}</span>
-                  <div className="cultivation-vitals__meter" role="progressbar" aria-label={`${label}状态`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}>
+                  <span>
+                    <AppIcon icon={icon} size={17} />
+                    {label}
+                  </span>
+                  <div
+                    className="cultivation-vitals__meter"
+                    role="progressbar"
+                    aria-label={`${label}状态`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={value}
+                  >
                     <i style={{ width: `${value}%` }} />
                   </div>
                   <strong>{value}</strong>
@@ -289,8 +297,7 @@ export function DigitalLifeHomePage() {
               <button
                 disabled={comfortedToday}
                 onClick={() => {
-                  if (comfortPet())
-                    showReaction("收到摸摸了。今天不用表现得很厉害。同行值 +1");
+                  if (comfortPet()) showReaction("收到摸摸了。今天不用表现得很厉害。同行值 +1");
                   setInteractionOpen(false);
                 }}
               >

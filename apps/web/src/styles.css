@@ -8,6 +8,19 @@
 * {
   box-sizing: border-box;
 }
+
+.route-announcer {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 html {
   min-width: 320px;
   background: var(--color-surface-50);
@@ -44,6 +57,21 @@ a:focus:not(:focus-visible),
 summary:focus:not(:focus-visible),
 [role="button"]:focus:not(:focus-visible) {
   outline: none;
+}
+
+/*
+  Route/question headings are focused programmatically for screen readers
+  (tabIndex=-1). Suppress the default system-blue outline on that focus;
+  keyboard users still get the warm brand ring via :focus-visible.
+*/
+main h1[tabindex="-1"]:focus,
+[tabindex="-1"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+main h1[tabindex="-1"]:focus-visible {
+  outline: 3px solid var(--color-focus-600);
+  outline-offset: 3px;
 }
 .quiz-landing {
   min-height: 100vh;
@@ -214,7 +242,9 @@ h1 {
   width: min(100%, 32rem);
   min-height: 100dvh;
   margin: 0 auto;
-  padding: max(var(--space-4), env(safe-area-inset-top)) max(var(--space-4), env(safe-area-inset-right)) max(var(--space-4), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
+  padding: max(var(--space-4), env(safe-area-inset-top))
+    max(var(--space-4), env(safe-area-inset-right)) max(var(--space-4), env(safe-area-inset-bottom))
+    max(var(--space-4), env(safe-area-inset-left));
   overflow-x: hidden;
   background:
     radial-gradient(circle at 8% 18%, rgb(255 208 87 / 12%) 0 0.18rem, transparent 0.22rem),
@@ -566,7 +596,9 @@ h1 {
 .result-page {
   width: min(100%, 34rem);
   margin: 0 auto;
-  padding: max(var(--space-4), env(safe-area-inset-top)) max(var(--space-4), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
+  padding: max(var(--space-4), env(safe-area-inset-top))
+    max(var(--space-4), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom))
+    max(var(--space-4), env(safe-area-inset-left));
 }
 
 .home-page {
@@ -890,17 +922,35 @@ h1 {
 }
 
 .result-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin-top: var(--space-6);
 }
 
-@media (max-width: 480px) {
-  .result-actions {
-    grid-template-columns: 1fr;
-  }
+.result-actions__secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 30rem);
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.result-actions__button.ui-button {
+  min-width: 0;
+  min-height: 3rem;
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-small);
+}
+
+.result-actions__restart.ui-button {
+  min-width: 0;
+  min-height: 3rem;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-ink-500);
+  font-size: var(--font-small);
 }
 
 /*
@@ -910,7 +960,6 @@ h1 {
 .result-moyu-cta {
   position: relative;
   display: grid;
-  grid-column: 1 / -1;
   place-items: center;
   width: min(11.75rem, 52vw);
   aspect-ratio: 1;
@@ -2022,7 +2071,8 @@ h1 {
 }
 
 .settings-card > a,
-.settings-links a {
+.settings-links a,
+.settings-links button {
   color: var(--color-brand-700);
   font-weight: 800;
 }
@@ -2032,6 +2082,27 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+}
+
+.settings-links a,
+.settings-links button {
+  min-height: 3rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.settings-links button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.settings-links button:focus-visible {
+  outline: 3px solid var(--color-focus-600);
+  outline-offset: 2px;
 }
 
 .settings-card--danger {
@@ -2696,7 +2767,7 @@ h1 {
   color: var(--color-ink-700);
 }
 
-.game-pause {
+.game-pause:not(.game-pause) {
   position: absolute;
   z-index: 20;
   inset: 4.8rem 0 0;
@@ -2709,15 +2780,15 @@ h1 {
   backdrop-filter: blur(8px);
 }
 
-.game-pause strong {
+.game-pause:not(.game-pause) strong {
   font-size: var(--font-h1);
 }
 
-.game-pause p {
+.game-pause:not(.game-pause) p {
   color: var(--color-ink-700);
 }
 
-.game-pause a {
+.game-pause:not(.game-pause) a {
   min-height: 2.75rem;
   margin-top: var(--space-3);
   color: var(--color-ink-700);
@@ -2879,10 +2950,6 @@ h1 {
     /* Give the type title more horizontal room next to the character. */
     grid-template-columns: minmax(0, 1.4fr) minmax(6.4rem, 0.72fr);
     gap: var(--space-2);
-  }
-
-  .result-actions {
-    display: grid;
   }
 
   .lawn-stage__bubble:not(.digital-life-stage__speech) {

@@ -1,18 +1,23 @@
 import type { DeviceStatus } from "@wingedhorse/contracts";
+import { getResultProfile } from "@wingedhorse/domain";
 import { Button, Card } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
+import { trackEvent } from "../lib/analytics";
 import { createUserDataExport, downloadUserDataExport } from "../lib/dataExport";
-import { fetchDeviceStatus } from "../lib/devices";
+import { fetchDeviceStatus, hardwareApiEnabled } from "../lib/devices";
 import { deleteRemoteLifeData, hasVisitorToken } from "../lib/lifeApi";
 import { clearPhotoMoments } from "../lib/photoMap";
 import { useAppStore } from "../store/useAppStore";
 
 export function SettingsPage() {
   const navigate = useNavigate();
+  const result = useAppStore((state) => state.result);
+  const answered = useAppStore((state) => Object.keys(state.answers).length);
+  const resetAssessment = useAppStore((state) => state.resetAssessment);
   const resetAll = useAppStore((state) => state.resetAll);
   const hardwareLink = useAppStore((state) => state.hardwareLink);
   const setHardwareLink = useAppStore((state) => state.setHardwareLink);
@@ -56,6 +61,44 @@ export function SettingsPage() {
       </header>
       <Card className="settings-card">
         <div>
+          <h2>娱乐问卷</h2>
+          <p>
+            {result
+              ? `你现在是「${getResultProfile(result.typeId).name}」。类型只会在你主动重测时改变，结果只作轻松参考。`
+              : answered > 0
+                ? "你还有未完成的问卷。结果只作轻松参考，不是心理或职业建议。"
+                : "17 题，大约 90 秒。结果只作轻松参考，不是心理或职业建议。"}
+          </p>
+        </div>
+        <div className="settings-links">
+          {result ? (
+            <>
+              <Link to="/result">查看结果</Link>
+              <button
+                type="button"
+                onClick={() => {
+                  resetAssessment();
+                  trackEvent("assessment_start");
+                  void navigate({ to: "/assessment" });
+                }}
+              >
+                重新测一次
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/assessment"
+              onClick={() => {
+                trackEvent("assessment_start");
+              }}
+            >
+              {answered > 0 ? "继续测测" : "开始测测"}
+            </Link>
+          )}
+        </div>
+      </Card>
+      <Card className="settings-card">
+        <div>
           <h2>密友</h2>
           <p>最多 6 人，只彼此可见。</p>
         </div>
@@ -65,8 +108,8 @@ export function SettingsPage() {
         <div>
           <h2>私密生活簿备份</h2>
           <p>
-            默认只保存在当前浏览器。开启后，结构化生活事件会用随机访客凭证备份到 WingedHorse
-            服务端，不会自动发送给 OpenRouter。
+            默认只留在这台浏览器。打开后，生活事件会用随机访客凭证备份到服务端，不会自动发给
+            OpenRouter。
           </p>
         </div>
         <label className="settings-toggle">
@@ -82,8 +125,8 @@ export function SettingsPage() {
         <div>
           <h2>导出我的数据</h2>
           <p>
-            下载当前设备上的问卷、测评结果、背包、养成状态、生活簿、共同记忆和设置。文件不包含匿名凭证、内部游戏会话
-            ID 或原始媒体。
+            下载这台设备上的问卷、结果、背包、养成、生活簿、记忆和设置。不含匿名凭证、内部会话 ID
+            或原始媒体。
           </p>
         </div>
         <Button
@@ -101,9 +144,8 @@ export function SettingsPage() {
         <div>
           <h2>云端游戏与背包</h2>
           <p>
-            待开放。启用后会把物品种类与数量、飞马四项养成值、游戏场次、得分和匿名游戏会话发送到
-            WingedHorse 服务端，用于防止重复发奖并在设备间保存背包；不会发送给
-            OpenRouter。需要你明确同意后才会接通。
+            待开放。接通后只会把物品、四项养成值、场次、得分和匿名会话发到服务端，用来防止重复发奖并保存背包；不会发给
+            OpenRouter。需要你单独同意。
           </p>
         </div>
         <label className="settings-toggle">
@@ -114,7 +156,9 @@ export function SettingsPage() {
       <Card className="settings-card">
         <div>
           <h2>AI 与长期记忆</h2>
-          <p>AI 飞马会明确标识身份。聊天记录不持久保存；只有你主动点“记住”的句子留在当前浏览器。远处模型按本机每日次数限制，用完后仍可本地陪伴，不需要登录。</p>
+          <p>
+            来来是 AI，不是真人。聊天不长期保存；只有你点「记住」的句子留在这台浏览器。远处模型有每日次数，用完后仍可本地陪伴。
+          </p>
         </div>
         <div className="settings-links">
           <Link to="/memories">管理记忆</Link>
@@ -124,9 +168,7 @@ export function SettingsPage() {
       <Card className="settings-card">
         <div>
           <h2>摄像头与状态线索</h2>
-          <p>
-            只在你主动授权的单次体验中使用。原始帧不上传、不落盘；关闭页面或点击停止会立即停止轨道。
-          </p>
+          <p>只在你主动打开的单次体验里使用。画面不上传、不保存；离开或点停止即结束。</p>
         </div>
         <Link to="/signals">
           管理与体验 <AppIcon icon={ArrowRight} size={16} />
@@ -142,12 +184,13 @@ export function SettingsPage() {
         <label className="settings-toggle">
           <input
             type="checkbox"
-            checked={hardwareLink}
+            checked={hardwareApiEnabled && hardwareLink}
+            disabled={!hardwareApiEnabled}
             onChange={(event) => setHardwareLink(event.target.checked)}
           />
-          允许同步心情给硬件
+          {hardwareApiEnabled ? "允许同步心情给硬件" : "生产环境暂未开放硬件配对"}
         </label>
-        {hardwareLink ? (
+        {hardwareApiEnabled && hardwareLink ? (
           <div className="settings-input">
             <label htmlFor="device-id">设备 ID</label>
             <input
@@ -175,7 +218,7 @@ export function SettingsPage() {
       <Card className="settings-card">
         <div>
           <h2>协议与隐私</h2>
-          <p>了解娱乐测评、第三方 AI、敏感信息和用户权利的边界。</p>
+          <p>娱乐问卷、第三方 AI、敏感信息和你的权利。</p>
         </div>
         <div className="settings-links">
           <Link to="/privacy">隐私说明</Link>
@@ -186,8 +229,7 @@ export function SettingsPage() {
         <div>
           <h2>清除本机数据</h2>
           <p>
-            删除问卷草稿、结果、背包、养成状态、手动心情和本机足迹照片；如存在任何 WingedHorse
-            服务端副本，也会先删除生活簿、游戏会话和玩家状态。本操作无法撤销。
+            删除问卷、结果、背包、养成、记忆、手动心情和本机足迹。若服务端有生活簿或玩家状态副本，会先删掉。此操作无法撤销。
           </p>
         </div>
         {confirming ? (

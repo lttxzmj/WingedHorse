@@ -251,7 +251,8 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 - 延续 VibeShot 风格：GitHub Actions 构建镜像，Docker Compose 部署到中国大陆 Linux VPS。
 - Nginx/兼容网关负责 TLS、静态资源、API 反向代理和限流。
 - 数据库不暴露公网端口。
-- 发布采用健康检查和可回滚镜像标签。
+- 发布采用 PostgreSQL/Redis 深度健康检查和可回滚镜像标签；候选失败只启动上一 SHA 的现有镜像，不在低资源主机上二次构建。
+- 服务器构建前强制检查磁盘与 `MemAvailable + SwapFree`；磁盘守护任务使用 `flock` 和硬超时，避免多个 Docker prune 重叠拖垮 daemon。
 - 域名、备案和部署服务商在上线前单独决策，不把厂商 SDK 写入领域层。
 
 ## 13. 架构决策待办
@@ -278,11 +279,12 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
   上行 topic: devices/{deviceId}/telemetry
 ```
 
-- broker 鉴权 + ACL 按用户隔离：服务端用户可 `write devices/#`；设备用户只 `read devices/{id}/effect`、`write devices/{id}/telemetry`（防越权）。
-- 服务端 `MqttProvider` 适配器，未配置 `MQTT_URL` 时优雅降级为 no-op。
+- broker 鉴权 + ACL 按用户隔离：服务端用户只可 `write devices/+/effect` 并读取标准遥测 topic；设备用户只可读写自己的标准 topic。
+- 服务端 `MqttProvider` 适配器仅在显式启用硬件且配置 `MQTT_URL` 时连接；失败会释放客户端并允许后续恢复，进程关闭时主动断开。
+- 正式设备配对与所有权鉴权完成前，生产 `HARDWARE_API_ENABLED` 必须为 `false`，Web 不建立 SSE，API 硬件路由返回稳定的不可用错误。不得用已知设备 ID 或共享默认密码代替配对鉴权。
 - **实时事件通道 (SSE)**：服务端监听设备 `telemetry` 上报，通过 `/api/devices/:deviceId/events` 推送至前端：
   - **超声波人员靠近 / Boss 来袭预警**：检测到有人靠近时，若处于摸鱼/游戏中立即弹出 Boss 预警并支持一键伪装工作表格；若处于日常陪伴则主动打招呼。
-  - **FSR 压力触控**：检测到抚摸/按压时，触发角色治愈与安心反馈。
+  - **FSR 压力触控**：固件上报 `{ interaction: "tap" | "rest_on" | "rest_off" }`，服务端映射为 `hasPress`/`pressure` 后由 `deriveHardwareEvent` 派生 `touch_comfort`；同时兼容旧版 `pressure`/`hasPress` 嵌套字段。`rest_off` 只同步状态不派生触摸事件。
 
 ### 心情 → 灯效（领域纯函数，packages/domain/src/signals/lighting.ts）
 

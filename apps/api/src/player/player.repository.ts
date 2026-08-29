@@ -7,7 +7,8 @@ import {
   type HorseTypeId,
   type ItemId
 } from "@wingedhorse/domain";
-import { Pool, type PoolClient } from "pg";
+import type { PoolClient } from "pg";
+import { createPostgresPool } from "../database/postgres.js";
 
 interface StoredSession {
   id: string;
@@ -29,16 +30,14 @@ export interface StartResult {
   startedAt: string;
 }
 
-function initialPlayer(bootstrap?: Omit<PlayerStateResponse, "revision">): PlayerStateResponse {
-  return bootstrap
-    ? { ...bootstrap, revision: 0 }
-    : {
-        inventory: {},
-        vitals: INITIAL_PET_VITALS,
-        gamesPlayed: 0,
-        relationshipXp: 0,
-        revision: 0
-      };
+function initialPlayer(): PlayerStateResponse {
+  return {
+    inventory: {},
+    vitals: INITIAL_PET_VITALS,
+    gamesPlayed: 0,
+    relationshipXp: 0,
+    revision: 0
+  };
 }
 
 function rowToPlayer(row: Record<string, unknown>): PlayerStateResponse {
@@ -53,9 +52,7 @@ function rowToPlayer(row: Record<string, unknown>): PlayerStateResponse {
 
 @Injectable()
 export class PlayerRepository implements OnModuleDestroy {
-  private readonly pool = process.env.DATABASE_URL
-    ? new Pool({ connectionString: process.env.DATABASE_URL, max: 8 })
-    : null;
+  private readonly pool = createPostgresPool(4);
   private readonly players = new Map<string, PlayerStateResponse>();
   private readonly sessions = new Map<string, Map<string, StoredSession>>();
 
@@ -72,11 +69,10 @@ export class PlayerRepository implements OnModuleDestroy {
     actorHash: string,
     sessionId: string,
     typeId: HorseTypeId,
-    startedAt: string,
-    bootstrap?: Omit<PlayerStateResponse, "revision">
+    startedAt: string
   ): Promise<StartResult> {
     if (!this.pool) {
-      const player = this.players.get(actorHash) ?? initialPlayer(bootstrap);
+      const player = this.players.get(actorHash) ?? initialPlayer();
       this.players.set(actorHash, player);
       const sessions = this.sessions.get(actorHash) ?? new Map<string, StoredSession>();
       const active = [...sessions.values()].find(
@@ -97,7 +93,7 @@ export class PlayerRepository implements OnModuleDestroy {
       this.sessions.set(actorHash, sessions);
       return { player, sessionId, startedAt };
     }
-    const player = initialPlayer(bootstrap);
+    const player = initialPlayer();
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");

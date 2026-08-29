@@ -13,7 +13,9 @@ export const ITEM_ICON_ASSETS: Record<ItemId, string> = {
   compass: "/game/item-art/compass.png",
   "mentor-card": "/game/item-art/mentor-card.png",
   "sponsored-tent-skin": "/game/item-icons/tent-tree.svg",
-  "sponsored-coffee-coupon": "/game/item-icons/ticket.svg"
+  "sponsored-coffee-coupon": "/game/item-icons/ticket.svg",
+  "sponsored-liberlive-aqua": "/game/item-icons/ticket.svg",
+  "sponsored-liberlive-sun": "/game/item-icons/ticket.svg"
 };
 
 /**
@@ -22,5 +24,7 @@ export const ITEM_ICON_ASSETS: Record<ItemId, string> = {
  */
 export const ITEM_BRAND_IMAGE_ASSETS: Partial<Record<ItemId, string>> = {
   "sponsored-tent-skin": "/brands/bluebox/logo.webp",
-  "sponsored-coffee-coupon": "/brands/bluebox/logo.webp"
+  "sponsored-coffee-coupon": "/brands/bluebox/logo.webp",
+  "sponsored-liberlive-aqua": "/brands/liberlive/logo.webp",
+  "sponsored-liberlive-sun": "/brands/liberlive/logo.webp"
 };

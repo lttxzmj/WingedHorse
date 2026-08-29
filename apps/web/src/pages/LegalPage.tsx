@@ -48,7 +48,7 @@ const CONTENT: Record<
   },
   ai: {
     eyebrow: "AI 生成内容说明",
-    title: "飞马是 AI，不是真人",
+    title: "来来是 AI，不是真人",
     sections: [
       {
         title: "它能做什么",

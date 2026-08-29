@@ -235,6 +235,10 @@
   box-shadow: 0 6px 20px rgb(90 60 20 / 4%);
 }
 
+.inventory-overview {
+  margin-bottom: 1rem;
+}
+
 .vital-item {
   display: flex;
   flex-direction: column;
@@ -900,8 +904,11 @@
 }
 
 .inventory-filters button {
-  min-height: 2.45rem;
+  display: inline-flex;
+  min-height: 2.75rem;
   padding: 0 0.85rem;
+  align-items: center;
+  gap: 0.35rem;
   flex: 0 0 auto;
   border: 1px solid rgb(90 69 50 / 12%);
   border-radius: 999px;
@@ -911,10 +918,27 @@
   font-weight: 680;
 }
 
+.inventory-filters button small {
+  display: grid;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding-inline: 0.25rem;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--color-ink-700);
+  background: rgb(90 69 50 / 8%);
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
 .inventory-filters button.is-active {
   border-color: rgb(201 149 25 / 35%);
   color: var(--color-ink-900);
   background: var(--color-brand-200);
+}
+
+.inventory-filters button.is-active small {
+  background: rgb(255 255 255 / 58%);
 }
 
 .inventory-filter-empty {

@@ -141,7 +141,9 @@ export class CompanionAccessService {
         return { granted: true, release: result.release, remaining: quota.remaining };
       }
       const remaining =
-        result.status === "device-budget" ? 0 : (await this.getDeviceQuota(deviceToken, now)).remaining;
+        result.status === "device-budget"
+          ? 0
+          : (await this.getDeviceQuota(deviceToken, now)).remaining;
       return {
         granted: false,
         reason: result.status === "unavailable" ? "capacity-unavailable" : result.status,
@@ -169,7 +171,11 @@ export class CompanionAccessService {
     this.deviceBudgets.set(lockKey, lock);
 
     if (lock.active >= 1)
-      return { granted: false, reason: "session-busy", remaining: Math.max(0, deviceLimit - device.count) };
+      return {
+        granted: false,
+        reason: "session-busy",
+        remaining: Math.max(0, deviceLimit - device.count)
+      };
     if (device.count >= deviceLimit)
       return { granted: false, reason: "device-budget", remaining: 0 };
 
