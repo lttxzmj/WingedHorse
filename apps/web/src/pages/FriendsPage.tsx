@@ -184,26 +184,6 @@ export function FriendsPage() {
         </Button>
       </section>
 
-      <section className="friends-page__me" aria-label="我的圈内昵称">
-        <label>
-          <span>我的圈内昵称</span>
-          <input
-            value={nameDraft}
-            onChange={(event) => setNameDraft(event.currentTarget.value)}
-            maxLength={24}
-            placeholder="密友看到的名字"
-          />
-        </label>
-        <Button
-          variant="tertiary"
-          loading={savingName}
-          disabled={!nameDraft.trim() || nameDraft.trim() === friendDisplayName}
-          onClick={saveDisplayName}
-        >
-          保存
-        </Button>
-      </section>
-
       {pendingJoin ? (
         <section className="friends-page__invite" aria-label="待处理邀请">
           <div>
