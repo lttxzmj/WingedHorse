@@ -135,8 +135,10 @@ export async function createResultShareCard(
 
   context.textAlign = "left";
   context.fillStyle = "#3B2E24";
-  context.font = '800 82px -apple-system, "PingFang SC", sans-serif';
-  context.fillText("来来", 74, 266);
+  // Type name is the share-card headline; 来来 is only the companion framing above.
+  const typeTitleSize = profile.name.length >= 6 ? 64 : 82;
+  context.font = `800 ${typeTitleSize}px -apple-system, "PingFang SC", sans-serif`;
+  context.fillText(profile.name, 74, 266);
   context.fillStyle = profile.accent;
   roundedRect(context, 74, 294, 322, 58, 29);
   context.fillStyle = "#5C470F";

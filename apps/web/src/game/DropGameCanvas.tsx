@@ -263,10 +263,20 @@ export function DropGameCanvas({
             });
             const drop = forceSponsored ? sponsoredDropDefinition() : selectDrop(this.random);
             const isFirstDrop = this.spawnedCount === 0;
-            const x = isFirstDrop ? this.catcher.x : 72 + this.random() * (390 - 144);
-            this.spawnedCount += 1;
             const item = ITEM_CATALOG[drop.itemId];
             const isSponsored = Boolean(item.sponsored);
+            // Sponsored boxes offset from the catcher so the slow showcase is readable
+            // before the dive; ordinary first drops still land on the player for onboarding.
+            const x = isSponsored
+              ? Phaser.Math.Clamp(
+                  this.catcher.x + (this.random() > 0.5 ? 1 : -1) * (52 + this.random() * 64),
+                  72,
+                  318
+                )
+              : isFirstDrop
+                ? this.catcher.x
+                : 72 + this.random() * (390 - 144);
+            this.spawnedCount += 1;
             const brandTexture = `item-brand-${drop.itemId}`;
             const iconTexture =
               isSponsored && this.textures.exists(brandTexture)

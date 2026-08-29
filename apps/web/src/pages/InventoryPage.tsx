@@ -11,7 +11,7 @@ import {
 } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
-import { BatteryCharging, Compass, Flame, PackageOpen, Sparkles, Waves, X } from "lucide-react";
+import { PackageOpen, Sparkles, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
@@ -142,51 +142,54 @@ export function InventoryPage() {
       </header>
       <div className="inventory-overview">
         <section className="inventory-companion-card" aria-labelledby="inventory-companion-title">
-          {result && profile ? (
-            <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />
-          ) : null}
-          <div>
-            <p className="eyebrow">
-              {growth.relationshipLabel} · {growth.name}阶段
-            </p>
-            <h2 id="inventory-companion-title">先看看它今天需要什么</h2>
-            <p>{growth.description}</p>
+          <div className="inventory-companion-card__visual">
+            {result && profile ? (
+              <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />
+            ) : null}
+          </div>
+          <div className="inventory-companion-card__content">
+            <div className="inventory-companion-card__meta">
+              <span className="inventory-companion-card__tag">
+                <i aria-hidden="true" />
+                {growth.relationshipLabel}
+              </span>
+              <span className="inventory-companion-card__stage">
+                {growth.name}阶段
+              </span>
+            </div>
+            <h2 id="inventory-companion-title">
+              {profile ? `${profile.name}正在整理补给` : "先看看它今天需要什么"}
+            </h2>
+            <p className="inventory-companion-card__desc">{growth.description}</p>
           </div>
         </section>
         <section className="vitals-card vitals-card--human" aria-label="来来今天的状态">
           {[
-            { key: "energy", label: "喘息余量", icon: BatteryCharging },
-            { key: "engine", label: "行动手感", icon: Flame },
-            { key: "chaos", label: "心里噪音", icon: Waves },
-            { key: "direction", label: "方向感", icon: Compass }
-          ].map((item) => {
-            const value = vitals[item.key as keyof typeof vitals] ?? 0;
-            const stateLabel = vitalState(item.key as keyof typeof EFFECT_LABELS, value);
-            return (
-              <div className="vitals-tile" key={item.key} data-vital={item.key}>
-                <div className="vitals-tile__header">
-                  <span className="vitals-tile__label">
-                    <AppIcon icon={item.icon} size={14} />
-                    <span>{item.label}</span>
-                  </span>
-                  <b className="vitals-tile__value">{value}</b>
-                </div>
-                <div
-                  className="mini-meter"
-                  role="progressbar"
-                  aria-valuenow={value}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <i
-                    className={item.key === "chaos" ? "is-inverse" : ""}
-                    style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
-                  />
-                </div>
-                <span className="vitals-tile__status">{stateLabel}</span>
+            { key: "energy", label: "喘息余量", value: vitals.energy },
+            { key: "engine", label: "行动手感", value: vitals.engine },
+            { key: "chaos", label: "心里噪音", value: vitals.chaos },
+            { key: "direction", label: "方向感", value: vitals.direction }
+          ].map((meter) => (
+            <div className="vital-item" key={meter.key}>
+              <div className="vital-item__header">
+                <span className="vital-item__label">
+                  {meter.label}
+                  <small>{vitalState(meter.key as keyof typeof EFFECT_LABELS, meter.value)}</small>
+                </span>
+                <strong className="vital-item__value">{meter.value}</strong>
               </div>
-            );
-          })}
+              <div
+                className="vital-item__track"
+                role="meter"
+                aria-label={meter.label}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={meter.value}
+              >
+                <span style={{ width: `${Math.min(Math.max(meter.value, 0), 100)}%` }} />
+              </div>
+            </div>
+          ))}
         </section>
       </div>
       {notice && !useFeedback ? (
