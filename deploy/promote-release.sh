@@ -12,7 +12,9 @@ rollback() {
   if [[ -n "$previous_release" && -d "$previous_release/deploy" ]]; then
     echo "Candidate failed; restoring previous release ${previous_release##*/}"
     cd "$previous_release/deploy"
-    docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d --build
+    docker compose --env-file ../.env.production -f docker-compose.prod.yml build api
+    docker compose --env-file ../.env.production -f docker-compose.prod.yml build web
+    docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d
     curl --fail --retry 12 --retry-delay 5 http://127.0.0.1:8080/api/health
   fi
   exit "$exit_code"
@@ -61,7 +63,11 @@ for migration in migrations/*.sql; do
     psql -v ON_ERROR_STOP=1 -U "$postgres_user" -d "$postgres_database" < "$migration"
 done
 
-docker compose --env-file "$env_file" -f "$compose_file" --profile hardware up -d --build
+# 2C2G 宿主同时并行构建 web/api 两个镜像会触发 OOM，拖垮包括 sshd 在内的整机进程；
+# 必须逐个串行构建，构建完成后再统一启动。
+docker compose --env-file "$env_file" -f "$compose_file" build api
+docker compose --env-file "$env_file" -f "$compose_file" build web
+docker compose --env-file "$env_file" -f "$compose_file" --profile hardware up -d
 docker compose --env-file "$env_file" -f "$compose_file" --profile hardware ps
 curl --fail --retry 12 --retry-delay 5 http://127.0.0.1:8080/api/health
 ln -sfn "$release_dir" /opt/wingedhorse/current.next

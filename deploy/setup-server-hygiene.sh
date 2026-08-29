@@ -79,5 +79,24 @@ if ! crontab -l 2>/dev/null | grep -q "disk-watchdog.sh"; then
   (crontab -l 2>/dev/null || true; echo "0 */2 * * * /opt/wingedhorse/scripts/disk-watchdog.sh >/dev/null 2>&1") | crontab -
 fi
 
-echo "=== 5. 治理完成，当前磁盘状态： ==="
+echo "=== 5. 配置交换空间（防止构建期 OOM 拖垮 sshd 与全部容器） ==="
+if ! swapon --show | grep -q .; then
+  if [[ ! -f /swapfile ]]; then
+    fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+    chmod 600 /swapfile
+    mkswap /swapfile
+  fi
+  swapon /swapfile
+  if ! grep -q '^/swapfile' /etc/fstab; then
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  fi
+fi
+# 低 swappiness：平时不主动换页，只在内存真正紧张时兼作缓冲
+sysctl -w vm.swappiness=10 || true
+if ! grep -q '^vm.swappiness' /etc/sysctl.conf 2>/dev/null; then
+  echo 'vm.swappiness=10' >> /etc/sysctl.conf
+fi
+swapon --show || true
+
+echo "=== 6. 治理完成，当前磁盘状态： ==="
 df -h /

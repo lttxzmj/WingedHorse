@@ -2,6 +2,9 @@
 
 FROM node:24-alpine AS build
 
+# 生产构建在 2C2G VPS 上执行；限制 Node 堆上限，内存不足时快速失败而不是把宿主拖进 OOM 抖动
+ENV NODE_OPTIONS=--max-old-space-size=1024
+
 ARG VITE_FEATURE_CAMERA_SIGNALS=false
 ARG VITE_FEATURE_RPPG=false
 ENV VITE_FEATURE_CAMERA_SIGNALS=$VITE_FEATURE_CAMERA_SIGNALS

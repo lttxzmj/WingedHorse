@@ -68,6 +68,8 @@ Agent 的应用层保护变量必须使用正整数：`COMPANION_IP_RATE_LIMIT_P
 
 生产 Compose 不公开 PostgreSQL 端口；Web、API 以只读根文件系统、最小 capability、资源限制和日志轮转运行。
 
+构建资源约束：宿主只有 2C2G 且与 VibeShot 共存，`promote-release.sh` 必须先 `build api`、再 `build web` 串行构建，最后 `up -d` 启动；禁止直接 `up -d --build`（BuildKit 会并行构建两镜像，曾导致整机 OOM、sshd 无法响应、全部容器退出）。两个 Dockerfile 的构建阶段均设置 `NODE_OPTIONS=--max-old-space-size=1024`，内存不足时构建快速失败而不是拖垮宿主。`setup-server-hygiene.sh` 会创建 2G swapfile（swappiness=10）作为兜底缓冲，新服务器初始化和故障恢复后都必须执行一次。
+
 镜像说明：`deploy/Dockerfile.api` 使用 `pnpm deploy --prod --legacy` 生成自包含生产依赖，并把两个 workspace 包（domain/contracts）以构建产物目录回填，规避 pnpm 11 `deploy` 命令对 `inject-workspace-packages` 的强制要求。构建步骤已在本地以 `node apps/api/dist/main.js`（`NODE_ENV=production`）验证可启动。
 
 ## 4. GitHub 手动部署
@@ -92,6 +94,18 @@ OpenRouter 密钥和模型策略只在服务器 600 权限的 `manual/.env.produ
 Agent 流式路由由 nginx 单独配置：关闭 `proxy_buffering` 与缓存，读取超时为 25 秒。若上层 CDN 或宿主反向代理仍启用响应缓冲，浏览器会等到整段完成才显示；部署验收需用 `/api/companion/messages/stream` 确认 `application/x-ndjson`、`X-Accel-Buffering: no` 和分段到达。
 
 Web 生产构建会生成 `asset-manifest.json`，Service Worker 按内容版本预缓存首页和页面分片，API 不进入 Cache Storage，Phaser 等超过 500 KB 的大型运行时只在首次使用后缓存。CI 在构建后执行 `pnpm test:e2e:production-sw`，用 Pixel 7 与桌面 Chromium 断网刷新 `/assessment`；发布前不得跳过该项。
+
+### 服务器失去响应的恢复步骤（2026-08-29 故障复盘）
+
+症状：80/443/8080 全部 connection refused（含同机 VibeShot），22 端口 TCP 可建立但 sshd 不返回 banner——整机内存耗尽（无 swap 时构建期 OOM）的典型表现。恢复流程：
+
+1. 腾讯云控制台对 CVM 执行强制重启（VNC 登录通常也会卡死，不必尝试）。
+2. 重启后 SSH 登录，先 `df -h /`、`free -m`、`docker ps -a` 确认现场；查看 `journalctl -k | grep -i oom` 确认根因。
+3. 执行 `deploy/setup-server-hygiene.sh`（现已包含 2G swap 配置）。
+4. 进入 `/opt/wingedhorse/current/deploy`，`docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d`（镜像已存在则无需构建）；确认 `/api/health` 后再检查 VibeShot 栈。
+5. 若需要重新构建，走 `promote-release.sh` 的串行构建路径，不要手动 `up -d --build`。
+
+另注意：GitHub Actions 若因账号扣费失败/用量额度暂停（Billing & plans），CI 与 deploy 会在数秒内直接失败且不产生日志，需先在 GitHub 账号侧恢复付款。
 
 ## 5. 备份与恢复
 
