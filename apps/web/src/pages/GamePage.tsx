@@ -43,6 +43,7 @@ export function GamePage() {
   const [stats, setStats] = useState<GameStats>(INITIAL_STATS);
   const [summary, setSummary] = useState<GameSummary | null>(null);
   const [gameLoadState, setGameLoadState] = useState<GameLoadState>("idle");
+  const [loadProgress, setLoadProgress] = useState(0);
   const [gameError, setGameError] = useState("");
   const [controlDirection, setControlDirection] = useState<-1 | 0 | 1>(0);
   const [catchNotice, setCatchNotice] = useState("");
@@ -115,6 +116,7 @@ export function GamePage() {
     setCatchNotice("");
     setWelfareItem(null);
     setGameLoadState("loading");
+    setLoadProgress(0);
     trackEvent("game_start", { round: gamesPlayed + 1 });
     setCountdownLeaving(false);
     setCountdown(3);
@@ -201,6 +203,7 @@ export function GamePage() {
                 controlDirection={playing ? controlDirection : 0}
                 onStatsChange={setStats}
                 onReady={() => setGameLoadState("ready")}
+                onLoadProgress={setLoadProgress}
                 onError={(message) => {
                   setGameError(message);
                   setPaused(false);
@@ -307,7 +310,10 @@ export function GamePage() {
                 </div>
                 {gameLoadState === "loading" && !countdownLeaving ? (
                   <div className="game-loading" role="status">
-                    <span className="game-loading__pill">正在打开补给雨…</span>
+                    <span className="game-loading__pill">
+                      正在打开补给雨…
+                      {loadProgress > 0 ? ` ${Math.round(loadProgress * 100)}%` : ""}
+                    </span>
                   </div>
                 ) : null}
                 {gameLoadState === "ready" ? (

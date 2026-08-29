@@ -37,6 +37,7 @@ interface DropGameCanvasProps {
   controlDirection: -1 | 0 | 1;
   onStatsChange: (stats: GameStats) => void;
   onReady: () => void;
+  onLoadProgress?: (progress: number) => void;
   onError: (message: string) => void;
   onCatch: (itemId: ItemId, points: number) => void;
   onSponsoredShown?: (itemId: ItemId) => void;
@@ -72,6 +73,7 @@ export function DropGameCanvas({
   controlDirection,
   onStatsChange,
   onReady,
+  onLoadProgress,
   onError,
   onCatch,
   onSponsoredShown,
@@ -84,6 +86,7 @@ export function DropGameCanvas({
   const pausedRef = useRef(paused);
   const controlDirectionRef = useRef(controlDirection);
   const readyRef = useRef(onReady);
+  const loadProgressRef = useRef(onLoadProgress);
   const errorRef = useRef(onError);
   const catchRef = useRef(onCatch);
   const sponsoredShownRef = useRef(onSponsoredShown);
@@ -92,6 +95,7 @@ export function DropGameCanvas({
   pausedRef.current = paused;
   controlDirectionRef.current = controlDirection;
   readyRef.current = onReady;
+  loadProgressRef.current = onLoadProgress;
   errorRef.current = onError;
   catchRef.current = onCatch;
   sponsoredShownRef.current = onSponsoredShown;
@@ -168,6 +172,10 @@ export function DropGameCanvas({
           }
 
           preload() {
+            // 低带宽环境首次拉取资源可能需要十几秒，把进度透出去避免“卡死”观感
+            this.load.on("progress", (value: number) => {
+              loadProgressRef.current?.(value);
+            });
             this.load.image("prairie-background", "/scene/prairie-home-v2.webp");
             this.load.image("player-character", GAME_CHARACTER_ASSETS[characterType]);
             Object.entries(ITEM_ICON_ASSETS).forEach(([itemId, path]) => {
