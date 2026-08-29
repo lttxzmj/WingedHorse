@@ -113,8 +113,18 @@ export function FriendsPage() {
       return;
     }
     setJoining(true);
-    void registerFriendProfile(ensureInviteCode())
+    void registerFriendProfile(ensureInviteCode(), friendDisplayName || undefined)
       .then(() => acceptFriendInvite(pendingJoin))
+      .then(() =>
+        // 加入后立即同步服务端列表，拿到对方的圈内昵称而不是本地占位的“新朋友”
+        listFriends()
+          .then((remote) =>
+            mergeFriends(
+              remote.friends.map((friend) => ({ id: friend.inviteCode, nickname: friend.nickname }))
+            )
+          )
+          .catch(() => undefined)
+      )
       .then(() => {
         setStatus(
           result === "exists"
