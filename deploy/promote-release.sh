@@ -20,6 +20,22 @@ rollback() {
 trap rollback ERR
 
 cd "$release_dir/deploy"
+if [[ -f /opt/wingedhorse/manual/mosquitto/passwd ]]; then
+  cp /opt/wingedhorse/manual/mosquitto/passwd "$release_dir/deploy/mosquitto/passwd"
+elif [[ ! -f "$release_dir/deploy/mosquitto/passwd" ]]; then
+  mqtt_user="$(grep '^MQTT_USER=' "$env_file" | cut -d= -f2- || true)"
+  mqtt_pass="$(grep '^MQTT_PASSWORD=' "$env_file" | cut -d= -f2- || true)"
+  if [[ -n "$mqtt_user" && -n "$mqtt_pass" ]]; then
+    mkdir -p "$release_dir/deploy/mosquitto" /opt/wingedhorse/manual/mosquitto
+    docker run --rm -v "$release_dir/deploy/mosquitto:/tmp/mosq" eclipse-mosquitto:2 \
+      mosquitto_passwd -b -c /tmp/mosq/passwd "$mqtt_user" "$mqtt_pass"
+    docker run --rm -v "$release_dir/deploy/mosquitto:/tmp/mosq" eclipse-mosquitto:2 \
+      mosquitto_passwd -b /tmp/mosq/passwd "lamp-001" "wingedhorse-lamp-001"
+    chmod 644 "$release_dir/deploy/mosquitto/passwd"
+    cp "$release_dir/deploy/mosquitto/passwd" /opt/wingedhorse/manual/mosquitto/passwd
+  fi
+fi
+
 docker compose --env-file "$env_file" -f "$compose_file" config --quiet
 docker compose --env-file "$env_file" -f "$compose_file" up -d postgres redis
 postgres_user="$(grep '^POSTGRES_USER=' "$env_file" | cut -d= -f2-)"
