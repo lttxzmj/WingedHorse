@@ -1,9 +1,13 @@
-import { DEFAULT_SPONSORED_CAMPAIGN, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
+import {
+  DEFAULT_SPONSORED_CAMPAIGN,
+  ITEM_CATALOG,
+  sponsoredProductLabel,
+  type ItemId
+} from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { AppIcon } from "./AppIcon";
-import { ItemIcon } from "./ItemIcon";
 import "./welfare-sheet.css";
 
 interface WelfareSheetProps {
@@ -17,6 +21,8 @@ export function WelfareSheet({ itemId, onClose }: WelfareSheetProps) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [qrFailed, setQrFailed] = useState(false);
+  const productLabel = sponsoredProductLabel(campaign);
+  const disclosure = campaign.welfare.disclosure.trim();
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -55,10 +61,18 @@ export function WelfareSheet({ itemId, onClose }: WelfareSheetProps) {
           <h2 id={titleId}>{campaign.welfare.hint}</h2>
         </header>
         <div className="welfare-sheet__product">
-          <ItemIcon itemId={itemId} size={52} />
+          <img
+            className="welfare-sheet__product-photo"
+            src={campaign.productImage}
+            alt={productLabel}
+            width={120}
+            height={80}
+          />
           <div>
-            <strong>{item.name}</strong>
-            <span>{campaign.welfare.name}</span>
+            <strong>{item.sponsored ? productLabel : item.name}</strong>
+            <span>
+              {campaign.partnerNameEn} {campaign.productCode}
+            </span>
           </div>
         </div>
         <figure className={`welfare-sheet__qr ${qrFailed ? "is-failed" : ""}`.trim()}>
@@ -80,7 +94,7 @@ export function WelfareSheet({ itemId, onClose }: WelfareSheetProps) {
           )}
           <figcaption>{qrFailed ? "稍后再试，或先收着" : "长按识别"}</figcaption>
         </figure>
-        <p className="welfare-sheet__disclosure">{campaign.welfare.disclosure}</p>
+        {disclosure ? <p className="welfare-sheet__disclosure">{disclosure}</p> : null}
         <Button onClick={onClose}>知道了</Button>
       </section>
     </div>

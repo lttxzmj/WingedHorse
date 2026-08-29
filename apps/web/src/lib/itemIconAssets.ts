@@ -17,10 +17,10 @@ export const ITEM_ICON_ASSETS: Record<ItemId, string> = {
 };
 
 /**
- * Brand photography is opt-in presentation data. It stays separate from the
- * generic icon set so an inactive campaign never changes the ordinary drops.
+ * Brand logo marks for drop / list identity. Product photos live on the campaign
+ * config (`productImage`) and are only shown after the user opens welfare.
  */
 export const ITEM_BRAND_IMAGE_ASSETS: Partial<Record<ItemId, string>> = {
   "sponsored-tent-skin": "/brands/bluebox/logo.webp",
-  "sponsored-coffee-coupon": "/brands/bluebox/pillow-n2.webp"
+  "sponsored-coffee-coupon": "/brands/bluebox/logo.webp"
 };

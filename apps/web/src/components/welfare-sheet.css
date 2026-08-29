@@ -59,6 +59,15 @@
   background: var(--color-surface-50);
 }
 
+.welfare-sheet__product-photo {
+  display: block;
+  width: 5.5rem;
+  height: 3.6rem;
+  object-fit: contain;
+  background: #fff;
+  border-radius: var(--radius-sm);
+}
+
 .welfare-sheet__product strong,
 .welfare-sheet__product span {
   display: block;

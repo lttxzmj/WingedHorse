@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createSeededRandom } from "./drop-table.js";
+import { ITEM_CATALOG } from "./items.js";
 import {
   DEFAULT_SPONSORED_CAMPAIGN,
   shouldSpawnSponsoredDrop,
-  sponsoredDropDefinition
+  sponsoredDropDefinition,
+  sponsoredProductLabel
 } from "./sponsored-campaign.js";
 
 describe("sponsored drop policy", () => {
@@ -84,10 +86,20 @@ describe("sponsored drop policy", () => {
     expect(random()).toBeGreaterThanOrEqual(0);
   });
 
-  it("keeps short welfare copy and a demo QR flag for placeholder codes", () => {
+  it("uses asset-printed marks only and keeps the demo QR flag", () => {
     expect(DEFAULT_SPONSORED_CAMPAIGN.partnerName).toBe("蓝盒子");
+    expect(DEFAULT_SPONSORED_CAMPAIGN.partnerNameEn).toBe("BLUE BOX");
+    expect(DEFAULT_SPONSORED_CAMPAIGN.productCode).toBe("N2");
+    expect(DEFAULT_SPONSORED_CAMPAIGN.logoImage).toContain("logo.webp");
+    expect(DEFAULT_SPONSORED_CAMPAIGN.productImage).toContain("pillow-n2.webp");
     expect(DEFAULT_SPONSORED_CAMPAIGN.welfare.hint).toBe("领牛毛");
-    expect(DEFAULT_SPONSORED_CAMPAIGN.welfare.disclosure).toBe("领不领随你。");
+    expect(DEFAULT_SPONSORED_CAMPAIGN.welfare.disclosure).toBe("");
     expect(DEFAULT_SPONSORED_CAMPAIGN.welfare.demoQr).toBe(true);
+    expect(sponsoredProductLabel()).toBe("蓝盒子 N2");
+    expect(ITEM_CATALOG["sponsored-coffee-coupon"].name).toBe("蓝盒子 N2");
+    expect(ITEM_CATALOG["sponsored-coffee-coupon"].description).toBe("BLUE BOX N2");
+    expect(ITEM_CATALOG["sponsored-tent-skin"].name).toBe("蓝盒子");
+    expect(ITEM_CATALOG["sponsored-tent-skin"].description).toBe("BLUE BOX");
   });
 });
+

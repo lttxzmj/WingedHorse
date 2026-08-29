@@ -196,8 +196,8 @@ export const ITEM_CATALOG: Record<ItemId, ItemDefinition> = {
   ),
   "sponsored-tent-skin": item(
     "sponsored-tent-skin",
-    "蓝盒子帐篷布标",
-    "草原支持伙伴留下的限定布标。",
+    "蓝盒子",
+    "BLUE BOX",
     "篷",
     "decoration",
     "rare",
@@ -207,10 +207,11 @@ export const ITEM_CATALOG: Record<ItemId, ItemDefinition> = {
     true,
     false
   ),
+  // Name/code taken from brands/bluebox/pillow-n2.webp markings only.
   "sponsored-coffee-coupon": item(
     "sponsored-coffee-coupon",
-    "蓝盒子睡眠护理枕",
-    "品牌合作补给。给来来休息用。",
+    "蓝盒子 N2",
+    "BLUE BOX N2",
     "券",
     "sponsored-supply",
     "uncommon",

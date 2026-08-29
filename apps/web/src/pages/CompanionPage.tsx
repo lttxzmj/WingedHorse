@@ -186,26 +186,26 @@ export function CompanionPage() {
         <BackLink to="/home" label="回到草原" />
         <div className="companion-header__identity">
           {result && profile ? (
-            <WingedHorseCharacter
-              typeId={result.typeId}
-              mood={profile.mood}
-              activity={sending && partialReply ? "talking" : draft.trim() ? "listening" : "idle"}
-              alt=""
-            />
+            <div className="companion-header__avatar">
+              <WingedHorseCharacter
+                typeId={result.typeId}
+                mood={profile.mood}
+                activity={sending && partialReply ? "talking" : draft.trim() ? "listening" : "idle"}
+                alt=""
+              />
+            </div>
           ) : (
-            <img className="companion-header__mascot" src="/wingedhorse-icon.svg" alt="" />
+            <div className="companion-header__avatar">
+              <img className="companion-header__mascot" src="/wingedhorse-icon.svg" alt="" />
+            </div>
           )}
-          <div>
-            <p className="eyebrow">{profile ? `${profile.name}状态` : "在草原"} · {CHARACTER_NAME}</p>
-            <h1>{companionName}</h1>
+          <div className="companion-header__titles">
+            <h1 className="companion-header__name">{companionName}</h1>
             <p className="companion-presence">
-              <span aria-hidden="true" /> 想和你说说话
+              <span aria-hidden="true" /> {profile ? `${profile.name} · 想和你说说话` : "想和你说说话"}
             </p>
           </div>
         </div>
-        <span className="ai-pill" aria-label="AI 陪伴伙伴">
-          AI
-        </span>
       </header>
       <details className="companion-safety">
         <summary>
@@ -290,19 +290,21 @@ export function CompanionPage() {
           {deliveryNotice}
         </p>
       ) : null}
-      <div className="prompt-chips" aria-label="快捷开场">
-        {[
-          "我有点累",
-          "想说件小事",
-          "陪我安静一下",
-          "我们接下来做什么？",
-          ...(Object.values(inventory).some(Boolean) ? ["背包里有什么？"] : []),
-          ...(latestLifeEvent ? [`聊聊刚才的「${latestLifeEvent.title}」`] : [])
-        ].map((prompt) => (
-          <button key={prompt} onClick={() => setDraft(prompt)}>
-            {prompt}
-          </button>
-        ))}
+      <div className="prompt-chips-wrapper">
+        <div className="prompt-chips" aria-label="快捷开场">
+          {[
+            "我有点累",
+            "想说件小事",
+            "陪我安静一下",
+            "我们接下来做什么？",
+            ...(Object.values(inventory).some(Boolean) ? ["背包里有什么？"] : []),
+            ...(latestLifeEvent ? [`聊聊刚才的「${latestLifeEvent.title}」`] : [])
+          ].map((prompt) => (
+            <button key={prompt} onClick={() => setDraft(prompt)}>
+              {prompt}
+            </button>
+          ))}
+        </div>
       </div>
       <form className="chat-composer" onSubmit={(event) => void send(event)}>
         <label htmlFor="chat-message" className="sr-only">
@@ -317,48 +319,11 @@ export function CompanionPage() {
           placeholder="和它说点什么……"
         />
         <div className="chat-composer__footer">
-          <details className="chat-consent-options">
-            <summary>
-              <Info aria-hidden="true" size={15} />
-              <span className="chat-consent-options__label">本次发送范围</span>
-              <span className="chat-consent-options__state">
-                {memoryEnabled || lifeContextEnabled
-                  ? `已带入 ${Number(memoryEnabled) + Number(lifeContextEnabled)} 项`
-                  : "默认仅此对话"}
-              </span>
-              <ChevronDown aria-hidden="true" size={15} />
-            </summary>
-            <div>
-              <p>每次进入对话都默认关闭；勾选只对当前页面会话生效。</p>
-              <label className="memory-toggle">
-                <input
-                  type="checkbox"
-                  checked={memoryEnabled}
-                  onChange={(event) => setMemoryEnabled(event.target.checked)}
-                />
-                已保存记忆 → WingedHorse 服务端与当前 OpenRouter 模型
-              </label>
-              <label className="memory-toggle">
-                <input
-                  type="checkbox"
-                  checked={lifeContextEnabled}
-                  onChange={(event) => setLifeContextEnabled(event.target.checked)}
-                  disabled={!lifeContextAvailable}
-                />
-                {lifeContextAvailable
-                  ? "生活簿、养成状态与手动心情 → 仅 WingedHorse 服务端"
-                  : "生活状态正在准备 → 暂不可选择"}
-              </label>
-            </div>
-          </details>
           <Button type="submit" loading={sending} disabled={!draft.trim()}>
-            <Send aria-hidden="true" size={18} />
+            <Send aria-hidden="true" size={16} />
             发送
           </Button>
         </div>
-        <p className="chat-composer__hint">
-          <Heart aria-hidden="true" size={14} /> 你可以随时停下，也可以只说一句。
-        </p>
       </form>
     </main>
   );

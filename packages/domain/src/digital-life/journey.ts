@@ -32,10 +32,10 @@ const milestoneCopy: Array<Pick<JourneyMilestone, "id" | "label">> = [
 ];
 
 const nextPrompts: Record<JourneyMilestoneId, string> = {
-  "first-haul": "哪天想动一动，就一起接一场 30 秒补给雨。",
-  "shared-supply": "背包里的补给不用急着用，想起它时再分享。",
-  "saved-memory": "遇到想留住的动态，可以存进你们的共同记忆。",
-  "trusted-pair": "继续按自己的节奏相处，同行值会自然长到 25。"
+  "first-haul": "想动一动时，一起接一场 30 秒补给雨。",
+  "shared-supply": "背包里的补给，想起它时再分享就好。",
+  "saved-memory": "想留住的动态，收藏进共同记忆即可。",
+  "trusted-pair": "按自己的节奏相处，同行值会慢慢到 25。"
 };
 
 export function deriveJourneyGoal(input: JourneyGoalInput): JourneyGoal {
@@ -53,17 +53,17 @@ export function deriveJourneyGoal(input: JourneyGoalInput): JourneyGoal {
   const nextMilestone = milestones.find((milestone) => !milestone.completed);
 
   return {
-    title: completedCount === milestones.length ? "第一段航线，已经画好" : "一起画一条远行航线",
+    title: completedCount === milestones.length ? "第一段航线画好了" : "慢慢画一条航线",
     description:
       completedCount === milestones.length
-        ? "你们已经有了补给、共同记忆和足够的默契。真正想出发时，再一起走。"
-        : "不用赶路，也没有截止日期。共同生活过的痕迹，会慢慢变成航线。",
+        ? "补给、记忆和默契都有了。想出发时，再一起走。"
+        : "没有截止日期。一起生活过的痕迹，会慢慢连成航线。",
     completedCount,
     totalCount: milestones.length,
     completed: completedCount === milestones.length,
     nextPrompt: nextMilestone
       ? nextPrompts[nextMilestone.id]
-      : "航线会留在这里。继续生活，不需要为了维持它而打卡。",
+      : "航线会留在这里。继续生活就好，不用为它打卡。",
     milestones
   };
 }

@@ -15,13 +15,12 @@ import {
   BatteryCharging,
   BookImage,
   ChevronRight,
-  Fish,
-  Hand,
   Heart,
-  ImagePlus,
   Package,
   Send,
   Settings,
+  Smartphone,
+  Sparkles,
   Waves,
   X
 } from "lucide-react";
@@ -60,7 +59,6 @@ export function DigitalLifeExperiencePage() {
   const navigate = useNavigate();
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [reaction, setReaction] = useState<{ id: number; message: string } | null>(null);
-  const [quickDraft, setQuickDraft] = useState("");
   const [collectingId, setCollectingId] = useState<string | null>(null);
   const [collectedKeys, setCollectedKeys] = useState<string[]>([]);
   const characterButtonRef = useRef<HTMLButtonElement>(null);
@@ -193,13 +191,6 @@ export function DigitalLifeExperiencePage() {
     setInteractionOpen(true);
   };
   const showReaction = (message: string) => setReaction({ id: Date.now(), message });
-  const openConversation = () => {
-    if (typeof window !== "undefined") {
-      const draft = quickDraft.trim();
-      if (draft) sessionStorage.setItem("wingedhorse-companion-draft", draft);
-    }
-    void navigate({ to: "/companion" });
-  };
 
   const handleCollectDrop = (itemId: ItemId, dropIndex: number) => {
     const key = `${sceneDropKey}:${dropIndex}:${itemId}`;
@@ -264,12 +255,18 @@ export function DigitalLifeExperiencePage() {
       <header className="home-header home-header--quiet digital-life-header">
         <nav className="digital-life-header__toolbar" aria-label="来来当前状态与常用入口">
           <div className="home-status-pill" aria-label="来来当前状态">
-            <span className="home-status-pill__item home-status-pill__item--mood" aria-label={`心情 ${moodLabel}`}>
+            <span
+              className="home-status-pill__item home-status-pill__item--mood"
+              aria-label={`心情 ${moodLabel}`}
+            >
               <AppIcon icon={Heart} size={15} />
               <em>{moodLabel}</em>
             </span>
             <i className="home-status-pill__divider" aria-hidden="true" />
-            <span className="home-status-pill__item home-status-pill__item--energy" aria-label={`元气 ${petVitals.energy}`}>
+            <span
+              className="home-status-pill__item home-status-pill__item--energy"
+              aria-label={`元气 ${petVitals.energy}`}
+            >
               <AppIcon icon={BatteryCharging} size={15} />
               <em>{petVitals.energy}</em>
             </span>
@@ -306,36 +303,45 @@ export function DigitalLifeExperiencePage() {
         className="lawn-stage lawn-stage--alive digital-life-stage"
         aria-label="来来生活草原"
       >
-        <div className="digital-life-stage__drops" aria-label="草原正在掉落的补给">
-          {sceneDrops.map((itemId, index) => {
-            const item = ITEM_CATALOG[itemId];
-            const dropKey = `${sceneDropKey}:${index}:${itemId}`;
-            const isCollected = collectedKeys.includes(dropKey);
-            const isCollecting = collectingId === dropKey;
+        <div className="digital-life-stage__drops" aria-label="来来刚带回来的补给">
+          <div className="digital-life-stage__drops-heading">
+            <span>
+              <AppIcon icon={Sparkles} size={15} />
+              刚带回来的补给
+            </span>
+            <small>点一下收进背包</small>
+          </div>
+          <div className="digital-life-stage__drop-list">
+            {sceneDrops.map((itemId, index) => {
+              const item = ITEM_CATALOG[itemId];
+              const dropKey = `${sceneDropKey}:${index}:${itemId}`;
+              const isCollected = collectedKeys.includes(dropKey);
+              const isCollecting = collectingId === dropKey;
 
-            if (isCollected) return null;
+              if (isCollected) return null;
 
-            return (
-              <button
-                className={`digital-life-stage__drop digital-life-stage__drop--${index + 1} ${
-                  isCollecting ? "is-collecting" : ""
-                }`.trim()}
-                key={dropKey}
-                type="button"
-                onClick={() => handleCollectDrop(itemId, index)}
-                aria-label={`收集掉落的${item.name}`}
-                disabled={isCollecting}
-              >
-                {isCollecting ? (
-                  <span className="digital-life-stage__drop-badge" aria-hidden="true">
-                    +1
-                  </span>
-                ) : null}
-                <ItemIcon itemId={itemId} size={30} />
-                <span>{item.name.replace("补给", "")}</span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  className={`digital-life-stage__drop ${
+                    isCollecting ? "is-collecting" : ""
+                  }`.trim()}
+                  key={dropKey}
+                  type="button"
+                  onClick={() => handleCollectDrop(itemId, index)}
+                  aria-label={`收集掉落的${item.name}`}
+                  disabled={isCollecting}
+                >
+                  {isCollecting ? (
+                    <span className="digital-life-stage__drop-badge" aria-hidden="true">
+                      +1
+                    </span>
+                  ) : null}
+                  <ItemIcon itemId={itemId} size={25} />
+                  <span>{item.name.replace("补给", "")}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="digital-life-stage__actor">
@@ -343,7 +349,7 @@ export function DigitalLifeExperiencePage() {
             <span>
               {reaction?.message ||
                 currentMoment?.body ||
-    "我不会催你。想说点什么，还是先在草原坐一会儿？"}
+                "我不会催你。想说点什么，还是先在草原坐一会儿？"}
             </span>
           </p>
           <button
@@ -360,62 +366,40 @@ export function DigitalLifeExperiencePage() {
             />
           </button>
         </div>
-        <img
-          className="digital-life-stage__tent"
-          src="/scene/prairie-tent.webp"
-          width="640"
-          height="492"
-          alt=""
-          aria-hidden="true"
-        />
+        <Link className="digital-life-stage__tent-link" to="/life" aria-label="打开生活簿">
+          <img
+            className="digital-life-stage__tent"
+            src="/scene/prairie-tent.webp"
+            width="640"
+            height="492"
+            alt=""
+            aria-hidden="true"
+          />
+          <span>
+            <AppIcon icon={BookImage} size={15} />
+            生活簿
+          </span>
+        </Link>
         <div className="digital-life-actions" aria-label="和来来互动">
-          <form
+          <Link
             className="digital-life-actions__composer"
-            onSubmit={(event) => {
-              event.preventDefault();
-              openConversation();
-            }}
+            to="/companion"
+            aria-label="和来来聊一聊"
           >
-            <input
-              value={quickDraft}
-              onChange={(event) => setQuickDraft(event.target.value)}
-              maxLength={1200}
-              aria-label="和来来聊一聊"
-              placeholder="和来来聊一聊…"
-            />
-            <button type="submit" aria-label="进入来来对话">
+            <span>和来来聊一聊…</span>
+            <span className="digital-life-actions__composer-send" aria-hidden="true">
               <AppIcon icon={Send} size={18} />
-            </button>
-          </form>
+            </span>
+          </Link>
           <button
             type="button"
-            className="digital-life-actions__icon digital-life-actions__fish"
-            aria-label="摸摸鱼：去接补给"
+            className="digital-life-actions__supply"
+            aria-label="接补给：去玩补给雨"
             onClick={() => void navigate({ to: "/game", hash: "start" })}
           >
-            <span className="digital-life-actions__fish-mark" aria-hidden="true">
-              <AppIcon icon={Hand} size={21} />
-              <AppIcon icon={Fish} size={13} />
-            </span>
+            <AppIcon icon={Sparkles} size={18} />
+            <span>接补给</span>
           </button>
-          <button
-            type="button"
-            className="digital-life-actions__icon digital-life-actions__shift"
-            aria-label={onDuty ? "下班，收来来的一天" : "上工，把手机交给来来"}
-            onClick={() => {
-              if (onDuty) handleClockOut();
-              else handleClockIn();
-            }}
-          >
-            <AppIcon icon={BookImage} size={22} />
-          </button>
-          <Link
-            className="digital-life-actions__icon digital-life-actions__moments"
-            to="/life"
-            aria-label="打开朋友圈动态"
-          >
-            <AppIcon icon={ImagePlus} size={22} />
-          </Link>
         </div>
       </section>
 
@@ -442,8 +426,20 @@ export function DigitalLifeExperiencePage() {
             <div className="cultivation-vitals" aria-label="来来当前状态">
               {careMeters.map(({ id, label, value, icon }) => (
                 <div className="cultivation-vitals__item" key={id}>
-                  <span><AppIcon icon={icon} size={17} />{label}</span>
-                  <div className="cultivation-vitals__meter" role="progressbar" aria-label={`${label}状态`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}><i style={{ width: `${value}%` }} /></div>
+                  <span>
+                    <AppIcon icon={icon} size={17} />
+                    {label}
+                  </span>
+                  <div
+                    className="cultivation-vitals__meter"
+                    role="progressbar"
+                    aria-label={`${label}状态`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={value}
+                  >
+                    <i style={{ width: `${value}%` }} />
+                  </div>
                   <strong>{value}</strong>
                 </div>
               ))}
@@ -452,14 +448,25 @@ export function DigitalLifeExperiencePage() {
               <button
                 disabled={comfortedToday}
                 onClick={() => {
-                  if (comfortPet())
-                    showReaction("收到摸摸了。今天不用表现得很厉害。同行值 +1");
+                  if (comfortPet()) showReaction("收到摸摸了。今天不用表现得很厉害。同行值 +1");
                   setInteractionOpen(false);
                 }}
               >
                 <AppIcon icon={Heart} size={21} />
                 <strong>{comfortedToday ? "今天已经摸过啦" : "摸摸它"}</strong>
                 <span>{comfortedToday ? "它记得这个安静时刻" : "给一个安静回应"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setInteractionOpen(false);
+                  if (onDuty) handleClockOut();
+                  else handleClockIn();
+                }}
+              >
+                <AppIcon icon={Smartphone} size={21} />
+                <strong>{onDuty ? "收工，看来来的一天" : "上工，把手机交给来来"}</strong>
+                <span>{onDuty ? "生成今日四格小记" : "支架上的来来帮你看着工位"}</span>
               </button>
               {recommendedItemId ? (
                 <button

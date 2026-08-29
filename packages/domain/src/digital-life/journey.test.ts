@@ -60,6 +60,6 @@ describe("deriveJourneyGoal", () => {
 
     expect(goal.completed).toBe(true);
     expect(goal.completedCount).toBe(goal.totalCount);
-    expect(goal.nextPrompt).toContain("不需要");
+    expect(goal.nextPrompt).toContain("不用为它打卡");
   });
 });

@@ -136,7 +136,8 @@ export async function createResultShareCard(
   context.textAlign = "left";
   context.fillStyle = "#3B2E24";
   // Type name is the share-card headline; 来来 is only the companion framing above.
-  const typeTitleSize = profile.name.length >= 6 ? 64 : 82;
+  const typeTitleSize =
+    profile.name.length >= 6 ? 58 : profile.name.length >= 5 ? 70 : 82;
   context.font = `800 ${typeTitleSize}px -apple-system, "PingFang SC", sans-serif`;
   context.fillText(profile.name, 74, 266);
   context.fillStyle = profile.accent;

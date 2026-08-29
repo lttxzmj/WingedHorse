@@ -13,6 +13,7 @@ export interface SponsoredWelfare {
   name: string;
   hint: string;
   qrImage: string;
+  /** Empty until brand-approved disclosure copy is provided. */
   disclosure: string;
   demoQr: boolean;
 }
@@ -20,16 +21,34 @@ export interface SponsoredWelfare {
 export interface SponsoredCampaign {
   id: string;
   partnerId: string;
+  /** Partner mark as printed on brand assets (logo). */
   partnerName: string;
+  /** Latin mark as printed on brand assets (logo / product). */
+  partnerNameEn: string;
+  /** Product code as printed on the product photo (pillow N2). */
+  productCode: string;
+  /** Logo path — drop / source recognition. */
+  logoImage: string;
+  /** Product photo path — welfare / inventory product view. */
+  productImage: string;
   boxItemId: ItemId;
   drop: SponsoredDropPolicy;
   welfare: SponsoredWelfare;
 }
 
+/**
+ * Copy and marks below are taken only from files in
+ * `apps/web/public/brands/bluebox/` (logo.webp, pillow-n2.webp).
+ * Do not invent product names or marketing lines here.
+ */
 export const DEFAULT_SPONSORED_CAMPAIGN: SponsoredCampaign = {
   id: "bluebox-niumao-2026",
   partnerId: "bluebox",
   partnerName: "蓝盒子",
+  partnerNameEn: "BLUE BOX",
+  productCode: "N2",
+  logoImage: "/brands/bluebox/logo.webp",
+  productImage: "/brands/bluebox/pillow-n2.webp",
   boxItemId: "sponsored-coffee-coupon",
   drop: {
     enabled: true,
@@ -42,10 +61,16 @@ export const DEFAULT_SPONSORED_CAMPAIGN: SponsoredCampaign = {
     name: "牛毛",
     hint: "领牛毛",
     qrImage: "/brands/bluebox/welfare-qr.svg",
-    disclosure: "领不领随你。",
+    disclosure: "",
     demoQr: true
   }
 };
+
+export function sponsoredProductLabel(
+  campaign: SponsoredCampaign = DEFAULT_SPONSORED_CAMPAIGN
+): string {
+  return `${campaign.partnerName} ${campaign.productCode}`;
+}
 
 export function sponsoredDisplayName(campaign: SponsoredCampaign = DEFAULT_SPONSORED_CAMPAIGN): string {
   return campaign.welfare.name;

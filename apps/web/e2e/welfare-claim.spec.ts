@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem(
       "wingedhorse-local-state-v2-1",
       JSON.stringify({
-        version: 7,
+        version: 8,
         state: {
           assessmentOptionSeed: "welfare-e2e",
           result: {
@@ -35,15 +35,16 @@ test.beforeEach(async ({ page }) => {
 
 test("inventory can reopen the welfare claim sheet", async ({ page }) => {
   await page.goto("/inventory");
-  await page.getByRole("button", { name: /蓝盒子睡眠护理枕/ }).click();
-  await expect(page.getByRole("dialog", { name: "蓝盒子睡眠护理枕" })).toBeVisible();
+  await page.getByRole("button", { name: /蓝盒子 N2/ }).click();
+  await expect(page.getByRole("dialog", { name: "蓝盒子 N2" })).toBeVisible();
   await expect(page.getByText("品牌合作 · 与购买无关")).toBeVisible();
   await page.getByRole("button", { name: "领牛毛" }).click();
   const sheet = page.getByRole("dialog", { name: "领牛毛" });
   await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("img", { name: "蓝盒子 N2" })).toBeVisible();
+  await expect(sheet.getByText("BLUE BOX N2")).toBeVisible();
   await expect(sheet.getByText("演示码")).toBeVisible();
   await expect(sheet.getByRole("img", { name: "演示领取码" })).toBeVisible();
-  await expect(sheet.getByText("领不领随你。")).toBeVisible();
   await sheet.getByRole("button", { name: "知道了" }).click();
   await expect(sheet).toHaveCount(0);
 });

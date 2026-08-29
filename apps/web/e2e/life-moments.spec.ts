@@ -81,7 +81,8 @@ test.beforeEach(async ({ page }) => {
 
 test("life feed reads like the character's private moments", async ({ page }, testInfo) => {
   await expect(page.getByRole("heading", { name: "它的朋友圈" })).toBeVisible();
-  await expect(page.getByText("它不在等你打卡，只是偶尔想告诉你")).toBeVisible();
+  await expect(page.getByText("只保存在这台设备")).toBeVisible();
+  await expect(page.getByText("共同远行")).toBeVisible();
   await expect(page.getByText("醒来以后，我郑重宣布休息也算今日事项。")).toBeVisible();
   await expect(page.getByText("我没有立刻用掉，而是先朝你点了点头")).toBeVisible();
   expect(await page.locator(".life-post").count()).toBeGreaterThanOrEqual(3);
@@ -91,8 +92,8 @@ test("life feed reads like the character's private moments", async ({ page }, te
     fullPage: true
   });
 
-  await page.locator(".life-post footer button", { hasText: "抱住这刻" }).first().click();
-  await expect(page.getByText("你抱住了这一刻").first()).toBeVisible();
+  await page.locator(".life-post footer button", { hasText: "抱住" }).first().click();
+  await expect(page.getByText("抱住了").first()).toBeVisible();
 
   await page.locator(".life-pinned-story > summary").click();
   await expect(page.getByRole("progressbar", { name: "共同远行进展" })).toBeVisible();

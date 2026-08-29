@@ -118,19 +118,16 @@ export function LifePage() {
         </div>
       </header>
       <aside className="life-boundary life-boundary--compact life-moments-privacy">
-        <AppIcon icon={ShieldCheck} size={19} />
-        <div>
-          <strong>这是你们的小世界</strong>
-          <span role="status">
-            {lifeSyncEnabled
-              ? syncState === "synced"
-                ? "动态已备份，照片仍只留在本机"
-                : syncState === "offline"
-                  ? "暂时离线，这些记忆还好好留在本机"
-                  : "正在收好这些动态，照片不会上传"
-              : "动态和照片目前只保存在这台设备"}
-          </span>
-        </div>
+        <AppIcon icon={ShieldCheck} size={18} />
+        <span role="status">
+          {lifeSyncEnabled
+            ? syncState === "synced"
+              ? "动态已备份 · 照片仍在本机"
+              : syncState === "offline"
+                ? "暂时离线 · 仍保存在本机"
+                : "正在同步 · 照片不上传"
+            : "只保存在这台设备"}
+        </span>
         <Link to="/settings" aria-label="打开朋友圈隐私设置">
           <AppIcon icon={LockKeyhole} size={16} />
           <span>隐私</span>
@@ -162,20 +159,19 @@ export function LifePage() {
         <>
           <details className="journey-card life-pinned-story" id="journey">
             <summary>
-              <span className="life-pinned-story__icon" aria-hidden="true">
-                <AppIcon icon={Sparkles} size={18} />
-              </span>
-              <span>
-                <small>置顶故事 · 我们的航线</small>
+              <div className="life-pinned-story__title-wrap">
+                <span className="life-pinned-story__badge">共同远行</span>
                 <strong id="journey-title">{journey.title}</strong>
-              </span>
-              <b aria-label={`已完成 ${journey.completedCount} 项，共 ${journey.totalCount} 项`}>
-                {journey.completedCount}/{journey.totalCount}
-              </b>
-              <AppIcon icon={ChevronDown} size={18} />
+              </div>
+              <div className="life-pinned-story__action-wrap">
+                <span className="life-pinned-story__counter" aria-label={`已完成 ${journey.completedCount} 项，共 ${journey.totalCount} 项`}>
+                  {journey.completedCount}/{journey.totalCount}
+                </span>
+                <AppIcon icon={ChevronDown} size={16} />
+              </div>
             </summary>
             <div className="life-pinned-story__body">
-              <p>{journey.description}</p>
+              <p className="life-pinned-story__desc">{journey.description}</p>
               <div
                 className="journey-track"
                 role="progressbar"
@@ -184,32 +180,44 @@ export function LifePage() {
                 aria-valuemax={journey.totalCount}
                 aria-valuenow={journey.completedCount}
               >
-                {journey.milestones.map((milestone) => (
-                  <span className={milestone.completed ? "is-complete" : ""} key={milestone.id}>
-                    <i aria-hidden="true">{milestone.completed ? "✓" : "·"}</i>
-                    <small>{milestone.label}</small>
-                  </span>
+                {journey.milestones.map((milestone, idx) => (
+                  <div className={`journey-node ${milestone.completed ? "is-complete" : ""}`} key={milestone.id}>
+                    <div className="journey-node__dot">
+                      {milestone.completed ? (
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="journey-node__check">
+                          <path
+                            d="M3.5 8.5L6.5 11.5L12.5 4.5"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      ) : (
+                        <span className="journey-node__index">{idx + 1}</span>
+                      )}
+                    </div>
+                    <span className="journey-node__label">{milestone.label}</span>
+                  </div>
                 ))}
               </div>
-              <p className="journey-card__next">
-                <AppIcon icon={Navigation} size={16} /> {journey.nextPrompt}
-              </p>
+              <div className="journey-card__next">
+                <span className="journey-card__next-indicator" aria-hidden="true" />
+                <p>{journey.nextPrompt}</p>
+              </div>
             </div>
           </details>
           {events.length === 0 ? (
             <section className="life-empty">
               <WingedHorseCharacter typeId={result.typeId} mood={profile.mood} alt={profile.name} />
               <h2>草原刚安静下来</h2>
-              <p>玩一局、送一份补给或摸摸它，新的共同记录就会出现在这里。</p>
+              <p>玩一局或送份补给，新动态会出现在这里。</p>
               <Button onClick={() => history.back()}>回草原看看</Button>
             </section>
           ) : (
-            <section className="life-feed" aria-label="数字生命最近动态">
+            <section className="life-feed" aria-label="来来最近动态">
               <div className="life-feed__heading">
-                <div>
-                  <p className="eyebrow">最近的碎碎念</p>
-                  <strong>它不在等你打卡，只是偶尔想告诉你</strong>
-                </div>
+                <p className="eyebrow">最近</p>
                 <span>{events.length} 条</span>
               </div>
               {events.map((event, index) => {
@@ -268,18 +276,18 @@ export function LifePage() {
                       <time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time>
                       <span>
                         <AppIcon icon={LockKeyhole} size={13} />
-                        {event.kind === "visitor" ? "有位 AI 朋友来过 · 仅你可见" : "仅你可见"}
+                        {event.kind === "visitor" ? "AI 访客 · 仅你可见" : "仅你可见"}
                       </span>
                     </div>
                     <footer>
                       <button
                         className={event.liked ? "is-active" : ""}
                         aria-pressed={event.liked}
-                        aria-label={event.liked ? "已接住" : "接住这刻"}
+                        aria-label={event.liked ? "已抱住" : "抱住"}
                         onClick={() => interact(event.id, "liked", !event.liked)}
                       >
                         <AppIcon icon={Heart} size={17} />
-                        {event.liked ? "已抱住" : "抱住这刻"}
+                        {event.liked ? "已抱住" : "抱住"}
                       </button>
                       <button
                         className={event.saved ? "is-active" : ""}
@@ -290,16 +298,16 @@ export function LifePage() {
                         <AppIcon icon={Save} size={17} />
                         {event.saved ? "已收藏" : "收藏"}
                       </button>
-                      <Link to="/companion">
+                      <Link to="/companion" aria-label="回它一句">
                         <AppIcon icon={MessageCircle} size={17} />
-                        回它一句
+                        回一句
                       </Link>
                     </footer>
                     {event.liked || event.saved ? (
                       <p className="life-post__reactions" aria-live="polite">
-                        {event.liked ? "你抱住了这一刻" : null}
+                        {event.liked ? "抱住了" : null}
                         {event.liked && event.saved ? " · " : null}
-                        {event.saved ? "已经收进共同记忆" : null}
+                        {event.saved ? "已收藏" : null}
                       </p>
                     ) : null}
                     </div>

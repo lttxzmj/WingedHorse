@@ -85,7 +85,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
   await page.getByRole("button", { name: "暂停" }).click();
   await page.getByRole("link", { name: "结束并回草原" }).click();
   await expect(page.getByRole("heading", { name: /牛马/ })).toBeVisible();
-  await page.getByRole("link", { name: "打开朋友圈动态" }).click();
+  await page.getByRole("link", { name: "打开生活簿" }).click();
   await expect(page.getByRole("heading", { name: "它的朋友圈" })).toBeVisible();
   await expect(page.getByText("新住客到达草原")).toBeVisible();
   await page.locator(".life-pinned-story > summary").click();
@@ -141,7 +141,7 @@ test("questionnaire reaches result, prairie and game without a broken step", asy
       path: `/private/tmp/wingedhorse-home-${testInfo.project.name}.png`,
       fullPage: true
     });
-  await expect(page.getByRole("button", { name: "摸摸鱼：去接补给" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "接补给：去玩补给雨" })).toBeVisible();
 });
 
 test("question option order stays stable and a quick answer can be undone", async ({ page }) => {
@@ -216,8 +216,8 @@ test("care happens in the prairie and advances the same relationship", async ({
     );
   });
   await page.goto("/home");
-  await expect(page.getByRole("link", { name: "打开朋友圈动态" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "摸摸鱼：去接补给" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开生活簿" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "接补给：去玩补给雨" })).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-digital-life-home-${testInfo.project.name}.png`,
@@ -557,7 +557,7 @@ test("a real game finishes, settles once, enters the bag and changes the life st
     });
 
   await page.getByRole("link", { name: "带着补给回草原" }).click();
-  await expect(page.getByRole("button", { name: "摸摸鱼：去接补给" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "接补给：去玩补给雨" })).toBeVisible();
   await page.getByRole("link", { name: /打开背包，共 [1-9]\d* 件/ }).click();
   await expect(page.getByRole("heading", { name: "今天接住的东西" })).toBeVisible();
   if (process.env.VISUAL_QA)

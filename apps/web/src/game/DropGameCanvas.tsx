@@ -287,19 +287,26 @@ export function DropGameCanvas({
               sponsoredShownRef.current?.(drop.itemId);
             }
             const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-            // Sponsored box starts higher so the slow showcase beat has runway.
-            const spawnY = isSponsored ? 72 : 128;
+            const rare = item.rarity === "rare";
+            const uncommon = item.rarity === "uncommon";
+            // Sponsored starts a bit higher for the soft showcase beat — size stays near ordinary.
+            const spawnY = isSponsored ? 96 : 128;
             const label = this.add.container(x, spawnY);
+            // Visual tiers: common < uncommon < rare; sponsored ≈ 1.2× common, told apart by blue halo + tag.
+            const box = isSponsored
+              ? { w: 78, h: 84, r: 22 }
+              : rare
+                ? { w: 70, h: 74, r: 20 }
+                : { w: 64, h: 68, r: 19 };
             const shadow = this.add.ellipse(
               2,
               5,
-              isSponsored ? 92 : 58,
-              isSponsored ? 94 : 58,
+              isSponsored ? 66 : rare ? 62 : 58,
+              isSponsored ? 68 : rare ? 64 : 58,
               0x3b2e24,
-              0.14
+              rare || isSponsored ? 0.16 : 0.12
             );
             const card = this.add.graphics();
-            const rare = item.rarity === "rare";
             const kindPalette = {
               "energy-supply": { surface: 0xfff2c8, icon: 0xd88d20 },
               "engine-tool": { surface: 0xe8f2d4, icon: 0x5f8338 },
@@ -308,73 +315,147 @@ export function DropGameCanvas({
               decoration: { surface: 0xeee7ff, icon: 0x7863a7 },
               "sponsored-supply": { surface: 0xe5f2ff, icon: 0x1768b3 }
             }[item.kind];
-            const box = isSponsored ? { w: 118, h: 128, r: 30 } : { w: 64, h: 68, r: 19 };
+
+            // Per-tier aura: sponsored = soft static blue; rare = faint gold; common = none.
+            // Brand rules: no continuous pulse — only a one-shot entry flash below.
+            let aura: PhaserType.GameObjects.Arc | undefined;
             if (isSponsored) {
-              // Soft static halo only — no pulsing (UI_STYLE_GUIDE brand rules).
-              const glow = this.add.circle(0, 0, 82, 0x3b83c9, reduceMotion ? 0.08 : 0.14);
-              label.add(glow);
+              aura = this.add.circle(0, 0, 52, 0x3b83c9, reduceMotion ? 0.1 : 0.18);
+              label.add(aura);
+            } else if (rare) {
+              aura = this.add.circle(0, 0, 44, 0xe2a91f, reduceMotion ? 0.06 : 0.12);
+              label.add(aura);
             }
-            card.fillStyle(isSponsored ? 0xf5faff : rare ? 0xfff7dc : 0xfffdf5, 0.98);
+
+            card.fillStyle(
+              isSponsored ? 0xf5faff : rare ? 0xfff7dc : uncommon ? 0xfffaf0 : 0xfffdf5,
+              0.98
+            );
             card.fillRoundedRect(-box.w / 2, -box.h / 2, box.w, box.h, box.r);
-            card.lineStyle(isSponsored ? 5 : rare ? 2.5 : 2, isSponsored ? 0x3b83c9 : rare ? 0xe2a91f : 0xffffff, 0.98);
+            card.lineStyle(
+              isSponsored ? 3.5 : rare ? 2.75 : uncommon ? 2.25 : 2,
+              isSponsored ? 0x3b83c9 : rare ? 0xe2a91f : uncommon ? 0xf0d48a : 0xffffff,
+              0.98
+            );
             card.strokeRoundedRect(-box.w / 2, -box.h / 2, box.w, box.h, box.r);
-            const iconPlate = this.add.circle(0, -8, isSponsored ? 30 : 20, kindPalette.surface, 1);
+            const iconPlate = this.add.circle(
+              0,
+              -8,
+              isSponsored ? 22 : rare ? 21 : 20,
+              kindPalette.surface,
+              1
+            );
+            // Sponsored drop uses the logo mark (wide wordmark); keep native colors.
             const glyph = this.add
-              .image(0, -8, iconTexture)
+              .image(0, isSponsored ? -6 : -8, iconTexture)
               .setTint(isSponsored && iconTexture === brandTexture ? 0xffffff : kindPalette.icon)
-              .setDisplaySize(isSponsored ? 82 : 31, isSponsored ? 60 : 31);
+              .setDisplaySize(
+                isSponsored ? 52 : rare ? 34 : 31,
+                isSponsored ? 28 : rare ? 34 : 31
+              );
             const partnerTag = isSponsored
               ? this.add
-                  .text(0, -46, "品牌合作", {
+                  .text(0, -34, "品牌合作", {
                     color: "#1768b3",
                     fontFamily: "PingFang SC, system-ui",
-                    fontSize: "10px",
+                    fontSize: "9px",
                     fontStyle: "bold"
                   })
                   .setOrigin(0.5)
               : null;
+            // Product code from pillow asset only — logo already carries 蓝盒子 / BLUE BOX.
             const name = this.add
               .text(
                 0,
-                isSponsored ? 38 : 24,
-                isSponsored ? DEFAULT_SPONSORED_CAMPAIGN.partnerName : item.name.replace("补给", ""),
+                isSponsored ? 28 : rare ? 26 : 24,
+                isSponsored
+                  ? DEFAULT_SPONSORED_CAMPAIGN.productCode
+                  : item.name.replace("补给", ""),
                 {
                   align: "center",
-                  color: isSponsored ? "#175b99" : "#59483b",
+                  color: isSponsored ? "#175b99" : rare ? "#7a5a12" : "#59483b",
                   fontFamily: "PingFang SC, system-ui",
-                  fontSize: isSponsored ? "12px" : "9px",
+                  fontSize: isSponsored ? "11px" : rare ? "9.5px" : "9px",
                   fontStyle: "bold",
-                  wordWrap: { width: isSponsored ? 96 : 60, useAdvancedWrap: true }
+                  wordWrap: { width: isSponsored ? 70 : 60, useAdvancedWrap: true }
                 }
               )
               .setOrigin(0.5);
             label.add([shadow, card, iconPlate, glyph, ...(partnerTag ? [partnerTag] : []), name]);
+
+            // Rare: one-shot spark dust (not on sponsored / common — keep tiers distinct).
+            if (rare && !reduceMotion) {
+              for (let i = 0; i < 3; i += 1) {
+                const spark = this.add.circle(
+                  (this.random() - 0.5) * 36,
+                  -18 - this.random() * 22,
+                  2 + this.random() * 1.5,
+                  0xffd057,
+                  0.85
+                );
+                label.add(spark);
+                this.tweens.add({
+                  targets: spark,
+                  y: spark.y - 18,
+                  alpha: 0,
+                  scale: 0.2,
+                  duration: 420 + this.random() * 180,
+                  delay: i * 40,
+                  ease: "Cubic.Out",
+                  onComplete: () => spark.destroy()
+                });
+              }
+            }
+
             this.world.add(label);
-            // Sponsored: pop bigger on entry, then slow-hover before a dive accelerate.
-            const restScale = isSponsored ? (reduceMotion ? 1.48 : 1.78) : 1;
-            label.setScale(isSponsored ? 0.58 : 0.72).setAlpha(0);
+
+            // Entry motion differs by tier so drops don't feel copy-pasted.
+            const restScale = isSponsored ? (reduceMotion ? 1.12 : 1.2) : rare ? 1.06 : 1;
+            label.setScale(isSponsored ? 0.7 : rare ? 0.62 : 0.72).setAlpha(0);
             this.tweens.add({
               targets: label,
               scale: restScale,
               alpha: 1,
-              duration: isSponsored ? (reduceMotion ? 160 : 380) : 180,
-              ease: "Back.Out"
+              duration: isSponsored ? (reduceMotion ? 140 : 280) : rare ? 240 : 180,
+              ease: isSponsored || rare ? "Back.Out" : "Cubic.Out"
             });
+            if (aura && !reduceMotion) {
+              const settleAlpha = isSponsored ? 0.14 : 0.09;
+              aura.setAlpha(isSponsored ? 0.32 : 0.22);
+              this.tweens.add({
+                targets: aura,
+                alpha: settleAlpha,
+                duration: isSponsored ? 360 : 300,
+                ease: "Sine.Out"
+              });
+            }
+
             const difficulty = isFirstDrop ? 0.82 : Math.min(1.65, 1 + elapsed / 42_000);
-            const sponsoredBaseSpeed = drop.speed * (isFirstDrop ? 0.62 : 0.78);
+            const sponsoredBaseSpeed = drop.speed * (isFirstDrop ? 0.72 : 0.88);
             this.drops.push({
               itemId: drop.itemId,
               label,
               points: drop.points,
-              speed: isSponsored ? sponsoredBaseSpeed : drop.speed * difficulty,
-              drift: isSponsored ? 10 + this.random() * 10 : 8 + this.random() * 13,
+              speed: isSponsored
+                ? sponsoredBaseSpeed
+                : rare
+                  ? drop.speed * difficulty * 0.92
+                  : drop.speed * difficulty,
+              drift: isSponsored
+                ? 7 + this.random() * 7
+                : rare
+                  ? 5 + this.random() * 8
+                  : 8 + this.random() * 13,
               phase: this.random() * Math.PI * 2,
               rotationSpeed: isSponsored
-                ? (this.random() - 0.5) * 0.0011
-                : (this.random() - 0.5) * 0.0016,
+                ? (this.random() - 0.5) * 0.0009
+                : rare
+                  ? (this.random() - 0.5) * 0.001
+                  : (this.random() - 0.5) * 0.0016,
               sponsored: isSponsored,
               fallAgeMs: 0,
-              introMs: isSponsored ? (reduceMotion ? 0 : 900) : 0,
+              // Shorter showcase now that the box is only slightly larger.
+              introMs: isSponsored ? (reduceMotion ? 0 : 560) : 0,
               diveStarted: false,
               restScale
             });
@@ -385,7 +466,14 @@ export function DropGameCanvas({
             const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
             const x = this.catcher.x;
             const y = this.catcher.y - 102;
-            const glow = this.add.circle(x, this.catcher.y - 28, 36, 0xffd058, 0.22);
+            const catchGlowColor = item.sponsored ? 0x3b83c9 : item.rarity === "rare" ? 0xe2a91f : 0xffd058;
+            const glow = this.add.circle(
+              x,
+              this.catcher.y - 28,
+              item.sponsored || item.rarity === "rare" ? 40 : 34,
+              catchGlowColor,
+              item.sponsored ? 0.2 : 0.22
+            );
             const panel = this.add.graphics();
             panel.fillStyle(0xfffdf5, 0.96);
             panel.fillRoundedRect(-66, -18, 132, 36, 18);
@@ -533,35 +621,27 @@ export function DropGameCanvas({
               let swayBoost = 1;
               if (drop.sponsored && drop.introMs > 0) {
                 if (drop.fallAgeMs < drop.introMs) {
-                  // Showcase: slow float + wider sway while the enlarged box is readable.
+                  // Brief soft float so the blue halo reads, then accelerate.
                   const t = drop.fallAgeMs / drop.introMs;
-                  fallFactor = 0.16 + t * 0.22;
-                  swayBoost = 1.75;
+                  fallFactor = 0.28 + t * 0.28;
+                  swayBoost = 1.35;
                 } else {
-                  // Dive: one-shot tip + speed climb so the catch window stays exciting.
                   if (!drop.diveStarted) {
                     drop.diveStarted = true;
-                    drop.rotationSpeed *= 2.4;
-                    drop.label.rotation += (this.random() > 0.5 ? 1 : -1) * 0.14;
-                    this.tweens.add({
-                      targets: drop.label,
-                      scale: drop.restScale * 0.9,
-                      duration: 160,
-                      yoyo: true,
-                      ease: "Cubic.InOut"
-                    });
+                    drop.rotationSpeed *= 1.8;
+                    drop.label.rotation += (this.random() > 0.5 ? 1 : -1) * 0.1;
                   }
                   const after = drop.fallAgeMs - drop.introMs;
-                  fallFactor = Math.min(3.15, 1.2 + after / 560);
-                  swayBoost = 0.55;
+                  fallFactor = Math.min(2.4, 1.1 + after / 720);
+                  swayBoost = 0.7;
                 }
               }
               drop.label.y += delta * 0.13 * drop.speed * verticalScale * fallFactor;
               drop.label.x +=
                 Math.sin(this.motionClock * 0.0024 + drop.phase) * drop.drift * swayBoost * (delta / 1000);
               drop.label.rotation += drop.rotationSpeed * delta;
-              const catchHalfWidth = drop.sponsored ? 104 : 62;
-              const catchDepth = drop.sponsored ? 108 : 74;
+              const catchHalfWidth = drop.sponsored ? 72 : 62;
+              const catchDepth = drop.sponsored ? 82 : 74;
               const isCaught =
                 drop.label.y >= catcherTop &&
                 drop.label.y <= catcherTop + catchDepth &&

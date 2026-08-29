@@ -38,6 +38,12 @@ export function ResultPage() {
 
   const currentResult = result;
   const profile = getResultProfile(result.typeId);
+  const typeTitleClass =
+    profile.name.length >= 6
+      ? "result-hero__title result-hero__title--long"
+      : profile.name.length >= 5
+        ? "result-hero__title result-hero__title--mid"
+        : "result-hero__title";
   async function shareResultCard() {
     if (isSharingRef.current) return;
     isSharingRef.current = true;
@@ -83,7 +89,7 @@ export function ResultPage() {
         />
         <div className="result-hero__copy">
           <p className="eyebrow">{CHARACTER_NAME}今天的状态</p>
-          <h1>{profile.name}</h1>
+          <h1 className={typeTitleClass}>{profile.name}</h1>
           <p className="result-rarity">{profile.rarity}</p>
           <p className="result-tagline">{profile.tagline}</p>
         </div>

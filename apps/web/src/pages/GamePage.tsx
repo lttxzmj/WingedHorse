@@ -2,7 +2,7 @@ import {
   CHARACTER_NAME,
   DEFAULT_SPONSORED_CAMPAIGN,
   ITEM_CATALOG,
-  sponsoredDisplayName,
+  sponsoredProductLabel,
   type ItemId
 } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
@@ -210,19 +210,27 @@ export function GamePage() {
                 aria-live="assertive"
                 aria-hidden={countdownLeaving || undefined}
               >
-                <img
-                  className="game-countdown__character"
-                  src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]}
-                  alt=""
-                />
                 <div className="game-countdown__veil" />
-                <div className="game-countdown__content" key={countdown}>
-                  <p className="game-countdown__pill">
-                    <span>{countdown > 1 ? "稳住，准备接补给" : `左右拖动${CHARACTER_NAME}`}</span>
-                  </p>
-                  <div className="game-countdown__core">
-                    <span className="game-countdown__halo" aria-hidden="true" />
-                    <strong>{countdown}</strong>
+                <div className="game-countdown__character" aria-hidden="true">
+                  <img
+                    src={GAME_CHARACTER_ASSETS[result?.typeId ?? "chosen"]}
+                    alt=""
+                  />
+                </div>
+                <div className="game-countdown__stage">
+                  <div className="game-countdown__content" key={countdown}>
+                    <p className="game-countdown__pill">
+                      <span>{countdown > 1 ? "准备接住补给" : `左右拖动${CHARACTER_NAME}`}</span>
+                    </p>
+                    <div className="game-countdown__core">
+                      <span className="game-countdown__halo" aria-hidden="true" />
+                      <strong className="game-countdown__number">{countdown}</strong>
+                    </div>
+                  </div>
+                  <div className="game-countdown__guide">
+                    <span className="game-countdown__guide-arrow" aria-hidden="true">‹</span>
+                    <span>左右滑动移动接物</span>
+                    <span className="game-countdown__guide-arrow" aria-hidden="true">›</span>
                   </div>
                 </div>
               </div>
@@ -231,37 +239,55 @@ export function GamePage() {
             {playing ? (
               <>
                 <div className="game-hud" aria-label="本局状态">
-                  <span className="game-hud__time">
-                    <AppIcon icon={Clock3} size={15} />
-                    <strong>{stats.remainingSeconds}</strong>
-                    <small>秒</small>
-                  </span>
-                  <span>
-                    <small>得分 · {stats.caughtCount} 件</small>
-                    <strong>{stats.score}</strong>
-                  </span>
-                  <span className={stats.combo >= 2 ? "is-hot" : ""}>
-                    <small>连击</small>
-                    <strong>×{Math.min(stats.combo, 10)}</strong>
-                  </span>
+                  <div className="game-hud__pill game-hud__pill--time">
+                    <span className="game-hud__icon" aria-hidden="true">
+                      <AppIcon icon={Clock3} size={15} />
+                    </span>
+                    <div className="game-hud__value">
+                      <strong>{stats.remainingSeconds}</strong>
+                      <small>秒</small>
+                    </div>
+                  </div>
+
+                  <div className="game-hud__pill game-hud__pill--score">
+                    <span className="game-hud__label">得分</span>
+                    <div className="game-hud__value">
+                      <strong>{stats.score}</strong>
+                      <small>{stats.caughtCount}件</small>
+                    </div>
+                  </div>
+
+                  <div className={`game-hud__pill game-hud__pill--combo${stats.combo >= 2 ? " is-hot" : ""}`}>
+                    <span className="game-hud__label">连击</span>
+                    <div className="game-hud__value">
+                      <strong>×{Math.min(stats.combo, 10)}</strong>
+                    </div>
+                  </div>
+
                   <button
+                    className="game-hud__pause-btn"
                     disabled={gameLoadState !== "ready"}
                     onClick={() => {
                       setControlDirection(0);
                       setPaused((value) => !value);
                     }}
                     aria-pressed={paused}
+                    aria-label={paused ? "继续" : "暂停"}
                   >
                     <AppIcon icon={paused ? Play : Pause} size={16} />
                     <span>{paused ? "继续" : "暂停"}</span>
                   </button>
-                  <span className="game-time-progress">
-                    <i style={{ width: `${(stats.remainingSeconds / 30) * 100}%` }} />
-                  </span>
+
+                  <div className="game-hud__progress-track" aria-hidden="true">
+                    <span
+                      className="game-hud__progress-bar"
+                      style={{ width: `${(stats.remainingSeconds / 30) * 100}%` }}
+                    />
+                  </div>
                 </div>
                 {gameLoadState === "loading" && !countdownLeaving ? (
                   <div className="game-loading" role="status">
-                    正在打开补给雨…
+                    <span className="game-loading__pill">正在打开补给雨…</span>
                   </div>
                 ) : null}
                 {gameLoadState === "ready" ? (
@@ -344,7 +370,7 @@ export function GamePage() {
                         return (
                           <span key={id} className={item.sponsored ? "is-sponsored" : undefined}>
                             <ItemIcon itemId={itemId} size={19} />
-                            <span>{item.sponsored ? sponsoredDisplayName() : item.name}</span>
+                            <span>{item.name}</span>
                             <strong>×{count}</strong>
                           </span>
                         );
@@ -356,12 +382,16 @@ export function GamePage() {
                 </section>
                 {sponsoredCaughtId ? (
                   <section className="game-summary__welfare" aria-labelledby="game-welfare-title">
-                    <ItemIcon itemId={sponsoredCaughtId} size={44} />
+                    <img
+                      className="game-summary__welfare-logo"
+                      src={DEFAULT_SPONSORED_CAMPAIGN.logoImage}
+                      alt=""
+                      width={54}
+                      height={30}
+                    />
                     <div>
                       <strong id="game-welfare-title">合作补给</strong>
-                      <p>
-                        {DEFAULT_SPONSORED_CAMPAIGN.partnerName} · {DEFAULT_SPONSORED_CAMPAIGN.welfare.name}
-                      </p>
+                      <p>{sponsoredProductLabel()}</p>
                     </div>
                     <Button
                       onClick={() => {
