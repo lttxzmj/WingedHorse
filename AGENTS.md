@@ -147,7 +147,18 @@
 - 重要取舍记录原因、替代方案和迁移影响。
 - 并行任务范围、禁止事项和验收标准更新 AI_WORKPACKS。
 
-## 11. Git 规范
+## 11. 部署前检查（强制，2026-08-29 生产事故后新增）
+
+背景：生产服务器为 2C2G 小机且与 VibeShot 共存。曾因在服务器上并行构建镜像 + BuildKit 缓存累积 33G，导致整机内存耗尽、sshd 假死、两套产品全部宕机。以下检查项每次部署前必须逐条确认：
+
+1. 禁止在生产服务器直接执行 `docker compose up -d --build` 或任何并行镜像构建；只允许走 `deploy/promote-release.sh` 的串行构建路径（先 build api、再 build web、最后 up -d）。
+2. 部署前登录服务器确认：磁盘使用率 < 75%（`df -h /`）、swap 已激活（`swapon --show`）、可用内存 > 1G（`free -m`）。不满足先治理再部署。
+3. 部署前确认 GitHub 账号计费正常（Settings → Billing and plans）：扣费失败或额度耗尽时 CI/Deploy 会在数秒内失败且不产生日志，不要误判为代码问题。
+4. 只从 `/opt/wingedhorse/current` 单一入口发布；禁止在服务器上新建 `live/`、临时目录或手工拷贝的平行发布目录。
+5. 部署后验收：`docker system df` 确认构建缓存已回收到 1GB 以内；WingedHorse `/api/health` 与 8080 首页、VibeShot 80/443 均正常；全部容器 restart 策略为 `unless-stopped`。
+6. 服务器失去响应时不要反复裸重启；按 `docs/DEPLOYMENT.md`「服务器失去响应的恢复步骤」执行（先禁用 docker 自启抢回控制权，再离线清理）。
+
+## 12. Git 规范
 
 - 默认分支为 master。
 - 初始化提交可直接进入 master；后续功能默认使用 codex/<topic> 分支，除非用户明确要求直接提交。
@@ -156,7 +167,7 @@
 - .riv、设计源文件等二进制资产按 .gitattributes 管理。
 - 未经用户要求不改写公开历史、不强推、不删除远程分支。
 
-## 12. 完成标准
+## 13. 完成标准
 
 报告完成前确认：
 

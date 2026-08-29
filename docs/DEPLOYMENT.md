@@ -1,16 +1,16 @@
 # WingedHorse 大陆 VPS 部署手册
 
-状态：已部署上线（与 VibeShot 共存于同一台 CVM，HTTP 过渡态，未绑域名/HTTPS）。
+状态：旧 CVM 已因资源与磁盘故障停止作为发布目标；等待新服务器完成安全预检后重新部署。
 
-## 0. 当前实际部署（2026-08-27）
+## 0. 旧部署现场记录（仅用于故障复盘，2026-08-27）
 
 | 项               | 值                                                                                                                                                                          |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 服务器           | 腾讯云 CVM `43.140.245.191`（2C2G TencentOS，Docker 26 + Compose v2）                                                                                                       |
-| 访问地址（过渡） | `http://43.140.245.191:8080/`                                                                                                                                               |
+| 服务器           | 旧腾讯云 CVM（2C2G）已停止作为发布目标；新服务器待定                                                                                                                        |
+| 访问地址（过渡） | 不再提供公网 HTTP 入口                                                                                                                                                      |
 | 目标域名         | `wingedhorse.leisuremaking.cn`（待 DNS + 证书 + 备案确认）                                                                                                                  |
 | 端口             | web/nginx 绑定宿主 `8080`(HTTP) / `8443`(HTTPS)；`api:3100`、`postgres:5432` 仅内网；`mosquitto:1883` 对公网（设备直连，鉴权 + ACL）                                        |
-| 静态压缩         | nginx `gzip` 对 JS/CSS/JSON/SVG/WASM 开启；Phaser 分片约 1.4 MB → gzip ~360 KB，避免移动端首开超时                                                                 |
+| 静态压缩         | nginx `gzip` 对 JS/CSS/JSON/SVG/WASM 开启；Phaser 分片约 1.4 MB → gzip ~360 KB，避免移动端首开超时                                                                          |
 | 目录             | `/opt/wingedhorse/releases/<SHA>/`（候选版本）、`/opt/wingedhorse/current`（当前版本软链）、`/opt/wingedhorse/manual/`（golden copy）、`/opt/wingedhorse/backups/postgres/` |
 | 容器             | `wingedhorse-web-1`、`wingedhorse-api-1`、`wingedhorse-postgres-1`、`wingedhorse-redis-1`；MQTT broker 仅在 hardware profile 启动                                           |
 | 备份             | 每日 03:00 crontab → `backup-postgres.sh`，原子生成 gzip + SHA-256，保留 7 天                                                                                               |
@@ -20,7 +20,7 @@
 
 ### 设备联动（MQTT）
 
-- broker：`eclipse-mosquitto:2`，属于可选 `hardware` Compose profile，默认 Web/API 发布不会启动或暴露 1883。确认需要设备联动后，以 `--profile hardware` 启动；配置文件在 `deploy/mosquitto/`（`mosquitto.conf` + `aclfile`，可提交；`passwd` 在服务器生成，不入库）。
+- broker：`eclipse-mosquitto:2` 属于可选 `hardware` Compose profile。生产 `HARDWARE_API_ENABLED=false`，在正式设备配对与所有权鉴权完成前不得启动硬件 API 或开放 1883。后续启用时，1883 默认仍只绑定 `127.0.0.1`；公网设备接入必须另行完成 TLS、逐设备凭据、防火墙和 ACL 复核。
 - 服务端用户 `wingedhorse`（API 连接用，凭据在 `.env.production` 的 `MQTT_URL/MQTT_USER/MQTT_PASSWORD`）；设备用户按 `lamp-001` 模式逐台建（凭据烧录进 ESP32）。
 - 下行 `devices/{id}/effect`，上行 `devices/{id}/telemetry`，ACL 按用户隔离防越权。
 - 固件：`hardware/esp32/wingedhorse_lamp/`（接线见 `hardware/esp32/README.md`）。
@@ -44,14 +44,14 @@
 
 复制 `deploy/.env.production.example` 到服务器的 `manual/.env.production`，至少替换：
 
-- `POSTGRES_USER` / `POSTGRES_PASSWORD`：生产数据库账号；密码随机生成。
+- `POSTGRES_USER` / `POSTGRES_PASSWORD`：生产数据库账号；密码随机生成。Compose 通过独立 `PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD` 字段传入 API，不把密码拼进 URL。
 - `OPENROUTER_API_KEY`：仅服务端可见（也可放 GitHub Secrets，由 CI 注入）。
 - 模型（Model Policy，非秘密，服务端 `.env.production` 直接配置）：`OPENROUTER_CHAT_MODEL` / `OPENROUTER_SUMMARY_MODEL` / `OPENROUTER_VISION_MODEL`。
 - `PUBLIC_APP_URL`：备案域名的 HTTPS 地址。
 
 不得把 `.env.production`、证书私钥或 SSH 私钥提交到 Git。
 
-API 会在监听端口前验证生产环境：`DATABASE_URL` 必须存在，OpenRouter Key 与聊天模型必须成对配置，MQTT 用户名/密码必须成对配置，模板中的“请替换/change-me”占位 Secret 会导致启动失败。错误只报告字段名，不输出 Secret 值。
+API 会在监听端口前验证生产环境：`DATABASE_URL` 或完整 `PG*` 字段必须存在，OpenRouter Key 与聊天模型必须成对配置，模板占位 Secret 会导致启动失败。生产硬件 API 在正式配对鉴权完成前强制关闭。错误只报告字段名，不输出 Secret 值。
 
 Agent 的应用层保护变量必须使用正整数：`COMPANION_IP_RATE_LIMIT_PER_MINUTE`（默认 60）、`COMPANION_SESSION_RATE_LIMIT_PER_MINUTE`（默认 8）、`COMPANION_DEVICE_MODEL_BUDGET_PER_DAY`（默认 15，按本机访客凭证计 UTC 自然日）、`COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY`（默认 1000）。仍兼容旧名 `COMPANION_SESSION_MODEL_BUDGET_PER_DAY`，但新部署应使用设备日额度。生产 Compose 使用带 AOF 的 Redis 原子统计分钟窗口、同会话并发锁和 UTC 自然日预算；`REDIS_PASSWORD` 必须为随机长密码，`COMPANION_FINGERPRINT_SECRET` 至少 32 字符并在全部 API 实例保持一致。Redis 不可用时远端模型调用会关闭，但经过审核的危机流程仍可用。仍须在 OpenRouter 账号侧另设费用上限，应用计数不是账单级硬上限。
 
@@ -66,9 +66,9 @@ Agent 的应用层保护变量必须使用正整数：`COMPANION_IP_RATE_LIMIT_P
 5. 先运行一次 `backup-postgres.sh`，再执行迁移和 `docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d --build`。
 6. 检查 `docker compose --env-file ../.env.production -f docker-compose.prod.yml ps` 与 `https://域名/api/health`，健康后再原子更新 `current` 软链。
 
-生产 Compose 不公开 PostgreSQL 端口；Web、API 以只读根文件系统、最小 capability、资源限制和日志轮转运行。
+生产 Compose 不公开 PostgreSQL、Redis 和 API 端口；Web、API 以只读根文件系统、最小 capability、资源限制和日志轮转运行。发布脚本要求至少 10GB 可用磁盘及 3GB `MemAvailable + SwapFree`，条件不足时直接拒绝构建。
 
-构建资源约束：宿主只有 2C2G 且与 VibeShot 共存，`promote-release.sh` 必须先 `build api`、再 `build web` 串行构建，最后 `up -d` 启动；禁止直接 `up -d --build`（BuildKit 会并行构建两镜像，曾导致整机 OOM、sshd 无法响应、全部容器退出）。两个 Dockerfile 的构建阶段均设置 `NODE_OPTIONS=--max-old-space-size=1024`，内存不足时构建快速失败而不是拖垮宿主。`setup-server-hygiene.sh` 会创建 2G swapfile（swappiness=10）作为兜底缓冲，新服务器初始化和故障恢复后都必须执行一次。
+构建资源约束：新服务器建议专用 2C4G 或以上。若仍在服务器构建，`promote-release.sh` 必须先 `build api`、再 `build web` 串行构建，最后 `up -d --no-build` 启动；禁止直接 `up -d --build`。镜像使用发布 SHA 标签，回滚只启动已存在的上一发布镜像，不在失败路径再次构建。`setup-server-hygiene.sh` 会启用 Docker、创建 2G swap，并安装带 `flock` 和超时的磁盘守护任务。
 
 镜像说明：`deploy/Dockerfile.api` 使用 `pnpm deploy --prod --legacy` 生成自包含生产依赖，并把两个 workspace 包（domain/contracts）以构建产物目录回填，规避 pnpm 11 `deploy` 命令对 `inject-workspace-packages` 的强制要求。构建步骤已在本地以 `node apps/api/dist/main.js`（`NODE_ENV=production`）验证可启动。
 
@@ -97,13 +97,14 @@ Web 生产构建会生成 `asset-manifest.json`，Service Worker 按内容版本
 
 ### 服务器失去响应的恢复步骤（2026-08-29 故障复盘）
 
-症状：80/443/8080 全部 connection refused（含同机 VibeShot），22 端口 TCP 可建立但 sshd 不返回 banner——整机内存耗尽（无 swap 时构建期 OOM）的典型表现。恢复流程：
+旧主机曾同时出现构建期 OOM 与根分区打满两类故障。2026-08-29 实际定位的根因：BuildKit 构建缓存累积 33G，dockerd 启动时加载缓存状态膨胀至 1.4G RSS，2G 内存整机抖动致死，重启后数分钟内必复发；在线 `docker builder prune` 会被同一问题拖死。若 22 端口可建立但 sshd 不返回 banner，或 Docker 命令长期卡住，不得继续远程构建或并发执行磁盘扫描/清理。恢复流程（已在 2026-08-29 实战验证）：
 
 1. 腾讯云控制台对 CVM 执行强制重启（VNC 登录通常也会卡死，不必尝试）。
-2. 重启后 SSH 登录，先 `df -h /`、`free -m`、`docker ps -a` 确认现场；查看 `journalctl -k | grep -i oom` 确认根因。
-3. 执行 `deploy/setup-server-hygiene.sh`（现已包含 2G swap 配置）。
-4. 进入 `/opt/wingedhorse/current/deploy`，`docker compose --env-file ../.env.production -f docker-compose.prod.yml up -d`（镜像已存在则无需构建）；确认 `/api/health` 后再检查 VibeShot 栈。
-5. 若需要重新构建，走 `promote-release.sh` 的串行构建路径，不要手动 `up -d --build`。
+2. 开机后立即抓登录窗口执行 `systemctl disable --now docker.socket docker.service containerd` 拿回控制权（必要时本地跑抓登循环）；确认 `df -h /`、`free -m`、`journalctl -k | grep -i oom` 现场。
+3. 若构建缓存膨胀，离线清理（不启动 dockerd）：用 `image/overlay2/layerdb/sha256/*/cache-id` 与 `layerdb/mounts/*/mount-id` 生成保留清单，删除 `/var/lib/docker/overlay2` 下未被引用的目录（`-init` 后缀属容器层须保留），再 `rm -rf /var/lib/docker/buildkit` 并清理 `overlay2/l` 悬空软链；用 `ionice -c3` + `setsid nohup` 后台执行。**绝不能动 `/var/lib/docker/volumes`（生产数据）**。
+4. 执行 `deploy/setup-server-hygiene.sh`（现已包含 2G swap 配置）。
+5. 启动 docker，先拉起 VibeShot（`/opt/vibeshot/backend`，`-f docker-compose.prod.yml`），再进入 `/opt/wingedhorse/current/deploy` 依次 `up -d postgres redis` → 健康后 `--profile hardware up -d`（镜像已存在则无需构建）；确认 `/api/health` 与全部容器 `unless-stopped` 后重新 `systemctl enable docker.socket docker.service containerd`。
+6. 若需要重新构建，走 `promote-release.sh` 的串行构建路径，不要手动 `up -d --build`。
 
 另注意：GitHub Actions 若因账号扣费失败/用量额度暂停（Billing & plans），CI 与 deploy 会在数秒内直接失败且不产生日志，需先在 GitHub 账号侧恢复付款。
 
@@ -119,7 +120,7 @@ Web 生产构建会生成 `asset-manifest.json`，Service Worker 按内容版本
 - CI 的格式、lint、类型、单测、E2E、构建全部通过。
 - 无密钥、原始音视频、未知授权素材进入镜像。
 - 数据库变更先备份并完成兼容性评审；当前迁移均为向前兼容的新增表/列，旧应用可继续读取。破坏性迁移必须另行提供逆向方案。
-- 手动部署在迁移前生成已校验备份并记录 `current` 指向；候选构建、迁移或健康检查失败时自动重新构建上一 SHA，不改变数据库卷，也不删除失败现场。
+- 手动部署在迁移前生成已校验备份并记录 `current` 指向；候选构建、迁移或健康检查失败时，只用上一 SHA 的现有镜像执行 `up -d --no-build`。若上一镜像不存在，脚本拒绝高风险的现场重建并退出。
 - 不在自动脚本中执行 `docker compose down -v`、删除卷或清理全部镜像。
 
 ## 7. 域名与 TLS（待办）
