@@ -103,4 +103,18 @@ describe("game settlement and cultivation state", () => {
     expect(migrated.friends).toEqual([{ id: "b", nickname: "小红" }]);
     expect(migrated.inviteCode).toBe("");
   });
+
+  it("stores and manages hardware and climate life memories", () => {
+    useAppStore.getState().addMemory("工位微气候干燥（湿度 30%），来来送上润燥补水包并提醒多喝水");
+    useAppStore.getState().addMemory("在工位狠狠捏了捏小马释放高压，来来给予了温暖回应");
+
+    const memories = useAppStore.getState().memories;
+    expect(memories).toHaveLength(2);
+    expect(memories[0]?.content).toContain("工位微气候干燥");
+    expect(memories[1]?.content).toContain("释放高压");
+
+    // 不允许重复添加完全相同的记忆
+    useAppStore.getState().addMemory("工位微气候干燥（湿度 30%），来来送上润燥补水包并提醒多喝水");
+    expect(useAppStore.getState().memories).toHaveLength(2);
+  });
 });

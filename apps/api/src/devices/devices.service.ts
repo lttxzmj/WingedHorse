@@ -35,16 +35,41 @@ export class DevicesService implements OnModuleInit {
     try {
       const rawText = payload.toString("utf-8");
       console.log(`[MQTT] 📥 收到硬件上报 <- Topic: ${topic} Payload: ${rawText}`);
-      const json = JSON.parse(rawText);
-      // 兼容两种格式：嵌套 ultrasonic.obstacle/pressure.has_pressure 或 扁平 obstacle/has_pressure
+      const json = JSON.parse(rawText) as Record<string, unknown>;
+      const ultrasonic = json.ultrasonic as Record<string, unknown> | undefined;
+      const pressure = json.pressure as Record<string, unknown> | undefined;
+      const led1Obj = json.led1 as Record<string, unknown> | undefined;
+      const led2Obj = json.led2 as Record<string, unknown> | undefined;
+      const dhtObj = json.dht as Record<string, unknown> | undefined;
+
+      const rawLed1 = typeof led1Obj?.state === "string" ? led1Obj.state : json.led1;
+      const rawLed2 = typeof led2Obj?.state === "string" ? led2Obj.state : json.led2;
+      const dhtTemp = typeof dhtObj?.temperature === "number" ? dhtObj.temperature : json.temperature;
+      const dhtHum = typeof dhtObj?.humidity === "number" ? dhtObj.humidity : json.humidity;
+
+      const deviceIdStr =
+        (typeof json.deviceId === "string" ? json.deviceId : null) ||
+        (typeof json.device_id === "string" ? json.device_id : null) ||
+        (typeof json.id === "string" ? json.id : null) ||
+        topic.split("/")[1] ||
+        "unknown";
+
       const normalizedData = {
-        deviceId: json.deviceId || json.device_id || json.id || topic.split("/")[1] || "unknown",
-        obstacle: Boolean(json.obstacle ?? json.ultrasonic?.obstacle),
-        pressure: Number(json.pressure?.value ?? json.pressure ?? 0),
-        hasPress: Boolean(json.hasPress ?? json.has_pressure ?? json.pressure?.has_pressure),
-        led1: (json.led1?.state ?? json.led1) === "on" ? "on" : "off",
-        led2: (json.led2?.state ?? json.led2) === "on" ? "on" : "off",
-        timestamp: json.timestamp || Math.floor(Date.now() / 1000)
+        deviceId: deviceIdStr,
+        obstacle: Boolean(json.obstacle ?? ultrasonic?.obstacle),
+        pressure: Number(pressure?.value ?? json.pressure ?? 0),
+        hasPress: Boolean(json.hasPress ?? json.has_pressure ?? pressure?.has_pressure),
+        led1: typeof rawLed1 === "string" ? rawLed1 : "off",
+        led2: typeof rawLed2 === "string" ? rawLed2 : "off",
+        dht: {
+          temperature: typeof dhtTemp === "number" ? dhtTemp : null,
+          humidity: typeof dhtHum === "number" ? dhtHum : null
+        },
+        env: {
+          temperatureC: typeof dhtTemp === "number" ? dhtTemp : undefined,
+          humidityPct: typeof dhtHum === "number" ? dhtHum : undefined
+        },
+        timestamp: typeof json.timestamp === "number" ? json.timestamp : Math.floor(Date.now() / 1000)
       };
 
       const parsed = deviceTelemetrySchema.safeParse(normalizedData);

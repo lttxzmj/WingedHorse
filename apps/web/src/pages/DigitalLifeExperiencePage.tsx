@@ -5,6 +5,7 @@ import {
   ITEM_IDS,
   createWorkdayComic,
   deriveCompanionGrowth,
+  deriveCompanionPrairieState,
   getResultProfile,
   recommendCareItem,
   type ItemId
@@ -15,6 +16,9 @@ import {
   BatteryCharging,
   BookImage,
   ChevronRight,
+  Coffee,
+  Droplets,
+  Flame,
   Heart,
   Package,
   Send,
@@ -22,13 +26,16 @@ import {
   Smartphone,
   Sparkles,
   Waves,
+  Wind,
   X
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { ItemIcon } from "../components/ItemIcon";
 import { LailaiStandFace } from "../components/LailaiStandFace";
 import { WorkdayComicSheet } from "../components/WorkdayComicSheet";
+import { createClientId } from "../lib/clientId";
+import { CompanionStreamError, streamCompanionMessage } from "../lib/companionStream";
 import { subscribeDeviceEvents, sendMoodToDevice } from "../lib/devices";
 import { trackEvent } from "../lib/analytics";
 import { createWorkdayComicCard } from "../lib/workdayComicCard";
@@ -36,6 +43,9 @@ import { useDigitalLife } from "../hooks/useDigitalLife";
 import { useAppStore } from "../store/useAppStore";
 import "../cultivation.css";
 import "../digital-life-experience.css";
+
+const HOME_CHAT_FALLBACK =
+  "来来暂时连不上远处，但还在这儿。点开对话框，还能慢慢说。";
 
 function chooseSceneDrops(seedSource: string): ItemId[] {
   let seed = 0;
@@ -59,6 +69,9 @@ export function DigitalLifeExperiencePage() {
   const navigate = useNavigate();
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [reaction, setReaction] = useState<{ id: number; message: string } | null>(null);
+  const [quickDraft, setQuickDraft] = useState("");
+  const [chatReply, setChatReply] = useState("");
+  const [chatSending, setChatSending] = useState(false);
   const [collectingId, setCollectingId] = useState<string | null>(null);
   const [collectedKeys, setCollectedKeys] = useState<string[]>([]);
   const characterButtonRef = useRef<HTMLButtonElement>(null);
@@ -66,6 +79,9 @@ export function DigitalLifeExperiencePage() {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const wasInteractionOpen = useRef(false);
   const sceneDropsRef = useRef<{ key: string; items: ItemId[] } | null>(null);
+  const chatSessionId = useRef(createClientId());
+  const chatAbortRef = useRef<AbortController | null>(null);
+  const lastChatExchange = useRef<{ user: string; assistant: string } | null>(null);
   const result = useAppStore((state) => state.result);
   const inventory = useAppStore((state) => state.inventory);
   const inventoryCount = useAppStore((state) =>
@@ -73,16 +89,29 @@ export function DigitalLifeExperiencePage() {
   );
   const relationshipXp = useAppStore((state) => state.relationshipXp);
   const lifeEvents = useAppStore((state) => state.lifeEvents);
+  const memories = useAppStore((state) => state.memories);
   const petVitals = useAppStore((state) => state.petVitals);
+  const dailyPlan = useAppStore((state) => state.dailyPlan);
+  const worldContext = useAppStore((state) => state.worldContext);
   const useItem = useAppStore((state) => state.useItem);
   const collectItem = useAppStore((state) => state.collectItem);
   const comfortPet = useAppStore((state) => state.comfortPet);
+  const addMemory = useAppStore((state) => state.addMemory);
   const deviceId = useAppStore((state) => state.deviceId);
   const workShift = useAppStore((state) => state.workShift);
   const clockIn = useAppStore((state) => state.clockIn);
   const clockOut = useAppStore((state) => state.clockOut);
   const gamesPlayed = useAppStore((state) => state.gamesPlayed);
   const todayCaughtCount = useAppStore((state) => state.todayCaughtCount);
+  const [climateDrop, setClimateDrop] = useState<{
+    type: "climate_dry" | "climate_hot" | "climate_cold" | "climate_humid";
+    title: string;
+    message: string;
+    itemId?: ItemId;
+    memoryFact: string;
+    temperature?: number | null;
+    humidity?: number | null;
+  } | null>(null);
   const [comicOpen, setComicOpen] = useState(false);
   const [standFaceOpen, setStandFaceOpen] = useState(false);
   const [comicMessage, setComicMessage] = useState("");
@@ -93,10 +122,11 @@ export function DigitalLifeExperiencePage() {
   useEffect(() => {
     const targetDeviceId = deviceId || "lamp-001";
     const unsubscribe = subscribeDeviceEvents(targetDeviceId, (event) => {
-      // 1. 实体触摸/按压 -> 触发角色抚摸与气泡对话
+      // 1. 实体触摸/按压 -> 触发角色抚摸与气泡对话，写入长期生活记忆
       if (event.type === "touch_comfort") {
         comfortPet();
         showReaction(event.message);
+        if (event.memoryFact) addMemory(event.memoryFact);
         // 如果按压力度很大，联动灯效为舒缓暖光以安抚用户
         if (event.stressLevel === "intense" || event.stressLevel === "high") {
           void sendMoodToDevice(targetDeviceId, "tired");
@@ -104,11 +134,20 @@ export function DigitalLifeExperiencePage() {
       } else if (event.type === "worker_presence") {
         // 2. 超声波检测到打工人来到工位
         showReaction(event.message);
+      } else if (
+        event.type === "climate_dry" ||
+        event.type === "climate_hot" ||
+        event.type === "climate_cold" ||
+        event.type === "climate_humid"
+      ) {
+        // 3. DHT 温湿度微气候触发 -> 展示草原专属浮动补给包并更新台词
+        setClimateDrop(event);
+        showReaction(event.message);
       }
     });
 
     return unsubscribe;
-  }, [deviceId, comfortPet]);
+  }, [deviceId, comfortPet, addMemory]);
 
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
@@ -154,6 +193,16 @@ export function DigitalLifeExperiencePage() {
 
   const profile = getResultProfile(result.typeId);
   const growth = deriveCompanionGrowth(relationshipXp);
+  const latestMemory = memories.length > 0 ? (memories[memories.length - 1]?.content ?? null) : null;
+  const latestEvent = lifeEvents.length > 0 ? (lifeEvents[0] ?? null) : null;
+  const prairieState = deriveCompanionPrairieState({
+    typeId: result.typeId,
+    vitals: petVitals,
+    relationshipXp,
+    latestEvent,
+    recentMemory: latestMemory,
+    isInteracting: interactionOpen || chatSending
+  });
   const recommendedItemId = recommendCareItem(inventory, petVitals);
   const comfortedToday = lifeEvents.some(
     (event) => event.eventKey === `quiet-moment:${new Date().toISOString().slice(0, 10)}`
@@ -192,6 +241,89 @@ export function DigitalLifeExperiencePage() {
   };
   const showReaction = (message: string) => setReaction({ id: Date.now(), message });
 
+  const openChatDetail = () => {
+    if (lastChatExchange.current) {
+      sessionStorage.setItem(
+        "wingedhorse-companion-seed",
+        JSON.stringify({
+          messages: [
+            { role: "user", content: lastChatExchange.current.user },
+            { role: "assistant", content: lastChatExchange.current.assistant }
+          ]
+        })
+      );
+    }
+    void navigate({ to: "/companion" });
+  };
+
+  const sendQuickChat = async (event: FormEvent) => {
+    event.preventDefault();
+    const content = quickDraft.trim();
+    if (!content || chatSending) return;
+    setInteractionOpen(false);
+    setQuickDraft("");
+    setChatSending(true);
+    setChatReply("…");
+    setReaction(null);
+    chatAbortRef.current?.abort();
+    const controller = new AbortController();
+    chatAbortRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 18_000);
+    try {
+      const data = await streamCompanionMessage(
+        {
+          sessionId: chatSessionId.current,
+          message: content,
+          history: [],
+          memoryEnabled: false,
+          memories: [],
+          typeId: result.typeId,
+          ...(dailyPlan && worldContext
+            ? {
+                lifeContext: {
+                  typeId: result.typeId,
+                  world: worldContext,
+                  plan: dailyPlan,
+                  vitals: petVitals,
+                  relationshipXp,
+                  recentEvents: lifeEvents
+                    .slice(0, 6)
+                    .map(({ title, body, occurredAt }) => ({ title, body, occurredAt })),
+                  inventory: Object.entries(inventory)
+                    .filter((entry): entry is [ItemId, number] => Boolean(entry[1]))
+                    .slice(0, 12)
+                    .map(([id, count]) => ({ name: ITEM_CATALOG[id].name, count }))
+                }
+              }
+            : {})
+        },
+        (partial) => setChatReply(partial || "…"),
+        controller.signal
+      );
+      setChatReply(data.reply);
+      lastChatExchange.current = { user: content, assistant: data.reply };
+      if (content.length >= 2) {
+        addMemory(content);
+      }
+    } catch (error) {
+      const rateLimited =
+        error instanceof CompanionStreamError && error.code === "COMPANION_RATE_LIMITED";
+      const fallback = rateLimited
+        ? "消息来得有点密，来来先停一小会儿。点开对话框还能继续看。"
+        : HOME_CHAT_FALLBACK;
+      setChatReply(fallback);
+      lastChatExchange.current = { user: content, assistant: fallback };
+    } finally {
+      window.clearTimeout(timeout);
+      if (chatAbortRef.current === controller) {
+        chatAbortRef.current = null;
+        setChatSending(false);
+      }
+    }
+  };
+
+  useEffect(() => () => chatAbortRef.current?.abort(), []);
+
   const handleCollectDrop = (itemId: ItemId, dropIndex: number) => {
     const key = `${sceneDropKey}:${dropIndex}:${itemId}`;
     if (collectedKeys.includes(key) || collectingId === key) return;
@@ -203,6 +335,23 @@ export function DigitalLifeExperiencePage() {
       setCollectedKeys((prev) => [...prev, key]);
       setCollectingId((curr) => (curr === key ? null : curr));
     }, 450);
+  };
+
+  const handleClaimClimateDrop = () => {
+    if (!climateDrop) return;
+    const targetDeviceId = deviceId || "lamp-001";
+    if (climateDrop.itemId) {
+      collectItem(climateDrop.itemId, 1);
+    }
+    comfortPet();
+    if (climateDrop.memoryFact) {
+      addMemory(climateDrop.memoryFact);
+    }
+    const itemName = climateDrop.itemId ? ITEM_CATALOG[climateDrop.itemId].name.replace("补给", "") : "清爽能量";
+    showReaction(`（开心收下）收到了${itemName}！${climateDrop.message}`);
+    // 领完后下发指令熄灭/恢复硬件联动灯效
+    void sendMoodToDevice(targetDeviceId, "good");
+    setClimateDrop(null);
   };
 
   const handleClockIn = () => {
@@ -293,14 +442,14 @@ export function DigitalLifeExperiencePage() {
           <p className="digital-life-presence">
             <i aria-hidden="true" />
             <span>
-              {profile.name}状态 · {growth.relationshipLabel}
+              {profile.name} · {prairieState.statusNote} · {growth.relationshipLabel}
             </span>
           </p>
         </div>
       </header>
 
       <section
-        className="lawn-stage lawn-stage--alive digital-life-stage"
+        className={`lawn-stage lawn-stage--alive digital-life-stage digital-life-stage--${prairieState.ambientTheme}`}
         aria-label="来来生活草原"
       >
         <div className="digital-life-stage__drops" aria-label="来来刚带回来的补给">
@@ -344,23 +493,84 @@ export function DigitalLifeExperiencePage() {
           </div>
         </div>
 
+        {climateDrop ? (
+          <div
+            className={`digital-life-stage__climate-gift ${
+              climateDrop.type === "climate_hot"
+                ? "digital-life-stage__climate-gift--hot"
+                : climateDrop.type === "climate_dry"
+                  ? "digital-life-stage__climate-gift--dry"
+                  : ""
+            }`.trim()}
+            role="status"
+            aria-live="polite"
+          >
+            <div className="digital-life-stage__climate-gift-info">
+              <div className="digital-life-stage__climate-gift-icon">
+                <AppIcon
+                  icon={
+                    climateDrop.type === "climate_dry"
+                      ? Droplets
+                      : climateDrop.type === "climate_hot"
+                        ? Flame
+                        : climateDrop.type === "climate_cold"
+                          ? Coffee
+                          : Wind
+                  }
+                  size={20}
+                />
+              </div>
+              <div className="digital-life-stage__climate-gift-text">
+                <strong>{climateDrop.title}</strong>
+                <span>
+                  {climateDrop.humidity ? `湿度 ${climateDrop.humidity}% ` : ""}
+                  {climateDrop.temperature ? `温度 ${climateDrop.temperature.toFixed(1)}°C` : ""}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="digital-life-stage__climate-gift-btn"
+              onClick={handleClaimClimateDrop}
+            >
+              <AppIcon icon={Sparkles} size={13} />
+              <span>领取</span>
+            </button>
+          </div>
+        ) : null}
+
         <div className="digital-life-stage__actor">
-          <p className="lawn-stage__bubble digital-life-stage__speech" aria-live="polite">
-            <span>
-              {reaction?.message ||
-                currentMoment?.body ||
-                "我不会催你。想说点什么，还是先在草原坐一会儿？"}
-            </span>
-          </p>
+          {chatReply ? (
+            <button
+              type="button"
+              className="lawn-stage__bubble digital-life-stage__speech digital-life-stage__speech--chat"
+              aria-live="polite"
+              aria-label="打开聊天详情"
+              onClick={openChatDetail}
+            >
+              <span>{chatReply}</span>
+              {!chatSending ? <small>点开继续聊</small> : null}
+            </button>
+          ) : (
+            <p className="lawn-stage__bubble digital-life-stage__speech" aria-live="polite">
+              <span>
+                {reaction?.message ||
+                  currentMoment?.body ||
+                  prairieState.bubbleSpeech ||
+                  "我不会催你。想说点什么，还是先在草原坐一会儿？"}
+              </span>
+            </p>
+          )}
           <button
             ref={characterButtonRef}
-            className={`character-hotspot ${reaction ? "is-cared-for" : ""}`.trim()}
+            className={`character-hotspot ${reaction || chatReply ? "is-cared-for" : ""}`.trim()}
             onClick={(event) => openInteraction(event.currentTarget)}
             aria-label={`和${CHARACTER_NAME}互动`}
           >
             <WingedHorseCharacter
-              key={reaction?.id ?? "rest"}
-              mood={profile.mood}
+              key={reaction?.id ?? chatReply ?? prairieState.visualMood}
+              mood={reaction ? profile.mood : prairieState.visualMood}
+              activity={chatSending ? "listening" : prairieState.activity}
               typeId={result.typeId}
               alt={CHARACTER_NAME}
             />
@@ -381,16 +591,20 @@ export function DigitalLifeExperiencePage() {
           </span>
         </Link>
         <div className="digital-life-actions" aria-label="和来来互动">
-          <Link
-            className="digital-life-actions__composer"
-            to="/companion"
-            aria-label="和来来聊一聊"
-          >
-            <span>和来来聊一聊…</span>
-            <span className="digital-life-actions__composer-send" aria-hidden="true">
+          <form className="digital-life-actions__composer" onSubmit={(event) => void sendQuickChat(event)}>
+            <input
+              id="home-quick-chat"
+              value={quickDraft}
+              onChange={(event) => setQuickDraft(event.target.value)}
+              maxLength={200}
+              placeholder="说一句…"
+              aria-label="和来来说一句"
+              disabled={chatSending}
+            />
+            <button type="submit" aria-label="发送" disabled={chatSending || !quickDraft.trim()}>
               <AppIcon icon={Send} size={18} />
-            </span>
-          </Link>
+            </button>
+          </form>
           <button
             type="button"
             className="digital-life-actions__supply"

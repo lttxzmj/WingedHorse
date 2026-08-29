@@ -2,7 +2,7 @@ import type { CompanionMessageRequest, CompanionMessageResponse } from "@wingedh
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { CHARACTER_NAME, getResultProfile, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
-import { BookOpen, ChevronDown, Heart, Info, Send, ShieldCheck } from "lucide-react";
+import { BookOpen, ChevronDown, Send, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { BackLink } from "../components/BackLink";
@@ -41,14 +41,14 @@ export function CompanionPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [partialReply, setPartialReply] = useState("");
-  const [memoryEnabled, setMemoryEnabled] = useState(false);
-  const [lifeContextEnabled, setLifeContextEnabled] = useState(false);
   const [deliveryNotice, setDeliveryNotice] = useState("");
   const memories = useAppStore((state) => state.memories);
+  const memoryEnabled = memories.length > 0;
   const latestLifeEvent = useAppStore((state) => state.lifeEvents[0]);
   const result = useAppStore((state) => state.result);
   const dailyPlan = useAppStore((state) => state.dailyPlan);
   const worldContext = useAppStore((state) => state.worldContext);
+  const lifeContextEnabled = Boolean(result && dailyPlan && worldContext);
   const petVitals = useAppStore((state) => state.petVitals);
   const relationshipXp = useAppStore((state) => state.relationshipXp);
   const lifeEvents = useAppStore((state) => state.lifeEvents);
@@ -58,7 +58,6 @@ export function CompanionPage() {
   const deviceId = useAppStore((state) => state.deviceId);
   const profile = result ? getResultProfile(result.typeId) : null;
   const companionName = CHARACTER_NAME;
-  const lifeContextAvailable = Boolean(result && dailyPlan && worldContext);
 
   // 监听硬件实体触摸并注入对话流
   useEffect(() => {
@@ -86,9 +85,33 @@ export function CompanionPage() {
 
   useEffect(() => {
     const draftFromHome = sessionStorage.getItem("wingedhorse-companion-draft");
-    if (!draftFromHome) return;
-    setDraft(draftFromHome);
-    sessionStorage.removeItem("wingedhorse-companion-draft");
+    if (draftFromHome) {
+      setDraft(draftFromHome);
+      sessionStorage.removeItem("wingedhorse-companion-draft");
+    }
+    const seedRaw = sessionStorage.getItem("wingedhorse-companion-seed");
+    if (!seedRaw) return;
+    sessionStorage.removeItem("wingedhorse-companion-seed");
+    try {
+      const seed = JSON.parse(seedRaw) as {
+        messages?: Array<{ role?: string; content?: string }>;
+      };
+      const seeded = (seed.messages ?? [])
+        .filter(
+          (item): item is { role: "user" | "assistant"; content: string } =>
+            (item.role === "user" || item.role === "assistant") &&
+            typeof item.content === "string" &&
+            item.content.trim().length > 0
+        )
+        .map((item) => ({
+          id: createClientId(),
+          role: item.role,
+          content: item.content.trim()
+        }));
+      if (seeded.length > 0) setMessages(seeded);
+    } catch {
+      // Ignore malformed home-seed payloads and keep the default greeting.
+    }
   }, []);
 
   const send = async (event?: FormEvent) => {
@@ -110,6 +133,7 @@ export function CompanionPage() {
       history,
       memoryEnabled,
       memories: memoryEnabled ? memories.map((memory) => memory.content) : [],
+      ...(result ? { typeId: result.typeId } : {}),
       ...(lifeContextEnabled && result && dailyPlan && worldContext
         ? {
             lifeContext: {

@@ -9,10 +9,8 @@ import {
   LockKeyhole,
   Map,
   MessageCircle,
-  Navigation,
   Save,
-  ShieldCheck,
-  Sparkles
+  ShieldCheck
 } from "lucide-react";
 import { useState } from "react";
 import { AppIcon } from "../components/AppIcon";

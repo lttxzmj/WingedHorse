@@ -60,7 +60,26 @@ describe("CompanionService", () => {
     const result = await service.reply(request);
     expect(result.source).toBe("local-fallback");
     expect(result.aiDisclosure).toBe(true);
-    expect(result.reply).toContain("AI");
+    expect(result.reply).toContain("来来");
+    expect(result.reply).not.toMatch(/我是来来/);
+  });
+
+  it("matches the tired state voice when typeId is provided without life context", async () => {
+    const provider = { available: false, complete: vi.fn() };
+    const service = createService(provider);
+    const result = await service.reply({ ...request, typeId: "tired", message: "今天有点累" });
+    expect(result.source).toBe("local-fallback");
+    expect(result.reply).toContain("不催满电");
+    expect(result.reply).toContain("来来");
+    expect(result.reply).not.toMatch(/我是来来|AI 伙伴/);
+  });
+
+  it("matches the hidden chosen state voice", async () => {
+    const provider = { available: false, complete: vi.fn() };
+    const service = createService(provider);
+    const result = await service.reply({ ...request, typeId: "chosen", message: "今天有点累" });
+    expect(result.reply).toContain("天选样");
+    expect(result.reply).toContain("来来");
   });
 
   it("never sends urgent messages to the model", async () => {
@@ -95,6 +114,20 @@ describe("CompanionService", () => {
     expect(provider.complete).not.toHaveBeenCalled();
   });
 
+  it("does not treat a tired vent as a life-log question", async () => {
+    const provider = { available: true, complete: vi.fn() };
+    const service = createService(provider);
+    const result = await service.reply({
+      ...request,
+      message: "今天有点累",
+      lifeContext
+    });
+    expect(result.source).toBe("domain-grounded");
+    expect(result.reply).toContain("不催满电");
+    expect(result.reply).not.toContain("生活簿");
+    expect(provider.complete).not.toHaveBeenCalled();
+  });
+
   it("uses the selected character voice for grounded companionship", async () => {
     const provider = { available: true, complete: vi.fn() };
     const service = createService(provider);
@@ -105,8 +138,9 @@ describe("CompanionService", () => {
     });
 
     expect(result.source).toBe("domain-grounded");
-    expect(result.reply).toContain("不催自己满电");
-    expect(result.reply).toContain("不会用测评类型解释");
+    expect(result.reply).toContain("不催满电");
+    expect(result.reply).toContain("来来");
+    expect(result.reply).not.toMatch(/\b我\b|我是来来/);
     expect(provider.complete).not.toHaveBeenCalled();
   });
 
@@ -120,7 +154,7 @@ describe("CompanionService", () => {
       lifeContext
     });
 
-    expect(result.reply).toContain("手动选的是“有点紧绷”");
+    expect(result.reply).toContain("手动选的是「有点紧绷」");
     expect(result.reply).toContain("不是对你情绪或健康的判断");
     expect(provider.complete).not.toHaveBeenCalled();
   });

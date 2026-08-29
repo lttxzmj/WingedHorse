@@ -2717,7 +2717,7 @@ h1 {
   font-weight: 800;
 }
 
-.game-recovery {
+.game-recovery:not(.game-recovery) {
   display: grid;
   min-height: min(72vh, 38rem);
   padding: var(--space-6);

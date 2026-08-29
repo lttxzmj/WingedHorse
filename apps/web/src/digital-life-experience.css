@@ -215,6 +215,35 @@
   position: relative;
 }
 
+.digital-life-stage--dusk::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(255 174 80 / 12%) 0%, rgb(255 120 50 / 8%) 100%);
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
+.digital-life-stage--night::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(20 30 55 / 24%) 0%, rgb(40 50 75 / 16%) 100%);
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
+.digital-life-stage--dawn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(255 240 200 / 14%) 0%, transparent 80%);
+  z-index: 1;
+}
+
 .digital-life-stage__actor {
   position: absolute;
   z-index: 5;
@@ -298,6 +327,113 @@
   content: "";
   transform: rotate(45deg);
   pointer-events: none;
+}
+
+.digital-life-stage__climate-gift {
+  position: absolute;
+  z-index: 5;
+  top: 4.8rem;
+  left: max(1rem, env(safe-area-inset-left));
+  width: min(calc(100% - 2rem), 24rem);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 1.1rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 60%, #e0f2fe 100%);
+  border: 1.5px solid #86efac;
+  box-shadow:
+    0 0.4rem 1.2rem rgb(34 197 94 / 18%),
+    0 0.1rem 0.2rem rgb(0 0 0 / 4%);
+  backdrop-filter: blur(8px);
+  animation: climateFloat 3s ease-in-out infinite alternate;
+}
+
+.digital-life-stage__climate-gift--hot {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 60%, #e0f2fe 100%);
+  border-color: #fdba74;
+  box-shadow:
+    0 0.4rem 1.2rem rgb(249 115 22 / 18%),
+    0 0.1rem 0.2rem rgb(0 0 0 / 4%);
+}
+
+.digital-life-stage__climate-gift--dry {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 60%, #e0e7ff 100%);
+  border-color: #93c5fd;
+  box-shadow:
+    0 0.4rem 1.2rem rgb(59 130 246 / 18%),
+    0 0.1rem 0.2rem rgb(0 0 0 / 4%);
+}
+
+.digital-life-stage__climate-gift-info {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.digital-life-stage__climate-gift-icon {
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+  color: #0284c7;
+  flex: 0 0 auto;
+}
+
+.digital-life-stage__climate-gift-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.digital-life-stage__climate-gift-text strong {
+  color: var(--color-ink-900);
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.digital-life-stage__climate-gift-text span {
+  color: var(--color-ink-600);
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
+.digital-life-stage__climate-gift-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: 999px;
+  background: var(--color-brand-500);
+  color: #3b2808;
+  border: 1px solid rgb(122 86 0 / 18%);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(244 178 35 / 35%);
+  flex: 0 0 auto;
+  transition: transform 0.15s ease;
+}
+
+.digital-life-stage__climate-gift-btn:active {
+  transform: scale(0.95);
+}
+
+@keyframes climateFloat {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-5px);
+  }
 }
 
 .digital-life-stage__drops {
@@ -504,58 +640,55 @@
   backdrop-filter: blur(16px);
 }
 
-.digital-life-actions a,
-.digital-life-actions > button {
-  min-height: 2.95rem;
-  border: 0;
-  border-radius: 0.85rem;
-  text-decoration: none;
-}
-
 .digital-life-actions__composer {
   display: flex;
   align-items: center;
   min-width: 0;
-  min-height: 2.95rem;
-  gap: 0.34rem;
-  padding: 0 0.38rem 0 0.72rem;
+  min-height: 3rem;
+  gap: 0.3rem;
+  padding: 0 0.35rem 0 0.75rem;
   border-radius: 0.85rem;
-  color: #9a8c78;
   background: rgb(255 255 255 / 94%);
-  font-size: 0.78rem;
-  font-weight: 650;
-  text-decoration: none;
 }
 
-.digital-life-actions__composer > span:first-child {
-  flex: 1 1 auto;
+.digital-life-actions__composer input {
+  width: 100%;
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  height: 2.7rem;
+  border: 0;
+  outline: 0;
+  color: var(--color-ink-900);
+  background: transparent;
+  font: inherit;
+  font-size: 0.84rem;
 }
 
-.digital-life-actions__composer:hover,
-.digital-life-actions__composer:focus-visible {
-  color: #756753;
-  background: #fff;
+.digital-life-actions__composer input::placeholder {
+  color: #9a8c78;
 }
 
-.digital-life-actions__composer-send {
+.digital-life-actions__composer button {
   display: grid;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.4rem;
+  height: 2.4rem;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 0.68rem;
+  border: 0;
+  border-radius: 0.7rem;
   color: #4f3d17;
   background: #ffd057;
+  cursor: pointer;
+}
+
+.digital-life-actions__composer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .digital-life-actions__supply {
   display: inline-flex;
-  min-width: 5.6rem;
-  min-height: 2.95rem;
+  min-width: 5.4rem;
+  min-height: 3rem;
   padding: 0 0.85rem;
   align-items: center;
   justify-content: center;
@@ -563,10 +696,10 @@
   border: 0;
   border-radius: 0.85rem;
   color: #6b5318;
-  background: rgb(255 255 255 / 90%);
+  background: rgb(255 255 255 / 92%);
   box-shadow: inset 0 0 0 1.5px rgb(212 162 28 / 42%);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   font-weight: 780;
   cursor: pointer;
 }
@@ -577,6 +710,28 @@
 
 .digital-life-actions__supply:active {
   transform: translateY(1px);
+}
+
+.digital-life-stage .lawn-stage__bubble.digital-life-stage__speech--chat,
+.digital-life-stage__speech.digital-life-stage__speech--chat {
+  display: grid;
+  gap: 0.2rem;
+  padding-bottom: 0.55rem;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  pointer-events: auto;
+}
+
+.digital-life-stage__speech--chat:focus-visible {
+  outline: 3px solid var(--color-focus-600);
+  outline-offset: 3px;
+}
+
+.digital-life-stage__speech--chat small {
+  color: #8e6915;
+  font-size: 0.62rem;
+  font-weight: 720;
 }
 
 .digital-life-actions a:focus,
@@ -847,9 +1002,9 @@
   }
 
   .digital-life-actions__supply {
-    min-width: 5.1rem;
+    min-width: 5rem;
     padding-inline: 0.7rem;
-    font-size: 0.72rem;
+    font-size: 0.78rem;
   }
 }
 

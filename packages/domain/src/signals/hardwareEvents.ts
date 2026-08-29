@@ -1,12 +1,20 @@
-import type { HorseTypeId } from "../assessment/types.js";
+import type { ItemId } from "../game/items.js";
 
 export type HardwareTelemetryInput = {
   deviceId: string;
   obstacle?: boolean | undefined;
   pressure?: number | undefined;
   hasPress?: boolean | undefined;
-  led1?: "on" | "off" | undefined;
-  led2?: "on" | "off" | undefined;
+  led1?: string | undefined;
+  led2?: string | undefined;
+  dht?: {
+    temperature?: number | null | undefined;
+    humidity?: number | null | undefined;
+  } | undefined;
+  env?: {
+    temperatureC?: number | null | undefined;
+    humidityPct?: number | null | undefined;
+  } | undefined;
   timestamp?: number | undefined;
 };
 
@@ -31,6 +39,46 @@ export type HardwareInteractionEvent =
       message: string;
       stressLevel: StressLevel;
       pressureValue: number;
+      memoryFact: string;
+      timestamp: number;
+    }
+  | {
+      type: "climate_dry";
+      title: "💧 工位干燥，来来送上润燥补水包";
+      message: string;
+      humidity: number;
+      temperature: number | null;
+      itemId: ItemId;
+      memoryFact: string;
+      timestamp: number;
+    }
+  | {
+      type: "climate_hot";
+      title: "🧊 工位微热，来来送上清凉补给";
+      message: string;
+      temperature: number;
+      humidity: number | null;
+      itemId: ItemId;
+      memoryFact: string;
+      timestamp: number;
+    }
+  | {
+      type: "climate_cold";
+      title: "☕ 工位冷气足，来来提醒保暖";
+      message: string;
+      temperature: number;
+      humidity: number | null;
+      itemId: ItemId;
+      memoryFact: string;
+      timestamp: number;
+    }
+  | {
+      type: "climate_humid";
+      title: "🌧️ 湿度过高，开个小窗透透气吧";
+      message: string;
+      humidity: number;
+      temperature: number | null;
+      memoryFact: string;
       timestamp: number;
     }
   | {
@@ -52,7 +100,7 @@ export function evaluateStressLevel(pressureValue: number): StressLevel {
 /**
  * 根据角色类型与压力等级生成定制关怀文案
  */
-export function getTouchReaction(typeId: HorseTypeId | string | undefined, stress: StressLevel): string {
+export function getTouchReaction(typeId: string | undefined, stress: StressLevel): string {
   switch (typeId) {
     case "explosive": // 易燃易爆牛马
       if (stress === "intense") return "（感受到你捏得好用力）高压锅快顶不住啦？深呼吸十秒，咱们不跟离谱需求置气！";
@@ -95,7 +143,7 @@ export function getTouchReaction(typeId: HorseTypeId | string | undefined, stres
 /**
  * 打工人专属归位迎客文案
  */
-export function getWorkerPresenceMessage(typeId: HorseTypeId | string | undefined): string {
+export function getWorkerPresenceMessage(typeId: string | undefined): string {
   switch (typeId) {
     case "explosive":
       return "（立正张望）你归位啦！今天谁敢甩锅，我第一个帮你怼回去！";
@@ -120,14 +168,13 @@ export function getWorkerPresenceMessage(typeId: HorseTypeId | string | undefine
  */
 export function deriveHardwareEvent(
   telemetry: HardwareTelemetryInput,
-  currentContext?: { inGame?: boolean; horseTypeId?: HorseTypeId | string }
+  currentContext?: { inGame?: boolean; horseTypeId?: string }
 ): HardwareInteractionEvent | null {
   const now = telemetry.timestamp ? telemetry.timestamp * 1000 : Date.now();
   const typeId = currentContext?.horseTypeId;
 
   // 1. 超声波感应到障碍/人员靠近
   if (telemetry.obstacle) {
-    // 如果处于游戏中（摸鱼场景），超声波触发防窥/防老板 Boss 警戒
     if (currentContext?.inGame) {
       return {
         type: "boss_alert",
@@ -136,7 +183,6 @@ export function deriveHardwareEvent(
         timestamp: now
       };
     }
-    // 非游戏场景（在工位/家园）：识别为打工人归位迎客
     return {
       type: "worker_presence",
       title: "🌟 感应到你来到工位啦",
@@ -145,11 +191,17 @@ export function deriveHardwareEvent(
     };
   }
 
-  // 2. FSR 压力传感器被触摸/按压 -> 结合压力值与角色性格生成关怀反馈
+  // 2. FSR 压力传感器被触摸/按压
   if (telemetry.hasPress || (telemetry.pressure && telemetry.pressure > 100)) {
     const pressureVal = telemetry.pressure ?? 500;
     const stressLevel = evaluateStressLevel(pressureVal);
     const message = getTouchReaction(typeId, stressLevel);
+    const stressDesc =
+      stressLevel === "intense"
+        ? "狠狠捏了捏小马释放高压"
+        : stressLevel === "high"
+          ? "握住小马寻找支持"
+          : "温柔抚摸了小马";
 
     return {
       type: "touch_comfort",
@@ -157,6 +209,74 @@ export function deriveHardwareEvent(
       message,
       stressLevel,
       pressureValue: pressureVal,
+      memoryFact: `在工位${stressDesc}，来来给予了温暖回应`,
+      timestamp: now
+    };
+  }
+
+  // 3. DHT 温湿度传感器环境判定与补给包派生
+  const temperature =
+    telemetry.dht?.temperature ??
+    telemetry.env?.temperatureC ??
+    null;
+  const humidity =
+    telemetry.dht?.humidity ??
+    telemetry.env?.humidityPct ??
+    null;
+
+  // 3.1 干燥判断（湿度 < 38%）-> 润燥补水包
+  if (humidity !== null && humidity > 0 && humidity < 38) {
+    return {
+      type: "climate_dry",
+      title: "💧 工位干燥，来来送上润燥补水包",
+      message: `工位当前湿度只有 ${Math.round(humidity)}%，嗓子快冒烟啦！来来送上了润燥补水包，记得喝口温水润润喉～`,
+      humidity: Math.round(humidity),
+      temperature,
+      itemId: "iced-americano",
+      memoryFact: `工位微气候干燥（湿度 ${Math.round(humidity)}%），来来送上润燥补水包并提醒多喝水`,
+      timestamp: now
+    };
+  }
+
+  // 3.2 高温/闷热判断（温度 > 27°C 或 led1 为 blinking）-> 清凉补给包
+  if ((temperature !== null && temperature > 27) || telemetry.led1 === "blinking") {
+    const displayTemp = temperature ?? 28;
+    return {
+      type: "climate_hot",
+      title: "🧊 工位微热，来来送上清凉补给",
+      message: `工位温度达到了 ${displayTemp.toFixed(1)}°C，别硬扛工位闷热，来来备好了清凉饮品，放松降降温～`,
+      temperature: displayTemp,
+      humidity,
+      itemId: "iced-americano",
+      memoryFact: `工位气温偏高（${displayTemp.toFixed(1)}°C），来来送上清凉补给包`,
+      timestamp: now
+    };
+  }
+
+  // 3.3 极高湿度判断（湿度 > 90% 或 led2 为 breathing）-> 通风除湿提示
+  if ((humidity !== null && humidity > 90) || telemetry.led2 === "breathing") {
+    const displayHum = humidity ?? 92;
+    return {
+      type: "climate_humid",
+      title: "🌧️ 湿度过高，开个小窗透透气吧",
+      message: `工位当前湿度达到 ${Math.round(displayHum)}%，空气稍显闷湿，开窗或走动透透气，给大脑换点新鲜空气～`,
+      humidity: Math.round(displayHum),
+      temperature,
+      memoryFact: `工位湿度偏高（${Math.round(displayHum)}%），来来提醒开窗透气`,
+      timestamp: now
+    };
+  }
+
+  // 3.4 低温冷气判断（温度 < 19°C）-> 保暖包
+  if (temperature !== null && temperature < 19) {
+    return {
+      type: "climate_cold",
+      title: "☕ 工位冷气足，来来提醒保暖",
+      message: `工位温度只有 ${temperature.toFixed(1)}°C，空调吹久了容易着凉，小马提醒你搭件薄外套或喝杯热茶～`,
+      temperature,
+      humidity,
+      itemId: "nap-mask",
+      memoryFact: `工位气温偏低（${temperature.toFixed(1)}°C），来来提醒加衣保暖`,
       timestamp: now
     };
   }

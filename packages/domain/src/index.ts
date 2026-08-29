@@ -14,6 +14,7 @@ export * from "./digital-life/life.js";
 export * from "./digital-life/engine.js";
 export * from "./digital-life/journey.js";
 export * from "./digital-life/growth.js";
+export * from "./digital-life/prairie-state.js";
 export * from "./digital-life/workday-comic.js";
 export * from "./signals/expression.js";
 export * from "./signals/lighting.js";

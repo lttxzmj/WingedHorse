@@ -29,7 +29,7 @@ describe("DevicesService", () => {
     expect(publish.mock.calls[4]![0]).toBe("devices/d-b/effect");
   });
 
-  it("handles incoming telemetry and publishes derived events with nested hardware format", async () => {
+  it("handles incoming telemetry and publishes derived events with nested hardware format", () => {
     const { service } = makeService();
     const emitted: unknown[] = [];
     service.getEventsStream("lamp-001").subscribe((data) => emitted.push(data));
@@ -57,5 +57,78 @@ describe("DevicesService", () => {
     expect(item.telemetry.led1).toBe("on");
     expect(item.telemetry.led2).toBe("on");
     expect(item.event.type).toBe("worker_presence");
+  });
+
+  it("handles DHT telemetry and derives climate drop events", () => {
+    const { service } = makeService();
+    const emitted: unknown[] = [];
+    service.getEventsStream("lamp-001").subscribe((data) => emitted.push(data));
+
+    const payload = Buffer.from(
+      JSON.stringify({
+        device_id: "lamp-001",
+        led1: { state: "off" },
+        led2: { state: "off" },
+        dht: { temperature: 24.8, humidity: 30 }
+      })
+    );
+
+    service.handleIncomingTelemetry("lamp-001/telemetry", payload);
+
+    expect(emitted).toHaveLength(1);
+    const item = emitted[0] as {
+      telemetry: { dht: { temperature: number; humidity: number } };
+      event: { type: string; humidity: number; itemId: string };
+    };
+    expect(item.telemetry.dht.temperature).toBe(24.8);
+    expect(item.telemetry.dht.humidity).toBe(30);
+    expect(item.event.type).toBe("climate_dry");
+    expect(item.event.humidity).toBe(30);
+    expect(item.event.itemId).toBe("iced-americano");
+  });
+
+  it("handles high temperature (>27C) with blinking LED1 and null-safe telemetry", () => {
+    const { service } = makeService();
+    const emitted: unknown[] = [];
+    service.getEventsStream("lamp-001").subscribe((data) => emitted.push(data));
+
+    // 1. Temperature > 27°C and led1 blinking
+    const payloadHot = Buffer.from(
+      JSON.stringify({
+        device_id: "lamp-001",
+        led1: { state: "blinking" },
+        led2: { state: "off" },
+        dht: { temperature: 28.2, humidity: 45 }
+      })
+    );
+    service.handleIncomingTelemetry("lamp-001/telemetry", payloadHot);
+
+    expect(emitted).toHaveLength(1);
+    const hotItem = emitted[0] as {
+      telemetry: { led1: string };
+      event: { type: string; temperature: number };
+    };
+    expect(hotItem.telemetry.led1).toBe("blinking");
+    expect(hotItem.event.type).toBe("climate_hot");
+    expect(hotItem.event.temperature).toBe(28.2);
+
+    // 2. DHT missing/null readings (fault tolerance)
+    const payloadNull = Buffer.from(
+      JSON.stringify({
+        device_id: "lamp-001",
+        led1: { state: "off" },
+        led2: { state: "off" },
+        dht: { temperature: null, humidity: null }
+      })
+    );
+    service.handleIncomingTelemetry("lamp-001/telemetry", payloadNull);
+    expect(emitted).toHaveLength(2);
+    const nullItem = emitted[1] as {
+      telemetry: { dht: { temperature: number | null; humidity: number | null } };
+      event: { type: string };
+    };
+    expect(nullItem.telemetry.dht.temperature).toBeNull();
+    expect(nullItem.telemetry.dht.humidity).toBeNull();
+    expect(nullItem.event.type).toBe("telemetry_sync");
   });
 });

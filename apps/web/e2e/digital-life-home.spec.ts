@@ -31,6 +31,27 @@ test.beforeEach(async ({ page }) => {
       })
     );
   });
+  await page.route("**/api/companion/messages/stream", async (route) => {
+    const body = route.request().postDataJSON() as { typeId?: string };
+    expect(body.typeId).toBe("chosen");
+    const response = {
+      reply: "来来把蹄子搁旁边，不催证明。今天这副天选样，也允许慢半拍。",
+      safetyLevel: "normal",
+      source: "local-fallback",
+      aiDisclosure: true,
+      memoryCandidate: null
+    };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: [
+        JSON.stringify({ type: "delta", delta: response.reply }),
+        JSON.stringify({ type: "done", response })
+      ]
+        .join("\n")
+        .concat("\n")
+    });
+  });
   await page.goto("/home");
 });
 
@@ -45,7 +66,7 @@ test("digital life home keeps companionship primary and care functional", async 
   await expect(page.getByLabel("来来刚带回来的补给").getByRole("button")).toHaveCount(3);
   await expect(page.getByText("点一下收进背包")).toBeVisible();
   await expect(page.getByRole("heading", { name: "熟悉阶段" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "和来来聊一聊" })).toBeVisible();
+  await expect(page.getByLabel("和来来说一句")).toBeVisible();
 
   await page.screenshot({
     path: `/private/tmp/wingedhorse-digital-life-home-${testInfo.project.name}.png`,
@@ -64,9 +85,13 @@ test("digital life home keeps companionship primary and care functional", async 
   await expect(page.getByText(/它收下了冰美式补给/)).toBeVisible();
   await expect(page.locator(".character-hotspot")).toBeFocused();
 
-  await page.getByRole("link", { name: "和来来聊一聊" }).click();
+  await page.getByLabel("和来来说一句").fill("今天有点累");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(page.getByRole("button", { name: "打开聊天详情" })).toContainText("来来把蹄子搁旁边");
+  await page.getByRole("button", { name: "打开聊天详情" }).click();
   await expect(page).toHaveURL(/\/companion/);
-  await expect(page.locator("#chat-message")).toBeVisible();
+  await expect(page.getByText("今天有点累")).toBeVisible();
+  await expect(page.getByText("来来把蹄子搁旁边，不催证明。今天这副天选样，也允许慢半拍。")).toBeVisible();
 
   const inventoryCount = await page.evaluate(() => {
     const raw = localStorage.getItem("wingedhorse-local-state-v2-1") ?? "{}";

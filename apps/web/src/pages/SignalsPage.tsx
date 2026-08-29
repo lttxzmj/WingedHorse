@@ -47,7 +47,6 @@ export function SignalsPage() {
   const runIdRef = useRef(0);
   const manualMood = useAppStore((state) => state.manualMood);
   const setManualMood = useAppStore((state) => state.setManualMood);
-  const hardwareLink = useAppStore((state) => state.hardwareLink);
   const deviceId = useAppStore((state) => state.deviceId);
   const [consented, setConsented] = useState(false);
   const [active, setActive] = useState(false);

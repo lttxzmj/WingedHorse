@@ -17,7 +17,7 @@ export async function copyText(text: string): Promise<boolean> {
   document.body.appendChild(area);
   area.focus();
   area.select();
-  let ok = false;
+  let ok: boolean;
   try {
     ok = document.execCommand("copy");
   } catch {

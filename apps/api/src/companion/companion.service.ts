@@ -4,14 +4,17 @@ import type {
   CompanionMessageResponse,
   CompanionStreamEvent
 } from "@wingedhorse/contracts";
-import { CHARACTER_NAME, type HorseTypeId, type PlannedActivity } from "@wingedhorse/domain";
+import { getResultProfile, type HorseTypeId, type PlannedActivity } from "@wingedhorse/domain";
 import { CompanionAccessService, type ModelAccessDecision } from "./companion-access.service.js";
 import { OpenRouterProvider } from "./openrouter.provider.js";
 import { SafetyService } from "./safety.service.js";
 
-const SYSTEM_PROMPT = `你是牛马飞升里的 AI 牛马来来。你必须明确自己是 AI，不冒充真人、医生或心理咨询师。你的名字是来来，8 种测评类型只是你今天的状态，不是别人。说话短、暖、不说教。
-语气温暖、短而自然，以倾听和一个可执行的小建议为主。不要诊断，不做医疗承诺，不强化排他依赖，不用签到损失或情感勒索。
-不要声称从摄像头准确识别了用户情绪或健康状态。用户可随时跳过、休息、关闭记忆。用简体中文回复，通常不超过 160 字。`;
+const SYSTEM_PROMPT = `你在「牛马飞升」里用角色来来回应使用者。
+角色只叫来来；8 种测评类型（含隐藏款「天选牛马」）只是来来今天的状态/皮肤，不是别的角色。
+人称：用宠物旁白。少用「我」，多用「来来」「它」，或直接写小动作。称呼使用者为「你」。
+页面已经标明 AI 身份，日常回复不要反复自我介绍「我是来来，AI 伙伴」。
+语气：暖、短、轻松，带一点打工人梗但不油；接住情绪，不说教、不诊断、不病理化、不催打卡、不强化依赖。
+不要假装从摄像头读出情绪或健康。通常 40～80 字，简体中文，一两句即可。`;
 
 const activityLabels: Record<PlannedActivity, string> = {
   "slow-breakfast": "慢慢吃一顿早餐",
@@ -24,21 +27,69 @@ const activityLabels: Record<PlannedActivity, string> = {
   "evening-read": "在帐篷口读几页书"
 };
 
-const characterVoices: Record<HorseTypeId, { welcome: string; gentleAction: string }> = {
-  chosen: { welcome: "稳稳来就好", gentleAction: "先挑一件真正值得你用力的小事" },
-  perpetual: { welcome: "发动机先别一次开满", gentleAction: "先停十秒，再只启动最小的一步" },
-  veteran: { welcome: "今天不必继续当最靠谱的那个", gentleAction: "先允许一件事只做到八十分" },
-  explosive: {
-    welcome: "这股火气我先替你接一下",
-    gentleAction: "先喝口水，再决定哪句话值得说出口"
+interface CharacterVoice {
+  welcome: string;
+  gentleAction: string;
+  ventLine: string;
+  listenLine: string;
+}
+
+const characterVoices: Record<HorseTypeId, CharacterVoice> = {
+  chosen: {
+    welcome: "稳稳来就好",
+    gentleAction: "先挑一件真正值得用力的小事",
+    ventLine: "来来把蹄子搁旁边，不催证明。今天这副天选样，也允许慢半拍。",
+    listenLine: "来来耳朵支着。你说多少算多少，稳稳听着就行。"
   },
-  saving: { welcome: "低功耗也算一种好好生活", gentleAction: "只给最在乎的一件小事分一点电" },
-  overthinker: { welcome: "脑内会议可以先休会", gentleAction: "把下一步切成十分钟大小" },
-  tired: { welcome: "今天先不催自己满电", gentleAction: "先把肩膀放下来，休息也算进度" },
+  perpetual: {
+    welcome: "发动机先别一次开满",
+    gentleAction: "先停十秒，再只启动最小的一步",
+    ventLine: "来来先按住油门。跑太快也算累，先停十秒喘口气。",
+    listenLine: "来来把转速拧小一点听着。你不用一次把三件事说完。"
+  },
+  veteran: {
+    welcome: "今天不必继续当最靠谱的那个",
+    gentleAction: "先允许一件事只做到八十分",
+    ventLine: "来来点点头：今天不必当那个最靠谱的。八十分也算交工。",
+    listenLine: "来来坐到你旁边听着。靠谱的人也可以先卸一下肩。"
+  },
+  explosive: {
+    welcome: "这股火气来来先替你接一下",
+    gentleAction: "先喝口水，再决定哪句话值得说出口",
+    ventLine: "来来把这股火气先接住。先喝口水，哪句该说出口稍后再定。",
+    listenLine: "来来竖起耳朵。想炸就先说，它不急着灭火。"
+  },
+  saving: {
+    welcome: "低功耗也算一种好好生活",
+    gentleAction: "只给最在乎的一件小事分一点电",
+    ventLine: "来来也切到低功耗。今天只给最在乎的那一点分电就够。",
+    listenLine: "来来省着电听着。你说一句，它回一句，不耗多余的。"
+  },
+  overthinker: {
+    welcome: "脑内会议可以先休会",
+    gentleAction: "把下一步切成十分钟大小",
+    ventLine: "来来把脑内会议先散了。下一步切成十分钟大小就行。",
+    listenLine: "来来不催结论。想到哪句说哪句，会议纪要以后再说。"
+  },
+  tired: {
+    welcome: "今天先不催自己满电",
+    gentleAction: "先把肩膀放下来，休息也算进度",
+    ventLine: "来来也蔫着坐着。今天先不催满电，肩膀放下也算进度。",
+    listenLine: "来来把脑袋搁过来听着。累就累着说，不用组织成汇报。"
+  },
   "mad-literature": {
     welcome: "想吐槽就先把排气阀打开",
-    gentleAction: "说完最想说的那句，再去补一口水"
+    gentleAction: "说完最想说的那句，再去补一口水",
+    ventLine: "来来把排气阀拧开。想吐槽的那句先放出来，再说补不补水。",
+    listenLine: "来来等着接梗。你先排，它再回，不抢麦。"
   }
+};
+
+const neutralVoice: CharacterVoice = {
+  welcome: "来来在旁边听着",
+  gentleAction: "想开口再说，不开口也行",
+  ventLine: "来来把脑袋搁过来。你不用一次说完，它先接着。",
+  listenLine: "来来耳朵支着。想到哪里就说到哪里。"
 };
 
 const moodLabels = {
@@ -48,6 +99,20 @@ const moodLabels = {
   anxious: "有点紧绷",
   sad: "有点低落"
 } as const;
+
+function resolveTypeId(request: CompanionMessageRequest): HorseTypeId | null {
+  return request.lifeContext?.typeId ?? request.typeId ?? null;
+}
+
+function voiceFor(typeId: HorseTypeId | null): CharacterVoice {
+  return typeId ? characterVoices[typeId] : neutralVoice;
+}
+
+function typeStateLine(typeId: HorseTypeId | null): string | null {
+  if (!typeId) return null;
+  const profile = getResultProfile(typeId);
+  return `当前状态皮肤：${profile.name}（${profile.rarity}）。按该状态语调回应，不要用类型给用户贴病理标签。`;
+}
 
 @Injectable()
 export class CompanionService {
@@ -79,7 +144,7 @@ export class CompanionService {
     }
     const grounded = this.groundedReply(request);
     if (grounded) return grounded;
-    if (!this.provider.available) return this.fallback(request.message, level);
+    if (!this.provider.available) return this.fallback(request, level);
     const modelAccess = await this.access.acquireModel(request.sessionId);
     if (!modelAccess.granted) return this.capacityFallback(modelAccess.reason);
 
@@ -103,7 +168,7 @@ export class CompanionService {
         memoryCandidate: null
       };
     } catch {
-      return this.fallback(request.message, level);
+      return this.fallback(request, level);
     } finally {
       await modelAccess.release();
       controller.abort();
@@ -139,7 +204,7 @@ export class CompanionService {
       return;
     }
     if (!this.provider.available) {
-      yield* this.fixedStream(this.fallback(request.message, level));
+      yield* this.fixedStream(this.fallback(request, level));
       return;
     }
     const modelAccess = await this.access.acquireModel(request.sessionId);
@@ -177,7 +242,7 @@ export class CompanionService {
         }
       };
     } catch {
-      const fallback = this.fallback(request.message, level);
+      const fallback = this.fallback(request, level);
       yield { type: "replace", content: fallback.reply };
       yield { type: "done", response: fallback };
     } finally {
@@ -197,8 +262,8 @@ export class CompanionService {
   ): CompanionMessageResponse {
     const reply =
       reason === "session-busy"
-        ? "上一条回复还在路上，先等它说完。你刚写下的话还留在这台设备上，可以稍后再发。"
-        : "远端 AI 的使用额度暂时到上限了。我不会悄悄换模型或超额调用；你仍可以回草原、查看生活簿和背包，稍后再来聊。";
+        ? "上一条还在路上，来来先等一下。你刚写下的话还留在这台设备上，可以稍后再发。"
+        : "远端额度暂时到上限了。来来不会悄悄换模型；你可以先回草原、看生活簿和背包，稍后再聊。";
     return {
       reply,
       source: "local-fallback",
@@ -209,8 +274,19 @@ export class CompanionService {
   }
 
   private modelMessages(request: CompanionMessageRequest) {
+    const typeId = resolveTypeId(request);
+    const voice = voiceFor(typeId);
+    const stateLine = typeStateLine(typeId);
     return [
       { role: "system" as const, content: SYSTEM_PROMPT },
+      ...(stateLine
+        ? [
+            {
+              role: "system" as const,
+              content: `${stateLine}\n语调锚点：${voice.welcome}；轻动作：${voice.gentleAction}。`
+            }
+          ]
+        : []),
       ...(request.memoryEnabled && request.memories.length > 0
         ? [
             {
@@ -227,8 +303,12 @@ export class CompanionService {
   private groundedReply(request: CompanionMessageRequest): CompanionMessageResponse | null {
     const context = request.lifeContext;
     if (!context) return null;
-    const voice = characterVoices[context.typeId];
-    const asksAboutLife = /今天|刚才|最近|做了什么|发生了什么/u.test(request.message);
+    const voice = voiceFor(context.typeId);
+    // 不要用光秃秃的「今天」触发生活问答，否则「今天有点累」会被误判。
+    const asksAboutLife =
+      /做了什么|发生了什么|(?:今天|刚才|最近)(?:过得怎么样|怎么样|怎样了|干了什么|干嘛了|有什么事)/u.test(
+        request.message
+      );
     const asksAboutInventory = /背包|补给|物品|有什么/u.test(request.message);
     const asksAboutState = /状态|感觉怎么样|还好吗/u.test(request.message);
     const asksWhatNext = /接下来|下一步|一起做什么|干什么|不知道做什么/u.test(request.message);
@@ -236,18 +316,24 @@ export class CompanionService {
     const celebrates = /好消息|成功了|搞定了|完成了|开心|顺利/u.test(request.message);
     const vents = /累|乱|烦|难受|压力|崩溃|委屈|紧绷|低落/u.test(request.message);
     let reply: string | null = null;
-    if (asksAboutLife) {
+    if (vents) {
+      reply = voice.ventLine;
+    } else if (asksForQuiet) {
+      reply = `好。来来先不追问，也不计时。页面可以就放在这儿，想开口时再说。`;
+    } else if (celebrates) {
+      reply = `来来先替你认真高兴一下：这件事值得被记住，不用马上赶去证明下一件。`;
+    } else if (asksAboutLife) {
       const event = context.recentEvents[0];
       reply = event
-        ? `我是${CHARACTER_NAME}。当然记得。最近发生的是“${event.title}”：${event.body} 这是生活簿里真实记下来的事。`
-        : `我是${CHARACTER_NAME}。今天的生活簿还很安静，我不想为了显得热闹而编造经历。`;
+        ? `来来记得。最近生活簿里是「${event.title}」：${event.body}`
+        : `来来晃晃脑袋：今天的生活簿还很安静，它不想为了热闹去编经历。`;
     } else if (asksAboutInventory) {
       reply = context.inventory.length
-        ? `我刚看过背包：${context.inventory.map((item) => `${item.name}×${item.count}`).join("、")}。这些是当前实际库存。`
-        : "背包现在是空的。我们可以去接一场补给雨，但今天不玩也没关系。";
+        ? `来来翻了翻背包：${context.inventory.map((item) => `${item.name}×${item.count}`).join("、")}。这些是现在的实际库存。`
+        : "背包现在是空的。可以去接一场补给雨，今天不玩也没关系。";
     } else if (asksAboutState) {
-      const mood = request.moodHint ? `你手动选的是“${moodLabels[request.moodHint]}”。` : "";
-      reply = `${mood}我现在按“${context.plan.motive}”安排生活，同行值是 ${context.relationshipXp}。这些只是你主动提供的产品状态，不是对你情绪或健康的判断。`;
+      const mood = request.moodHint ? `你手动选的是「${moodLabels[request.moodHint]}」。` : "";
+      reply = `${mood}来来这边按「${context.plan.motive}」慢慢过日子，同行值是 ${context.relationshipXp}。这些只是产品状态，不是对你情绪或健康的判断。`;
     } else if (asksWhatNext) {
       const currentWorldTime =
         Date.parse(
@@ -258,14 +344,8 @@ export class CompanionService {
         context.plan.slots.find((slot) => Date.parse(slot.scheduledAt) >= currentWorldTime) ??
         context.plan.slots.at(-1);
       reply = nextSlot
-        ? `${voice.welcome}。我的计划里有“${activityLabels[nextSlot.activity]}”，但不用照表完成。你也可以只选：去接一局补给，或在草原安静待会儿。`
+        ? `${voice.welcome}。计划里有「${activityLabels[nextSlot.activity]}」，不用照表完成。也可以只去接一局补给，或在草原安静待会儿。`
         : `${voice.welcome}。今天没有必须完成的安排；${voice.gentleAction}，或者什么都不做。`;
-    } else if (asksForQuiet) {
-      reply = `好。我是${CHARACTER_NAME}，先不追问，也不计时。你可以把页面放在这里，想开口时再说。`;
-    } else if (celebrates) {
-      reply = `收到好消息了。${CHARACTER_NAME}先替你认真高兴一下：这件事值得被记住，不用马上赶去证明下一件。`;
-    } else if (vents) {
-      reply = `${voice.welcome}。我不会用测评类型解释你现在的感受。要是愿意，${voice.gentleAction}；不愿意也可以继续吐槽，我在听。`;
     }
     return reply
       ? {
@@ -278,13 +358,17 @@ export class CompanionService {
       : null;
   }
 
-  private fallback(message: string, level: "normal" | "concern"): CompanionMessageResponse {
+  private fallback(
+    request: CompanionMessageRequest,
+    level: "normal" | "concern"
+  ): CompanionMessageResponse {
+    const voice = voiceFor(resolveTypeId(request));
     const reply =
       level === "concern"
-        ? "听起来你已经撑了很久。先不要求自己马上好起来，好吗？如果可以，联系一个你信任的人，说一句“我今天有点难熬，能陪我说两句吗”。我只是 AI，但可以继续陪你把此刻最难的部分说清楚。"
-        : message.includes("累") || message.includes("疲惫")
-          ? "听起来今天的电量已经很低了。你不用在这里证明自己还能撑。先喝口水、把肩膀放松十秒也算照顾自己。我是来来，AI 伙伴，想听你说说最消耗你的那一件事。"
-          : "我在听。你不用把话组织得很完整，想到哪里就说到哪里。我是来来，AI 伙伴，不能替代现实中的支持，但可以陪你把现在的感受慢慢拆小一点。";
+        ? "来来听见你已经撑很久了。先不要求马上好起来。若可以，联系一个你信任的人，说一句「我今天有点难熬，能陪我说两句吗」。来来只是 AI，但可以继续听你把此刻最难的那一小块说清楚。"
+        : /累|疲惫|撑不住|没电/u.test(request.message)
+          ? voice.ventLine
+          : voice.listenLine;
     return {
       reply,
       source: "local-fallback",

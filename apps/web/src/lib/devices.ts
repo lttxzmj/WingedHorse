@@ -36,12 +36,15 @@ export function subscribeDeviceEvents(
     console.log(`[subscribeDeviceEvents] 🟢 SSE 通道已连接成功: ${url}`);
   };
 
-  es.onmessage = (event) => {
+  es.onmessage = (event: MessageEvent<string>) => {
     try {
       console.log(`[subscribeDeviceEvents] 📩 收到 SSE 事件原始数据:`, event.data);
-      const payload = JSON.parse(event.data);
-      if (payload?.event || payload?.telemetry) {
-        onEvent(payload.event, payload.telemetry || payload);
+      const payload = JSON.parse(event.data) as {
+        event?: HardwareInteractionEvent;
+        telemetry?: DeviceTelemetry;
+      };
+      if (payload.event && payload.telemetry) {
+        onEvent(payload.event, payload.telemetry);
       }
     } catch (err) {
       console.error("[subscribeDeviceEvents] 无法解析 SSE 数据:", err);

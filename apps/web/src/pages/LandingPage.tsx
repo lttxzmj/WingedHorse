@@ -1,6 +1,6 @@
 import { Button } from "@wingedhorse/ui";
 import { useNavigate } from "@tanstack/react-router";
-import { CHARACTER_NAME, PRODUCT_NAME, PRODUCT_SLOGAN } from "@wingedhorse/domain";
+import { PRODUCT_NAME, PRODUCT_SLOGAN } from "@wingedhorse/domain";
 import { CircleHelp, Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { AppIcon } from "../components/AppIcon";

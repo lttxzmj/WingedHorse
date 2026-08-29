@@ -269,6 +269,8 @@ export const companionMessageSchema = z.object({
     .default([]),
   memories: z.array(z.string().trim().min(1).max(240)).max(20).default([]),
   memoryEnabled: z.boolean().default(false),
+  /** 当前测评状态/皮肤；无完整 lifeContext 时也应用来匹配语气。 */
+  typeId: horseTypeIdSchema.optional(),
   moodHint: z.enum(["good", "flat", "tired", "anxious", "sad"]).optional(),
   lifeContext: z
     .object({
@@ -341,14 +343,20 @@ export const deviceTelemetrySchema = z.object({
   obstacle: z.boolean().optional(),
   pressure: z.number().optional(),
   hasPress: z.boolean().optional(),
-  led1: z.enum(["on", "off"]).optional(),
-  led2: z.enum(["on", "off"]).optional(),
+  led1: z.union([z.enum(["on", "off", "blinking"]), z.string()]).optional(),
+  led2: z.union([z.enum(["on", "off", "breathing"]), z.string()]).optional(),
+  dht: z
+    .object({
+      temperature: z.number().nullable().optional(),
+      humidity: z.number().nullable().optional()
+    })
+    .optional(),
   // 智能推导/业务事件
-  eventType: z.enum(["proximity", "touch", "boss_alert", "idle"]).optional(),
+  eventType: z.enum(["proximity", "touch", "boss_alert", "climate", "idle"]).optional(),
   env: z
     .object({
-      temperatureC: z.number().optional(),
-      humidityPct: z.number().optional()
+      temperatureC: z.number().nullable().optional(),
+      humidityPct: z.number().nullable().optional()
     })
     .optional(),
   heartTrend: z.enum(["calm", "active", "elevated"]).optional(),

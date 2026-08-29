@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Sse, MessageEvent } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Inject, Param, Post, Sse, MessageEvent } from "@nestjs/common";
 import { deviceEffectRequestSchema } from "@wingedhorse/contracts";
 import { map, Observable } from "rxjs";
 import { DevicesService } from "./devices.service.js";
