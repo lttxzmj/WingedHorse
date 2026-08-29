@@ -59,6 +59,13 @@ export function GamePage() {
   const deviceId = useAppStore((state) => state.deviceId);
   const playing = phase === "playing";
 
+  // Warm the Phaser chunk on the intro screen so countdown isn't blocked by a 1MB+ download.
+  useEffect(() => {
+    void import("phaser").catch(() => {
+      // Prefetch failure is non-fatal; DropGameCanvas still handles load errors.
+    });
+  }, []);
+
   // 监听硬件超声波：如果在游戏中检测到有人靠近，自动安全暂停防窥
   useEffect(() => {
     const targetDeviceId = deviceId || "lamp-001";
@@ -168,10 +175,18 @@ export function GamePage() {
           <>
             {gameLoadState === "error" ? (
               <div className="game-recovery" role="alert">
-                <strong>补给雨还没打开</strong>
-                <p>{gameError}</p>
-                <Button onClick={start}>再试一次</Button>
-                <Link to="/home">回到草原</Link>
+                <div className="game-recovery__veil" />
+                <div className="game-recovery__card">
+                  <div className="game-recovery__icon" aria-hidden="true">
+                    <span>!</span>
+                  </div>
+                  <strong>补给雨暂未开启</strong>
+                  <p>{gameError || "网络或加载遇到了一点小波动，请重试。"}</p>
+                  <div className="game-recovery__actions">
+                    <Button onClick={start}>再试一次</Button>
+                    <Link to="/home" className="quiet-link">回到草原</Link>
+                  </div>
+                </div>
               </div>
             ) : (
               <DropGameCanvas

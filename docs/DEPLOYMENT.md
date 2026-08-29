@@ -10,6 +10,7 @@
 | 访问地址（过渡） | `http://43.140.245.191:8080/`                                                                                                                                               |
 | 目标域名         | `wingedhorse.leisuremaking.cn`（待 DNS + 证书 + 备案确认）                                                                                                                  |
 | 端口             | web/nginx 绑定宿主 `8080`(HTTP) / `8443`(HTTPS)；`api:3100`、`postgres:5432` 仅内网；`mosquitto:1883` 对公网（设备直连，鉴权 + ACL）                                        |
+| 静态压缩         | nginx `gzip` 对 JS/CSS/JSON/SVG/WASM 开启；Phaser 分片约 1.4 MB → gzip ~360 KB，避免移动端首开超时                                                                 |
 | 目录             | `/opt/wingedhorse/releases/<SHA>/`（候选版本）、`/opt/wingedhorse/current`（当前版本软链）、`/opt/wingedhorse/manual/`（golden copy）、`/opt/wingedhorse/backups/postgres/` |
 | 容器             | `wingedhorse-web-1`、`wingedhorse-api-1`、`wingedhorse-postgres-1`、`wingedhorse-redis-1`；MQTT broker 仅在 hardware profile 启动                                           |
 | 备份             | 每日 03:00 crontab → `backup-postgres.sh`，原子生成 gzip + SHA-256，保留 7 天                                                                                               |

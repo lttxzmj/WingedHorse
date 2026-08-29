@@ -112,9 +112,11 @@ export function DropGameCanvas({
       settled = true;
       errorRef.current(message);
     };
+    // Mobile first-open must cover Phaser (~gzip 360KB) plus scene assets.
+    // An 8s watchdog was firing on production before the chunk finished.
     const startupTimeout = window.setTimeout(() => {
       fail("补给雨没有及时打开，请再试一次。");
-    }, 8_000);
+    }, 25_000);
 
     void import("phaser")
       .then((module) => {
