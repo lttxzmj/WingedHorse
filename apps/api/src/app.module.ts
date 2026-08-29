@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AnalyticsRepository } from "./analytics/analytics.repository.js";
 import { AppController } from "./app.controller.js";
 import { AssessmentController } from "./assessment/assessment.controller.js";
 import { AssessmentService } from "./assessment/assessment.service.js";
@@ -28,6 +29,7 @@ import { PlayerService } from "./player/player.service.js";
     PlayerController
   ],
   providers: [
+    AnalyticsRepository,
     AssessmentService,
     CompanionAccessService,
     CompanionRedisStore,

@@ -200,7 +200,7 @@
 
 .digital-life-stage {
   --digital-life-header-space: max(6.2rem, calc(env(safe-area-inset-top) + 5.6rem));
-  --digital-life-composer-space: max(4.85rem, calc(env(safe-area-inset-bottom) + 4.35rem));
+  --digital-life-composer-space: max(6.4rem, calc(env(safe-area-inset-bottom) + 5.8rem));
   --digital-life-character-size: clamp(14rem, min(72vw, 40dvh), 20rem);
   width: 100%;
   min-height: calc(100% - var(--digital-life-header-space));
@@ -631,6 +631,7 @@
   left: max(0.85rem, env(safe-area-inset-left));
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   gap: 0.42rem;
   padding: 0.42rem;
   border: 1px solid rgb(255 255 255 / 65%);
@@ -640,49 +641,12 @@
   backdrop-filter: blur(16px);
 }
 
-.digital-life-actions__composer {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  min-height: 3rem;
-  gap: 0.3rem;
-  padding: 0 0.35rem 0 0.75rem;
-  border-radius: 0.85rem;
-  background: rgb(255 255 255 / 94%);
+.digital-life-actions .companion-composer--home .companion-composer__form {
+  background: rgb(255 255 255 / 96%);
 }
 
-.digital-life-actions__composer input {
-  width: 100%;
-  min-width: 0;
-  height: 2.7rem;
-  border: 0;
-  outline: 0;
-  color: var(--color-ink-900);
-  background: transparent;
-  font: inherit;
-  font-size: 0.84rem;
-}
-
-.digital-life-actions__composer input::placeholder {
-  color: #9a8c78;
-}
-
-.digital-life-actions__composer button {
-  display: grid;
-  width: 2.4rem;
-  height: 2.4rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 0;
-  border-radius: 0.7rem;
-  color: #4f3d17;
-  background: #ffd057;
-  cursor: pointer;
-}
-
-.digital-life-actions__composer button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.digital-life-actions .companion-composer__hint {
+  display: none;
 }
 
 .digital-life-actions__supply {
@@ -869,7 +833,7 @@
     box-shadow: none;
     overflow: visible;
     background: transparent;
-    --digital-life-composer-space: max(4.85rem, calc(env(safe-area-inset-bottom) + 4.35rem));
+    --digital-life-composer-space: max(6.4rem, calc(env(safe-area-inset-bottom) + 5.8rem));
     --digital-life-character-size: min(40vw, 24rem);
     min-height: calc(100% - var(--digital-life-header-space));
     margin-top: var(--digital-life-header-space);
@@ -964,7 +928,7 @@
 
 @media (max-height: 700px) and (max-width: 759px) {
   .digital-life-stage {
-    --digital-life-composer-space: max(4.6rem, calc(env(safe-area-inset-bottom) + 4.1rem));
+    --digital-life-composer-space: max(6.1rem, calc(env(safe-area-inset-bottom) + 5.5rem));
     --digital-life-character-size: clamp(11.5rem, min(62vw, 33dvh), 15rem);
   }
 
@@ -996,7 +960,7 @@
     padding: 0.32rem;
   }
 
-  .digital-life-actions__composer,
+  .digital-life-actions .companion-composer__form,
   .digital-life-actions__supply {
     min-height: 2.75rem;
   }

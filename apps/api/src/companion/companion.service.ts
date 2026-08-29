@@ -127,7 +127,10 @@ export class CompanionService {
     @Inject(CompanionAccessService) private readonly access: CompanionAccessService
   ) {}
 
-  async reply(request: CompanionMessageRequest): Promise<CompanionMessageResponse> {
+  async reply(
+    request: CompanionMessageRequest,
+    deviceToken: string
+  ): Promise<CompanionMessageResponse> {
     const level = this.safety.classify(request.message);
     if (level === "urgent") {
       return {
@@ -150,7 +153,7 @@ export class CompanionService {
     const grounded = this.groundedReply(request);
     if (grounded) return grounded;
     if (!this.provider.available) return this.fallback(request, level);
-    const modelAccess = await this.access.acquireModel(request.sessionId);
+    const modelAccess = await this.access.acquireModel(deviceToken, request.sessionId);
     if (!modelAccess.granted) return this.capacityFallback(modelAccess.reason);
 
     const controller = new AbortController();
@@ -181,7 +184,10 @@ export class CompanionService {
     }
   }
 
-  async *replyStream(request: CompanionMessageRequest): AsyncGenerator<CompanionStreamEvent> {
+  async *replyStream(
+    request: CompanionMessageRequest,
+    deviceToken: string
+  ): AsyncGenerator<CompanionStreamEvent> {
     const level = this.safety.classify(request.message);
     if (level === "urgent") {
       yield* this.fixedStream({
@@ -212,7 +218,7 @@ export class CompanionService {
       yield* this.fixedStream(this.fallback(request, level));
       return;
     }
-    const modelAccess = await this.access.acquireModel(request.sessionId);
+    const modelAccess = await this.access.acquireModel(deviceToken, request.sessionId);
     if (!modelAccess.granted) {
       yield* this.fixedStream(this.capacityFallback(modelAccess.reason));
       return;
@@ -268,7 +274,9 @@ export class CompanionService {
     const reply =
       reason === "session-busy"
         ? "上一条还在路上，我先等一下。你刚写下的话还留在这台设备上，可以稍后再发。"
-        : "远端额度暂时到上限了。我不会悄悄换模型；你可以先回草原、看生活簿和背包，稍后再聊。";
+        : reason === "device-budget"
+          ? "今天和我聊得差不多啦。明天再来；草原、补给和背包还能继续玩。"
+          : "远端额度暂时到上限了。我不会悄悄换模型；你可以先回草原、看生活簿和背包，稍后再聊。";
     return {
       reply,
       source: "local-fallback",

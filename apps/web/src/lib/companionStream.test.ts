@@ -1,6 +1,6 @@
 import type { CompanionMessageResponse } from "@wingedhorse/contracts";
-import { describe, expect, it } from "vitest";
-import { readCompanionStream } from "./companionStream";
+import { describe, expect, it, vi } from "vitest";
+import { fetchCompanionQuota, readCompanionStream } from "./companionStream";
 
 const doneResponse: CompanionMessageResponse = {
   reply: "先慢一点。",
@@ -73,5 +73,25 @@ describe("readCompanionStream", () => {
       code: "COMPANION_RATE_LIMITED",
       retryAfterSeconds: 37
     });
+  });
+});
+
+describe("fetchCompanionQuota", () => {
+  it("reads remaining daily remote-model calls", async () => {
+    localStorage.setItem("wingedhorse-visitor-capability-v1", "a".repeat(43));
+    const quota = {
+      limit: 15,
+      used: 3,
+      remaining: 12,
+      resetsAt: "2026-08-30T00:00:00.000Z"
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(quota), { status: 200, headers: { "Content-Type": "application/json" } })
+      )
+    );
+    await expect(fetchCompanionQuota()).resolves.toEqual(quota);
+    vi.unstubAllGlobals();
   });
 });

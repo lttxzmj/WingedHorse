@@ -1,4 +1,5 @@
 import { isAnalyticsEventName, type AnalyticsEventName } from "@wingedhorse/domain";
+import { visitorHeaders } from "./lifeApi";
 
 const endpoint = "/api/events";
 
@@ -13,18 +14,10 @@ export function trackEvent(
     ...(props ? { props } : {})
   };
   const body = JSON.stringify(payload);
-  try {
-    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const blob = new Blob([body], { type: "application/json" });
-      if (navigator.sendBeacon(endpoint, blob)) return;
-    }
-  } catch {
-    /* keep going to fetch */
-  }
   if (typeof fetch === "function") {
     void fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: visitorHeaders(),
       body,
       keepalive: true
     }).catch(() => undefined);

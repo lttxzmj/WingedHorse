@@ -22,7 +22,6 @@ import {
   Flame,
   Heart,
   Package,
-  Send,
   Settings,
   Smartphone,
   Sparkles,
@@ -30,8 +29,9 @@ import {
   Wind,
   X
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
+import { CompanionComposer, type CompanionComposerSubmit } from "../components/CompanionComposer";
 import { ItemIcon } from "../components/ItemIcon";
 import { LailaiStandFace } from "../components/LailaiStandFace";
 import { WorkdayComicSheet } from "../components/WorkdayComicSheet";
@@ -256,12 +256,10 @@ export function DigitalLifeExperiencePage() {
     void navigate({ to: "/companion" });
   };
 
-  const sendQuickChat = async (event: FormEvent) => {
-    event.preventDefault();
-    const content = quickDraft.trim();
+  const sendQuickChat = async ({ text, localImageUrl }: CompanionComposerSubmit) => {
+    const content = text.trim();
     if (!content || chatSending) return;
     setInteractionOpen(false);
-    setQuickDraft("");
     setChatSending(true);
     setChatReply("…");
     setReaction(null);
@@ -302,9 +300,6 @@ export function DigitalLifeExperiencePage() {
       );
       setChatReply(data.reply);
       lastChatExchange.current = { user: content, assistant: data.reply };
-      if (content.length >= 2) {
-        addMemory(content);
-      }
     } catch (error) {
       const rateLimited =
         error instanceof CompanionStreamError && error.code === "COMPANION_RATE_LIMITED";
@@ -314,6 +309,7 @@ export function DigitalLifeExperiencePage() {
       setChatReply(fallback);
       lastChatExchange.current = { user: content, assistant: fallback };
     } finally {
+      if (localImageUrl) URL.revokeObjectURL(localImageUrl);
       window.clearTimeout(timeout);
       if (chatAbortRef.current === controller) {
         chatAbortRef.current = null;
@@ -591,20 +587,17 @@ export function DigitalLifeExperiencePage() {
           </span>
         </Link>
         <div className="digital-life-actions" aria-label="和来来互动">
-          <form className="digital-life-actions__composer" onSubmit={(event) => void sendQuickChat(event)}>
-            <input
-              id="home-quick-chat"
-              value={quickDraft}
-              onChange={(event) => setQuickDraft(event.target.value)}
-              maxLength={200}
-              placeholder="说一句…"
-              aria-label="和来来说一句"
-              disabled={chatSending}
-            />
-            <button type="submit" aria-label="发送" disabled={chatSending || !quickDraft.trim()}>
-              <AppIcon icon={Send} size={18} />
-            </button>
-          </form>
+          <CompanionComposer
+            variant="home"
+            inputId="home-quick-chat"
+            value={quickDraft}
+            onChange={setQuickDraft}
+            onSubmit={(payload) => void sendQuickChat(payload)}
+            disabled={chatSending}
+            maxLength={200}
+            placeholder="说一句…"
+            ariaLabel="和来来说一句"
+          />
           <button
             type="button"
             className="digital-life-actions__supply"

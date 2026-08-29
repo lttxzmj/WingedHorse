@@ -42,7 +42,7 @@ return 0
 
 export type RedisModelDecision =
   | { status: "granted"; release: () => Promise<void> }
-  | { status: "session-budget" | "global-budget" | "session-busy" | "unavailable" };
+  | { status: "device-budget" | "global-budget" | "session-busy" | "unavailable" };
 
 @Injectable()
 export class CompanionRedisStore implements OnModuleDestroy {
@@ -78,10 +78,24 @@ export class CompanionRedisStore implements OnModuleDestroy {
     }
   }
 
+  async getDeviceUsage(deviceKey: string, dayKey: string): Promise<number | null> {
+    try {
+      const client = await this.getClient();
+      if (!client) return null;
+      const value = await client.get(`wingedhorse:companion:model:device:${dayKey}:${deviceKey}`);
+      if (value === null) return 0;
+      const used = Number(value);
+      return Number.isFinite(used) ? used : null;
+    } catch {
+      return null;
+    }
+  }
+
   async acquireModel(
+    deviceKey: string,
     sessionKey: string,
     dayKey: string,
-    sessionLimit: number,
+    deviceLimit: number,
     globalLimit: number,
     dayTtlSeconds: number,
     lockTtlSeconds: number
@@ -96,17 +110,17 @@ export class CompanionRedisStore implements OnModuleDestroy {
           "EVAL",
           ACQUIRE_SCRIPT,
           "3",
-          `wingedhorse:companion:model:session:${dayKey}:${sessionKey}`,
+          `wingedhorse:companion:model:device:${dayKey}:${deviceKey}`,
           `wingedhorse:companion:model:global:${dayKey}`,
           lockKey,
-          String(sessionLimit),
+          String(deviceLimit),
           String(globalLimit),
           String(dayTtlSeconds),
           String(lockTtlSeconds),
           token
         ])
       );
-      if (result === 1) return { status: "session-budget" };
+      if (result === 1) return { status: "device-budget" };
       if (result === 2) return { status: "global-budget" };
       if (result === 3) return { status: "session-busy" };
       if (result !== 0) return { status: "unavailable" };

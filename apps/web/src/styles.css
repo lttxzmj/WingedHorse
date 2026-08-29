@@ -2071,6 +2071,13 @@ h1 {
   outline-offset: 2px;
 }
 
+.settings-device-status {
+  margin: 0.2rem 0 0;
+  color: var(--color-ink-500);
+  font-size: var(--font-micro);
+  line-height: 1.5;
+}
+
 .legal-body {
   display: grid;
   gap: var(--space-4);

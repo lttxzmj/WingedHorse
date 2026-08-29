@@ -363,6 +363,26 @@ export const deviceTelemetrySchema = z.object({
   timestamp: z.number().optional()
 });
 
+export const companionQuotaSchema = z.object({
+  limit: z.number().int().min(0).max(500),
+  used: z.number().int().min(0).max(500),
+  remaining: z.number().int().min(0).max(500),
+  resetsAt: z.iso.datetime()
+});
+export type CompanionQuota = z.infer<typeof companionQuotaSchema>;
+
+export const purchaseIntentSchema = z.object({
+  contact: z.string().trim().min(2).max(80)
+});
+export type PurchaseIntentRequest = z.infer<typeof purchaseIntentSchema>;
+
+export const deviceStatusSchema = z.object({
+  deviceId: z.string().trim().min(1).max(64),
+  online: z.boolean(),
+  lastSeenAt: z.iso.datetime().nullable()
+});
+export type DeviceStatus = z.infer<typeof deviceStatusSchema>;
+
 export type DeviceEffectRequest = z.infer<typeof deviceEffectRequestSchema>;
 export type DeviceEffect = z.infer<typeof deviceEffectSchema>;
 export type DeviceTelemetry = z.infer<typeof deviceTelemetrySchema>;

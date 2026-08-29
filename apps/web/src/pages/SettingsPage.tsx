@@ -1,10 +1,12 @@
+import type { DeviceStatus } from "@wingedhorse/contracts";
 import { Button, Card } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
 import { createUserDataExport, downloadUserDataExport } from "../lib/dataExport";
+import { fetchDeviceStatus } from "../lib/devices";
 import { deleteRemoteLifeData, hasVisitorToken } from "../lib/lifeApi";
 import { clearPhotoMoments } from "../lib/photoMap";
 import { useAppStore } from "../store/useAppStore";
@@ -22,6 +24,26 @@ export function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [exported, setExported] = useState(false);
+  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
+
+  useEffect(() => {
+    if (!hardwareLink || !deviceId.trim()) {
+      setDeviceStatus(null);
+      return;
+    }
+    let cancelled = false;
+    const load = () => {
+      void fetchDeviceStatus(deviceId).then((status) => {
+        if (!cancelled) setDeviceStatus(status);
+      });
+    };
+    load();
+    const timer = window.setInterval(load, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [hardwareLink, deviceId]);
   return (
     <main className="settings-page">
       <header className="subpage-header">
@@ -92,7 +114,7 @@ export function SettingsPage() {
       <Card className="settings-card">
         <div>
           <h2>AI 与长期记忆</h2>
-          <p>AI 飞马会明确标识身份。聊天记录不持久保存；只有你主动点“记住”的句子留在当前浏览器。</p>
+          <p>AI 飞马会明确标识身份。聊天记录不持久保存；只有你主动点“记住”的句子留在当前浏览器。远处模型按本机每日次数限制，用完后仍可本地陪伴，不需要登录。</p>
         </div>
         <div className="settings-links">
           <Link to="/memories">管理记忆</Link>
@@ -134,6 +156,19 @@ export function SettingsPage() {
               onChange={(event) => setDeviceId(event.target.value)}
               placeholder="如 lamp-001"
             />
+            {deviceId.trim() ? (
+              <p className="settings-device-status" role="status">
+                {deviceStatus
+                  ? deviceStatus.online
+                    ? "设备当前在线，最近有上报。"
+                    : deviceStatus.lastSeenAt
+                      ? `设备当前离线，上次上报 ${new Date(deviceStatus.lastSeenAt).toLocaleString("zh-CN", { hour12: false })}。`
+                      : "尚未收到这台设备的上报。"
+                  : "正在查询这台设备是否在线。"}
+              </p>
+            ) : (
+              <p className="settings-device-status">填写设备 ID 后，可查看是否在线。</p>
+            )}
           </div>
         ) : null}
       </Card>

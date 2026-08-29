@@ -3,10 +3,13 @@ import { Button } from "@wingedhorse/ui";
 import { useState } from "react";
 import { BackLink } from "../components/BackLink";
 import { trackEvent } from "../lib/analytics";
+import { visitorHeaders } from "../lib/lifeApi";
 
 export function IntentPage() {
   const [contact, setContact] = useState("");
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   return (
     <main className="settings-page">
@@ -27,9 +30,23 @@ export function IntentPage() {
           onSubmit={(event) => {
             event.preventDefault();
             const value = contact.trim().slice(0, 80);
-            if (!value) return;
-            trackEvent("intent_submit");
-            setDone(true);
+            if (!value || submitting) return;
+            setSubmitting(true);
+            setError("");
+            void fetch("/api/intents", {
+              method: "POST",
+              headers: visitorHeaders(),
+              body: JSON.stringify({ contact: value })
+            })
+              .then((response) => {
+                if (!response.ok) throw new Error("INTENT_UNAVAILABLE");
+                trackEvent("intent_submit");
+                setDone(true);
+              })
+              .catch(() => {
+                setError("暂时没记下，请稍后再试。");
+              })
+              .finally(() => setSubmitting(false));
           }}
         >
           <label htmlFor="intent-contact">微信或邮箱</label>
@@ -38,9 +55,18 @@ export function IntentPage() {
             value={contact}
             onChange={(event) => setContact(event.target.value)}
             required
+            minLength={2}
+            maxLength={80}
             autoComplete="off"
           />
-          <Button type="submit">留下</Button>
+          <Button type="submit" loading={submitting}>
+            留下
+          </Button>
+          {error ? (
+            <p className="settings-error" role="alert">
+              {error}
+            </p>
+          ) : null}
         </form>
       )}
     </main>

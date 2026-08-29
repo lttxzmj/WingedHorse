@@ -1,4 +1,14 @@
-import { BadRequestException, Body, Controller, Inject, Param, Post, Sse, MessageEvent } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Post,
+  Sse,
+  MessageEvent
+} from "@nestjs/common";
 import { deviceEffectRequestSchema } from "@wingedhorse/contracts";
 import { map, Observable } from "rxjs";
 import { DevicesService } from "./devices.service.js";
@@ -6,6 +16,17 @@ import { DevicesService } from "./devices.service.js";
 @Controller("devices")
 export class DevicesController {
   constructor(@Inject(DevicesService) private readonly devices: DevicesService) {}
+
+  @Get(":deviceId/status")
+  status(@Param("deviceId") deviceId: string) {
+    const id = deviceId.trim();
+    if (!id || id.length > 64)
+      throw new BadRequestException({
+        code: "INVALID_DEVICE_ID",
+        message: "设备 ID 格式不正确"
+      });
+    return this.devices.getStatus(id);
+  }
 
   @Post(":deviceId/effects")
   applyEffect(@Param("deviceId") deviceId: string, @Body() body: unknown) {

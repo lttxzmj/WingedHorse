@@ -9,6 +9,8 @@ import { MqttProvider } from "./mqtt.provider.js";
  * 1. 下行：把心情映射为灯效下发给设备（MQTT）。
  * 2. 上行：监听设备遥测上报，并广播给前端 SSE 事件流。
  */
+const ONLINE_WINDOW_MS = 90_000;
+
 @Injectable()
 export class DevicesService implements OnModuleInit {
   private readonly telemetrySubject = new Subject<{
@@ -16,6 +18,7 @@ export class DevicesService implements OnModuleInit {
     telemetry: DeviceTelemetry;
     event: HardwareInteractionEvent | null;
   }>();
+  private readonly lastSeenAt = new Map<string, number>();
 
   constructor(@Inject(MqttProvider) private readonly mqtt: MqttProvider) {}
 
@@ -34,7 +37,6 @@ export class DevicesService implements OnModuleInit {
   handleIncomingTelemetry(topic: string, payload: Buffer) {
     try {
       const rawText = payload.toString("utf-8");
-      console.log(`[MQTT] 📥 收到硬件上报 <- Topic: ${topic} Payload: ${rawText}`);
       const json = JSON.parse(rawText) as Record<string, unknown>;
       const ultrasonic = json.ultrasonic as Record<string, unknown> | undefined;
       const pressure = json.pressure as Record<string, unknown> | undefined;
@@ -53,6 +55,7 @@ export class DevicesService implements OnModuleInit {
         (typeof json.id === "string" ? json.id : null) ||
         topic.split("/")[1] ||
         "unknown";
+      this.touch(deviceIdStr);
 
       const normalizedData = {
         deviceId: deviceIdStr,
@@ -84,6 +87,15 @@ export class DevicesService implements OnModuleInit {
     } catch {
       // 忽略无法解析的脏数据
     }
+  }
+
+  getStatus(deviceId: string, now = Date.now()) {
+    const lastSeen = this.lastSeenAt.get(deviceId);
+    return {
+      deviceId,
+      online: typeof lastSeen === "number" && now - lastSeen <= ONLINE_WINDOW_MS,
+      lastSeenAt: typeof lastSeen === "number" ? new Date(lastSeen).toISOString() : null
+    };
   }
 
   getEventsStream(deviceId: string): Observable<{
@@ -121,5 +133,16 @@ export class DevicesService implements OnModuleInit {
       this.mqtt.publish(`${deviceId}`, message)
     ]);
     return message;
+  }
+
+  private touch(deviceId: string, now = Date.now()) {
+    if (!deviceId || deviceId === "unknown") return;
+    this.lastSeenAt.set(deviceId, now);
+    if (this.lastSeenAt.size > 2_000) {
+      const staleBefore = now - ONLINE_WINDOW_MS * 20;
+      for (const [id, seen] of this.lastSeenAt) {
+        if (seen < staleBefore) this.lastSeenAt.delete(id);
+      }
+    }
   }
 }

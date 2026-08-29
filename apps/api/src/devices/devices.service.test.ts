@@ -87,6 +87,29 @@ describe("DevicesService", () => {
     expect(item.event.itemId).toBe("iced-americano");
   });
 
+  it("reports online after recent telemetry and offline when never seen", () => {
+    const { service } = makeService();
+    expect(service.getStatus("lamp-001")).toEqual({
+      deviceId: "lamp-001",
+      online: false,
+      lastSeenAt: null
+    });
+    service.handleIncomingTelemetry(
+      "devices/lamp-001/telemetry",
+      Buffer.from(
+        JSON.stringify({
+          device_id: "lamp-001",
+          led1: { state: "off" },
+          led2: { state: "off" }
+        })
+      )
+    );
+    const status = service.getStatus("lamp-001");
+    expect(status.online).toBe(true);
+    expect(status.lastSeenAt).toEqual(expect.any(String));
+    expect(service.getStatus("lamp-001", Date.now() + 91_000).online).toBe(false);
+  });
+
   it("handles high temperature (>27C) with blinking LED1 and null-safe telemetry", () => {
     const { service } = makeService();
     const emitted: unknown[] = [];

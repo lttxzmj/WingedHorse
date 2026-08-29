@@ -20,15 +20,30 @@ export type RequestAccessDecision =
   { allowed: true } | { allowed: false; retryAfterSeconds: number };
 
 export type ModelAccessDecision =
-  | { granted: true; release: () => void | Promise<void> }
+  | { granted: true; release: () => void | Promise<void>; remaining: number }
   | {
       granted: false;
-      reason: "session-budget" | "global-budget" | "session-busy" | "capacity-unavailable";
+      reason: "device-budget" | "global-budget" | "session-busy" | "capacity-unavailable";
+      remaining: number;
     };
+
+export interface DeviceModelQuota {
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+}
 
 function configuredLimit(name: string, fallback: number): number {
   const value = Number(process.env[name] ?? fallback);
   return Number.isSafeInteger(value) && value > 0 ? value : fallback;
+}
+
+/** Guest/device daily remote-model budget. DEVICE env wins; otherwise 15. */
+export function deviceModelBudgetPerDay(): number {
+  const device = Number(process.env.COMPANION_DEVICE_MODEL_BUDGET_PER_DAY);
+  if (Number.isSafeInteger(device) && device > 0) return device;
+  return 15;
 }
 
 @Injectable()
@@ -36,7 +51,7 @@ export class CompanionAccessService {
   private readonly salt = randomBytes(16);
   private readonly ipWindows = new Map<string, WindowCounter>();
   private readonly sessionWindows = new Map<string, WindowCounter>();
-  private readonly sessionBudgets = new Map<string, SessionBudget>();
+  private readonly deviceBudgets = new Map<string, SessionBudget>();
   private globalBudget: WindowCounter = { windowId: -1, count: 0, lastSeenAt: 0 };
   private checks = 0;
 
@@ -54,7 +69,7 @@ export class CompanionAccessService {
     const ipKey = this.fingerprint(`ip:${clientAddress}`);
     const sessionKey = this.fingerprint(`session:${sessionId}`);
     const ipLimit = configuredLimit("COMPANION_IP_RATE_LIMIT_PER_MINUTE", 60);
-    const sessionLimit = configuredLimit("COMPANION_SESSION_RATE_LIMIT_PER_MINUTE", 20);
+    const sessionLimit = configuredLimit("COMPANION_SESSION_RATE_LIMIT_PER_MINUTE", 8);
     if (this.redis.configured) {
       const allowed = await this.redis.consumeRate(
         ipKey,
@@ -81,53 +96,105 @@ export class CompanionAccessService {
     };
   }
 
-  async acquireModel(sessionId: string, now = Date.now()): Promise<ModelAccessDecision> {
+  async getDeviceQuota(deviceToken: string, now = Date.now()): Promise<DeviceModelQuota> {
     const day = Math.floor(now / DAY_MS);
-    const key = this.fingerprint(`model:${sessionId}`);
+    const limit = deviceModelBudgetPerDay();
+    const key = this.fingerprint(`model-device:${deviceToken}`);
+    const local = this.deviceBudgets.get(key);
+    const localUsed = local && local.windowId === day ? local.count : 0;
+    let used = localUsed;
+    if (this.redis.configured) {
+      const remote = await this.redis.getDeviceUsage(key, String(day));
+      if (remote !== null) used = remote;
+    }
+    return {
+      limit,
+      used,
+      remaining: Math.max(0, limit - used),
+      resetsAt: new Date((day + 1) * DAY_MS).toISOString()
+    };
+  }
+
+  async acquireModel(
+    deviceToken: string,
+    sessionId: string,
+    now = Date.now()
+  ): Promise<ModelAccessDecision> {
+    const day = Math.floor(now / DAY_MS);
+    const deviceKey = this.fingerprint(`model-device:${deviceToken}`);
+    const sessionKey = this.fingerprint(`model-session:${sessionId}`);
+    const deviceLimit = deviceModelBudgetPerDay();
+    const globalLimit = configuredLimit("COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY", 1_000);
+
     if (this.redis.configured) {
       const result = await this.redis.acquireModel(
-        key,
+        deviceKey,
+        sessionKey,
         String(day),
-        configuredLimit("COMPANION_SESSION_MODEL_BUDGET_PER_DAY", 40),
-        configuredLimit("COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY", 1_000),
+        deviceLimit,
+        globalLimit,
         Math.max(60, Math.ceil(((day + 1) * DAY_MS - now) / 1_000) + 60),
         Math.max(30, Math.ceil(configuredLimit("OPENROUTER_TIMEOUT_MS", 15_000) / 1_000) + 15)
       );
-      if (result.status === "granted") return { granted: true, release: result.release };
+      if (result.status === "granted") {
+        const quota = await this.getDeviceQuota(deviceToken, now);
+        return { granted: true, release: result.release, remaining: quota.remaining };
+      }
+      const remaining =
+        result.status === "device-budget" ? 0 : (await this.getDeviceQuota(deviceToken, now)).remaining;
       return {
         granted: false,
-        reason: result.status === "unavailable" ? "capacity-unavailable" : result.status
+        reason: result.status === "unavailable" ? "capacity-unavailable" : result.status,
+        remaining
       };
     }
-    const current = this.sessionBudgets.get(key);
-    const session: SessionBudget =
+
+    const current = this.deviceBudgets.get(deviceKey);
+    const device: SessionBudget =
       current && current.windowId === day
         ? current
         : { windowId: day, count: 0, active: current?.active ?? 0, lastSeenAt: now };
-    session.lastSeenAt = now;
-    this.sessionBudgets.set(key, session);
+    // Session busy is tracked on device.active for in-memory single-flight per device+session:
+    // use a separate map entry keyed by session for active lock.
+    const lockKey = sessionKey;
+    const lockCurrent = this.deviceBudgets.get(lockKey);
+    const lock: SessionBudget =
+      lockCurrent && lockCurrent.windowId === day
+        ? lockCurrent
+        : { windowId: day, count: 0, active: 0, lastSeenAt: now };
 
-    if (session.active >= 1) return { granted: false, reason: "session-busy" };
-    if (session.count >= configuredLimit("COMPANION_SESSION_MODEL_BUDGET_PER_DAY", 40))
-      return { granted: false, reason: "session-budget" };
+    device.lastSeenAt = now;
+    lock.lastSeenAt = now;
+    this.deviceBudgets.set(deviceKey, device);
+    this.deviceBudgets.set(lockKey, lock);
+
+    if (lock.active >= 1)
+      return { granted: false, reason: "session-busy", remaining: Math.max(0, deviceLimit - device.count) };
+    if (device.count >= deviceLimit)
+      return { granted: false, reason: "device-budget", remaining: 0 };
 
     if (this.globalBudget.windowId !== day) {
       this.globalBudget = { windowId: day, count: 0, lastSeenAt: now };
     }
-    if (this.globalBudget.count >= configuredLimit("COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY", 1_000))
-      return { granted: false, reason: "global-budget" };
+    if (this.globalBudget.count >= globalLimit)
+      return {
+        granted: false,
+        reason: "global-budget",
+        remaining: Math.max(0, deviceLimit - device.count)
+      };
 
-    session.count += 1;
-    session.active += 1;
+    device.count += 1;
+    lock.active += 1;
     this.globalBudget.count += 1;
     this.globalBudget.lastSeenAt = now;
     let released = false;
     return {
       granted: true,
+      remaining: Math.max(0, deviceLimit - device.count),
       release: () => {
         if (released) return;
         released = true;
-        session.active = Math.max(0, session.active - 1);
+        lock.active = Math.max(0, lock.active - 1);
       }
     };
   }
@@ -163,7 +230,7 @@ export class CompanionAccessService {
     this.checks += 1;
     if (this.checks % 256 !== 0 && this.ipWindows.size < MAX_TRACKED_CLIENTS) return;
     const removeBefore = now - DAY_MS;
-    for (const store of [this.ipWindows, this.sessionWindows, this.sessionBudgets]) {
+    for (const store of [this.ipWindows, this.sessionWindows, this.deviceBudgets]) {
       for (const [key, value] of store) {
         const active = "active" in value ? value.active : 0;
         if (typeof active === "number" && active > 0) continue;

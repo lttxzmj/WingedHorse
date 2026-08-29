@@ -1,14 +1,13 @@
-import type { CompanionMessageRequest, CompanionMessageResponse } from "@wingedhorse/contracts";
+import type { CompanionMessageRequest, CompanionMessageResponse, CompanionQuota } from "@wingedhorse/contracts";
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import { CHARACTER_NAME, getResultProfile, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
-import { Button } from "@wingedhorse/ui";
-import { BookOpen, ChevronDown, Send, ShieldCheck } from "lucide-react";
+import { BookOpen, ChevronDown, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
 import { BackLink } from "../components/BackLink";
+import { CompanionComposer, type CompanionComposerSubmit } from "../components/CompanionComposer";
 import { createClientId } from "../lib/clientId";
 import { subscribeDeviceEvents } from "../lib/devices";
-import { CompanionStreamError, streamCompanionMessage } from "../lib/companionStream";
+import { CompanionStreamError, fetchCompanionQuota, streamCompanionMessage } from "../lib/companionStream";
 import { useAppStore } from "../store/useAppStore";
 import { useDigitalLife } from "../hooks/useDigitalLife";
 import "../companion-experience.css";
@@ -17,6 +16,7 @@ interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  localImageUrl?: string | null;
   safety?: "normal" | "concern" | "urgent";
   source?: CompanionMessageResponse["source"];
 }
@@ -29,6 +29,7 @@ export function CompanionPage() {
   useDigitalLife();
   const sessionId = useRef(createClientId());
   const abortRef = useRef<AbortController | null>(null);
+  const localImageUrlsRef = useRef<string[]>([]);
   const listEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -42,6 +43,7 @@ export function CompanionPage() {
   const [sending, setSending] = useState(false);
   const [partialReply, setPartialReply] = useState("");
   const [deliveryNotice, setDeliveryNotice] = useState("");
+  const [quota, setQuota] = useState<CompanionQuota | null>(null);
   const memories = useAppStore((state) => state.memories);
   const memoryEnabled = memories.length > 0;
   const latestLifeEvent = useAppStore((state) => state.lifeEvents[0]);
@@ -81,7 +83,18 @@ export function CompanionPage() {
     listEndRef.current?.scrollIntoView?.({ block: "end", behavior: "smooth" });
   }, [messages.length, partialReply, sending]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => {
+    void fetchCompanionQuota().then(setQuota);
+  }, []);
+
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      for (const url of localImageUrlsRef.current) URL.revokeObjectURL(url);
+      localImageUrlsRef.current = [];
+    },
+    []
+  );
 
   useEffect(() => {
     const draftFromHome = sessionStorage.getItem("wingedhorse-companion-draft");
@@ -114,16 +127,20 @@ export function CompanionPage() {
     }
   }, []);
 
-  const send = async (event?: FormEvent) => {
-    event?.preventDefault();
-    const content = draft.trim();
+  const send = async ({ text, localImageUrl }: CompanionComposerSubmit) => {
+    const content = text.trim();
     if (!content || sending) return;
-    const userMessage: ChatMessage = { id: createClientId(), role: "user", content };
+    const userMessage: ChatMessage = {
+      id: createClientId(),
+      role: "user",
+      content,
+      localImageUrl
+    };
+    if (localImageUrl) localImageUrlsRef.current.push(localImageUrl);
     const history = messages
       .slice(-10)
       .map(({ role, content: previous }) => ({ role, content: previous }));
     setMessages((current) => [...current, userMessage]);
-    setDraft("");
     setSending(true);
     setPartialReply("");
     setDeliveryNotice("");
@@ -170,8 +187,13 @@ export function CompanionPage() {
         }
       ]);
       if (data.source === "local-fallback") {
-        setDeliveryNotice("远端回复暂时不可用，已切换为本地陪伴回复。");
+        setDeliveryNotice(
+          data.reply.includes("今天和我聊得差不多")
+            ? "今天的远处对话次数用完了，已切换为本地陪伴。问卷、草原和补给雨还能继续。"
+            : "远端回复暂时不可用，已切换为本地陪伴回复。"
+        );
       }
+      void fetchCompanionQuota().then(setQuota);
     } catch (error) {
       const rateLimited =
         error instanceof CompanionStreamError && error.code === "COMPANION_RATE_LIMITED";
@@ -228,6 +250,13 @@ export function CompanionPage() {
             <p className="companion-presence">
               <span aria-hidden="true" /> {profile ? `${profile.name} · 想和你说说话` : "想和你说说话"}
             </p>
+            {quota ? (
+              <p className="companion-quota">
+                {quota.remaining > 0
+                  ? `今天还能远处聊 ${quota.remaining} 次，用完后仍可本地陪伴`
+                  : "今天远处对话次数已用完，仍可本地陪伴"}
+              </p>
+            ) : null}
           </div>
         </div>
       </header>
@@ -265,6 +294,15 @@ export function CompanionPage() {
             key={message.id}
           >
             <span>{message.role === "assistant" ? companionName : "你"}</span>
+            {message.localImageUrl ? (
+              <img
+                className="chat-bubble__local-image"
+                src={message.localImageUrl}
+                alt="本机图片预览，未上传"
+                width={160}
+                height={160}
+              />
+            ) : null}
             <p>{message.content}</p>
             {message.role === "assistant" && message.source ? (
               <small className="chat-source">
@@ -330,25 +368,17 @@ export function CompanionPage() {
           ))}
         </div>
       </div>
-      <form className="chat-composer" onSubmit={(event) => void send(event)}>
-        <label htmlFor="chat-message" className="sr-only">
-          想说什么都可以
-        </label>
-        <textarea
-          id="chat-message"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          maxLength={1200}
-          rows={1}
-          placeholder="和它说点什么……"
-        />
-        <div className="chat-composer__footer">
-          <Button type="submit" loading={sending} disabled={!draft.trim()}>
-            <Send aria-hidden="true" size={16} />
-            发送
-          </Button>
-        </div>
-      </form>
+      <CompanionComposer
+        variant="detail"
+        inputId="chat-message"
+        value={draft}
+        onChange={setDraft}
+        onSubmit={(payload) => void send(payload)}
+        disabled={sending}
+        maxLength={1200}
+        placeholder="和它说点什么……"
+        ariaLabel="想说什么都可以"
+      />
     </main>
   );
 }

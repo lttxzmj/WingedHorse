@@ -14,6 +14,7 @@ describeRedis("CompanionAccessService Redis integration", () => {
       "COMPANION_FINGERPRINT_SECRET",
       "COMPANION_IP_RATE_LIMIT_PER_MINUTE",
       "COMPANION_SESSION_RATE_LIMIT_PER_MINUTE",
+      "COMPANION_DEVICE_MODEL_BUDGET_PER_DAY",
       "COMPANION_SESSION_MODEL_BUDGET_PER_DAY",
       "COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY"
     ])
@@ -22,7 +23,7 @@ describeRedis("CompanionAccessService Redis integration", () => {
     process.env.COMPANION_FINGERPRINT_SECRET = `integration-${randomUUID()}-shared-secret`;
     process.env.COMPANION_IP_RATE_LIMIT_PER_MINUTE = "20";
     process.env.COMPANION_SESSION_RATE_LIMIT_PER_MINUTE = "1";
-    process.env.COMPANION_SESSION_MODEL_BUDGET_PER_DAY = "1";
+    process.env.COMPANION_DEVICE_MODEL_BUDGET_PER_DAY = "1";
     process.env.COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY = "100";
   });
 
@@ -48,20 +49,21 @@ describeRedis("CompanionAccessService Redis integration", () => {
     expect((await second.checkRequest("198.51.100.4", session)).allowed).toBe(false);
   });
 
-  it("shares model budgets and active locks across API instances", async () => {
+  it("shares device budgets and active locks across API instances", async () => {
     const first = access();
     const second = access();
+    const device = `device-${randomUUID().replaceAll("-", "")}`;
     const session = `model-${randomUUID()}`;
-    const acquired = await first.acquireModel(session);
+    const acquired = await first.acquireModel(device, session);
     expect(acquired.granted).toBe(true);
-    await expect(second.acquireModel(session)).resolves.toEqual({
+    await expect(second.acquireModel(device, session)).resolves.toMatchObject({
       granted: false,
       reason: "session-busy"
     });
     if (acquired.granted) await acquired.release();
-    await expect(second.acquireModel(session)).resolves.toEqual({
+    await expect(second.acquireModel(device, `model-${randomUUID()}`)).resolves.toMatchObject({
       granted: false,
-      reason: "session-budget"
+      reason: "device-budget"
     });
   });
 });

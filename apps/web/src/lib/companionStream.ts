@@ -1,9 +1,12 @@
 import {
+  companionQuotaSchema,
   companionStreamEventSchema,
   companionRateLimitErrorSchema,
   type CompanionMessageRequest,
-  type CompanionMessageResponse
+  type CompanionMessageResponse,
+  type CompanionQuota
 } from "@wingedhorse/contracts";
+import { visitorHeaders } from "./lifeApi";
 
 const STREAM_BUFFER_LIMIT = 16_384;
 
@@ -83,9 +86,20 @@ export async function streamCompanionMessage(
 ): Promise<CompanionMessageResponse> {
   const response = await fetch("/api/companion/messages/stream", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
+    headers: visitorHeaders("application/x-ndjson"),
     body: JSON.stringify(payload),
     signal: signal ?? null
   });
   return readCompanionStream(response, onPartial);
+}
+
+export async function fetchCompanionQuota(): Promise<CompanionQuota | null> {
+  try {
+    const response = await fetch("/api/companion/quota", { headers: visitorHeaders() });
+    if (!response.ok) return null;
+    const parsed = companionQuotaSchema.safeParse(await response.json());
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }

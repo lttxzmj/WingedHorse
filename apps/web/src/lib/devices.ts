@@ -1,5 +1,5 @@
 import type { MoodId, HardwareInteractionEvent } from "@wingedhorse/domain";
-import type { DeviceTelemetry } from "@wingedhorse/contracts";
+import { deviceStatusSchema, type DeviceStatus, type DeviceTelemetry } from "@wingedhorse/contracts";
 
 /**
  * 把心情下发到已配对的硬件设备（经服务端 → MQTT → 设备）。
@@ -58,4 +58,17 @@ export function subscribeDeviceEvents(
   return () => {
     es.close();
   };
+}
+
+export async function fetchDeviceStatus(deviceId: string): Promise<DeviceStatus | null> {
+  const id = deviceId.trim();
+  if (!id) return null;
+  try {
+    const response = await fetch(`/api/devices/${encodeURIComponent(id)}/status`);
+    if (!response.ok) return null;
+    const parsed = deviceStatusSchema.safeParse(await response.json());
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }

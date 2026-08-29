@@ -29,11 +29,16 @@ export function hasVisitorToken(): boolean {
   return Boolean(localStorage.getItem(VISITOR_TOKEN_KEY));
 }
 
-function headers() {
+export function visitorHeaders(accept?: string) {
   return {
     "Content-Type": "application/json",
-    "X-WingedHorse-Visitor-Token": getVisitorToken()
+    "X-WingedHorse-Visitor-Token": getVisitorToken(),
+    ...(accept ? { Accept: accept } : {})
   };
+}
+
+function headers() {
+  return visitorHeaders();
 }
 
 async function expectJson(response: Response): Promise<unknown> {

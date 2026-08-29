@@ -2,14 +2,17 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
+  Headers,
   HttpException,
   HttpStatus,
   Inject,
   Post,
   Req,
-  Res
+  Res,
+  UnauthorizedException
 } from "@nestjs/common";
-import { companionMessageSchema } from "@wingedhorse/contracts";
+import { companionMessageSchema, visitorTokenSchema } from "@wingedhorse/contracts";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { CompanionAccessService } from "./companion-access.service.js";
 import { CompanionService } from "./companion.service.js";
@@ -23,18 +26,30 @@ export class CompanionController {
     @Inject(SafetyService) private readonly safety: SafetyService
   ) {}
 
+  @Get("quota")
+  async quota(@Headers("x-wingedhorse-visitor-token") token: string | undefined) {
+    return this.access.getDeviceQuota(this.deviceToken(token));
+  }
+
   @Post("messages")
-  async message(@Body() body: unknown, @Req() request: FastifyRequest) {
+  async message(
+    @Body() body: unknown,
+    @Req() request: FastifyRequest,
+    @Headers("x-wingedhorse-visitor-token") token: string | undefined
+  ) {
+    const deviceToken = this.deviceToken(token);
     const parsed = await this.parseAndAuthorize(body, request);
-    return this.companion.reply(parsed);
+    return this.companion.reply(parsed, deviceToken);
   }
 
   @Post("messages/stream")
   async messageStream(
     @Body() body: unknown,
     @Req() request: FastifyRequest,
-    @Res() reply: FastifyReply
+    @Res() reply: FastifyReply,
+    @Headers("x-wingedhorse-visitor-token") token: string | undefined
   ) {
+    const deviceToken = this.deviceToken(token);
     const parsed = await this.parseAndAuthorize(body, request);
 
     reply.hijack();
@@ -43,13 +58,23 @@ export class CompanionController {
     reply.raw.setHeader("Cache-Control", "no-store, no-transform");
     reply.raw.setHeader("X-Accel-Buffering", "no");
     try {
-      for await (const event of this.companion.replyStream(parsed)) {
+      for await (const event of this.companion.replyStream(parsed, deviceToken)) {
         if (reply.raw.destroyed) break;
         reply.raw.write(`${JSON.stringify(event)}\n`);
       }
     } finally {
       if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.end();
     }
+  }
+
+  private deviceToken(value: string | undefined): string {
+    const parsed = visitorTokenSchema.safeParse(value);
+    if (!parsed.success)
+      throw new UnauthorizedException({
+        code: "VISITOR_TOKEN_REQUIRED",
+        message: "需要本机访客凭证才能使用对话"
+      });
+    return parsed.data;
   }
 
   private async parseAndAuthorize(body: unknown, request: FastifyRequest) {

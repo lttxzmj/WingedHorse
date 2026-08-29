@@ -67,6 +67,9 @@ test("digital life home keeps companionship primary and care functional", async 
   await expect(page.getByText("点一下收进背包")).toBeVisible();
   await expect(page.getByRole("heading", { name: "熟悉阶段" })).toHaveCount(0);
   await expect(page.getByLabel("和来来说一句")).toBeVisible();
+  await expect(page.getByRole("button", { name: "添加图片说明" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "语音输入" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /开启唤醒词/ })).toBeVisible();
 
   await page.screenshot({
     path: `/private/tmp/wingedhorse-digital-life-home-${testInfo.project.name}.png`,

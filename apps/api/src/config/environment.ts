@@ -35,8 +35,11 @@ const environmentSchema = z
     OPENROUTER_BASE_URL: optionalUrl,
     OPENROUTER_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(15_000),
     COMPANION_IP_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(60),
-    COMPANION_SESSION_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(120).default(20),
-    COMPANION_SESSION_MODEL_BUDGET_PER_DAY: z.coerce.number().int().min(1).max(500).default(40),
+    COMPANION_SESSION_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(120).default(8),
+    /** Per visitor-device daily remote-model calls (no login). */
+    COMPANION_DEVICE_MODEL_BUDGET_PER_DAY: z.coerce.number().int().min(1).max(500).default(15),
+    /** @deprecated Prefer COMPANION_DEVICE_MODEL_BUDGET_PER_DAY; kept for existing env files. */
+    COMPANION_SESSION_MODEL_BUDGET_PER_DAY: z.coerce.number().int().min(1).max(500).optional(),
     COMPANION_GLOBAL_MODEL_BUDGET_PER_DAY: z.coerce
       .number()
       .int()
