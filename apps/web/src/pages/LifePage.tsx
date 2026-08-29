@@ -1,5 +1,10 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { CHARACTER_NAME, deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
+import {
+  CHARACTER_NAME,
+  deriveJourneyGoal,
+  getResultProfile,
+  toCharacterSpeech
+} from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import {
@@ -40,13 +45,7 @@ function characterVoice(title: string, body: string, kind: string) {
       )
     };
   }
-  const rewrite = (value: string) =>
-    value
-      .replaceAll("你们", "我们")
-      .replaceAll("它们", "我们")
-      .replaceAll("它", "我")
-      .replaceAll("你和我", "我们");
-  return { title: rewrite(title), body: rewrite(body) };
+  return { title: toCharacterSpeech(title), body: toCharacterSpeech(body) };
 }
 
 function eventMoodLabel(kind: string) {

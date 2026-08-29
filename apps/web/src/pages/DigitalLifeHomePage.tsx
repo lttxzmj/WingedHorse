@@ -3,7 +3,8 @@ import {
   ITEM_CATALOG,
   deriveCompanionGrowth,
   getResultProfile,
-  recommendCareItem
+  recommendCareItem,
+  toCharacterSpeech
 } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -171,7 +172,7 @@ export function DigitalLifeHomePage() {
           </small>
           <span>
             {reaction?.message ||
-              currentMoment?.body ||
+              (currentMoment?.body ? toCharacterSpeech(currentMoment.body) : null) ||
               "我不会催你。想说点什么，还是先在草原坐一会儿？"}
           </span>
         </p>

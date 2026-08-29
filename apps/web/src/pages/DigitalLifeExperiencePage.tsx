@@ -8,6 +8,7 @@ import {
   deriveCompanionPrairieState,
   getResultProfile,
   recommendCareItem,
+  toCharacterSpeech,
   type ItemId
 } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
@@ -44,8 +45,7 @@ import { useAppStore } from "../store/useAppStore";
 import "../cultivation.css";
 import "../digital-life-experience.css";
 
-const HOME_CHAT_FALLBACK =
-  "来来暂时连不上远处，但还在这儿。点开对话框，还能慢慢说。";
+const HOME_CHAT_FALLBACK = "我暂时连不上远处，但还在这儿。点开对话框，还能慢慢说。";
 
 function chooseSceneDrops(seedSource: string): ItemId[] {
   let seed = 0;
@@ -309,7 +309,7 @@ export function DigitalLifeExperiencePage() {
       const rateLimited =
         error instanceof CompanionStreamError && error.code === "COMPANION_RATE_LIMITED";
       const fallback = rateLimited
-        ? "消息来得有点密，来来先停一小会儿。点开对话框还能继续看。"
+        ? "消息来得有点密，我先停一小会儿。点开对话框还能继续看。"
         : HOME_CHAT_FALLBACK;
       setChatReply(fallback);
       lastChatExchange.current = { user: content, assistant: fallback };
@@ -555,7 +555,7 @@ export function DigitalLifeExperiencePage() {
             <p className="lawn-stage__bubble digital-life-stage__speech" aria-live="polite">
               <span>
                 {reaction?.message ||
-                  currentMoment?.body ||
+                  (currentMoment?.body ? toCharacterSpeech(currentMoment.body) : null) ||
                   prairieState.bubbleSpeech ||
                   "我不会催你。想说点什么，还是先在草原坐一会儿？"}
               </span>

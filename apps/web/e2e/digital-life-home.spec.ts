@@ -35,7 +35,7 @@ test.beforeEach(async ({ page }) => {
     const body = route.request().postDataJSON() as { typeId?: string };
     expect(body.typeId).toBe("chosen");
     const response = {
-      reply: "来来把蹄子搁旁边，不催证明。今天这副天选样，也允许慢半拍。",
+      reply: "我不催你证明什么。今天这副天选样，也允许慢半拍。",
       safetyLevel: "normal",
       source: "local-fallback",
       aiDisclosure: true,
@@ -87,11 +87,11 @@ test("digital life home keeps companionship primary and care functional", async 
 
   await page.getByLabel("和来来说一句").fill("今天有点累");
   await page.getByRole("button", { name: "发送" }).click();
-  await expect(page.getByRole("button", { name: "打开聊天详情" })).toContainText("来来把蹄子搁旁边");
+  await expect(page.getByRole("button", { name: "打开聊天详情" })).toContainText("我不催你证明什么");
   await page.getByRole("button", { name: "打开聊天详情" }).click();
   await expect(page).toHaveURL(/\/companion/);
   await expect(page.getByText("今天有点累")).toBeVisible();
-  await expect(page.getByText("来来把蹄子搁旁边，不催证明。今天这副天选样，也允许慢半拍。")).toBeVisible();
+  await expect(page.getByText("我不催你证明什么。今天这副天选样，也允许慢半拍。")).toBeVisible();
 
   const inventoryCount = await page.evaluate(() => {
     const raw = localStorage.getItem("wingedhorse-local-state-v2-1") ?? "{}";

@@ -60,8 +60,8 @@ describe("CompanionService", () => {
     const result = await service.reply(request);
     expect(result.source).toBe("local-fallback");
     expect(result.aiDisclosure).toBe(true);
-    expect(result.reply).toContain("来来");
-    expect(result.reply).not.toMatch(/我是来来/);
+    expect(result.reply).toMatch(/我/);
+    expect(result.reply).not.toMatch(/我是来来|AI 伙伴/);
   });
 
   it("matches the tired state voice when typeId is provided without life context", async () => {
@@ -70,8 +70,8 @@ describe("CompanionService", () => {
     const result = await service.reply({ ...request, typeId: "tired", message: "今天有点累" });
     expect(result.source).toBe("local-fallback");
     expect(result.reply).toContain("不催满电");
-    expect(result.reply).toContain("来来");
-    expect(result.reply).not.toMatch(/我是来来|AI 伙伴/);
+    expect(result.reply).toContain("我");
+    expect(result.reply).not.toMatch(/我是来来|AI 伙伴|\b它\b/);
   });
 
   it("matches the hidden chosen state voice", async () => {
@@ -79,7 +79,7 @@ describe("CompanionService", () => {
     const service = createService(provider);
     const result = await service.reply({ ...request, typeId: "chosen", message: "今天有点累" });
     expect(result.reply).toContain("天选样");
-    expect(result.reply).toContain("来来");
+    expect(result.reply).toContain("我");
   });
 
   it("never sends urgent messages to the model", async () => {
@@ -139,8 +139,8 @@ describe("CompanionService", () => {
 
     expect(result.source).toBe("domain-grounded");
     expect(result.reply).toContain("不催满电");
-    expect(result.reply).toContain("来来");
-    expect(result.reply).not.toMatch(/\b我\b|我是来来/);
+    expect(result.reply).toContain("我");
+    expect(result.reply).not.toMatch(/我是来来|AI 伙伴/);
     expect(provider.complete).not.toHaveBeenCalled();
   });
 
