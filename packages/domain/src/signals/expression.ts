@@ -95,3 +95,21 @@ export const EXPRESSION_LABEL: Record<ExpressionTag, string> = {
   tired: "看起来挺累",
   neutral: "表情平静"
 };
+
+/** 端侧表情线索 → 手动心情（仅供娱乐同步，非诊断） */
+export type ExpressionMoodId = "good" | "flat" | "tired" | "anxious" | "sad";
+
+export function expressionToMood(tag: ExpressionTag): ExpressionMoodId {
+  switch (tag) {
+    case "smile":
+      return "good";
+    case "tired":
+      return "tired";
+    case "frown":
+      return "sad";
+    case "surprise":
+      return "anxious";
+    case "neutral":
+      return "flat";
+  }
+}

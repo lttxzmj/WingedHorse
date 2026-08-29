@@ -37,3 +37,6 @@ captures/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# 原始素材压缩包不入库（AGENTS §11）
+assets/source/*.zip

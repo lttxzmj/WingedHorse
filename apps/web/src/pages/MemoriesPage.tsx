@@ -1,6 +1,9 @@
 import { Button, Card } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
+import { Archive } from "lucide-react";
 import { useState } from "react";
+import { AppIcon } from "../components/AppIcon";
+import { BackLink } from "../components/BackLink";
 import { useAppStore } from "../store/useAppStore";
 
 export function MemoriesPage() {
@@ -12,10 +15,10 @@ export function MemoriesPage() {
   return (
     <main className="settings-page">
       <header className="subpage-header">
-        <Link to="/settings">←</Link>
+        <BackLink to="/settings" label="返回设置" />
         <div>
           <p className="eyebrow">本机长期记忆</p>
-          <h1>飞马记住了什么</h1>
+          <h1>来来记住了什么</h1>
         </div>
         <span>{memories.length}/20</span>
       </header>
@@ -70,7 +73,9 @@ export function MemoriesPage() {
         ))
       ) : (
         <section className="empty-state">
-          <span className="empty-state__icon">🫙</span>
+          <span className="empty-state__icon">
+            <AppIcon icon={Archive} size={42} />
+          </span>
           <h2>还没有保存任何记忆</h2>
           <p>空着也很好。你不需要为了让 AI 懂你而交出更多信息。</p>
           <Link className="ui-button ui-button--primary inline-link-button" to="/companion">

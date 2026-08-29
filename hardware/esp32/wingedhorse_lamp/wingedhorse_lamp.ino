@@ -35,11 +35,11 @@
 const char *WIFI_SSID = "你的WiFi名称";
 const char *WIFI_PASS = "你的WiFi密码";
 
-const char *MQTT_HOST = "43.140.245.191";
+const char *MQTT_HOST = "43.140.245.191";     // 生产服务器公网 IP（本地联调使用 Mac 局域网/热点 IP）
 const uint16_t MQTT_PORT = 1883;
-const char *MQTT_USER = "wingedhorse";
-const char *MQTT_PASS = "设备专用密码";   // broker 里为每个设备单独建的用户名/密码
-const char *DEVICE_ID = "lamp-001";        // 与服务器配对一致
+const char *MQTT_USER = "lamp-001";          // 生产环境在 broker 为设备创建的账号
+const char *MQTT_PASS = "请替换为设备密码";    // 生产环境为设备分配的密码
+const char *DEVICE_ID = "lamp-001";          // 设备唯一 ID，与网页设置一致
 
 #define ENABLE_DHT 0      // 有 DHT22 时置 1
 #define ENABLE_HEART 0    // 有 MAX30102 时置 1

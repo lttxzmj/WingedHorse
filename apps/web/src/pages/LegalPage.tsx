@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { BackLink } from "../components/BackLink";
 
 type LegalKind = "privacy" | "terms" | "ai";
 
@@ -24,7 +24,7 @@ const CONTENT: Record<
       },
       {
         title: "你的权利",
-        body: "你可以在设置中清除本机数据、拒绝摄像头并继续使用核心功能。账号、云同步、数据导出和服务端删除功能启用前不得宣称已经提供。"
+        body: "你可以在设置中导出或清除本机数据、拒绝摄像头并继续使用核心功能。当前导出只覆盖这台设备；账号和云同步启用前，不得宣称支持跨设备完整导出。"
       }
     ]
   },
@@ -48,7 +48,7 @@ const CONTENT: Record<
   },
   ai: {
     eyebrow: "AI 生成内容说明",
-    title: "飞马是 AI，不是真人",
+    title: "来来是 AI，不是真人",
     sections: [
       {
         title: "它能做什么",
@@ -71,7 +71,7 @@ export function LegalPage({ kind }: { kind: LegalKind }) {
   return (
     <main className="legal-page">
       <header className="subpage-header">
-        <Link to="/settings">←</Link>
+        <BackLink to="/settings" label="返回设置" />
         <div>
           <p className="eyebrow">{content.eyebrow}</p>
           <h1>{content.title}</h1>

@@ -4,7 +4,9 @@ import {
   addItem,
   consumeItem,
   createPetVitalsFromAssessment,
-  INITIAL_PET_VITALS
+  grantItems,
+  INITIAL_PET_VITALS,
+  recommendCareItem
 } from "./inventory.js";
 
 describe("inventory transactions", () => {
@@ -38,6 +40,32 @@ describe("inventory transactions", () => {
     expect(() => addItem({ "iced-americano": 99 }, "iced-americano", 1)).toThrow(
       "ITEM_STACK_LIMIT"
     );
+  });
+
+  it("grants a game reward bundle atomically and caps stacks", () => {
+    expect(grantItems({ "iced-americano": 98 }, { "iced-americano": 4, compass: 1 })).toEqual({
+      "iced-americano": 99,
+      compass: 1
+    });
+    expect(() => grantItems({}, { compass: -1 })).toThrow("INVALID_ITEM_QUANTITY");
+  });
+
+  it("recommends the owned common item that best matches the current need", () => {
+    const inventory = {
+      "iced-americano": 2,
+      "nap-mask": 1,
+      "steering-wheel-charm": 1,
+      "screaming-chicken": 1,
+      "emotion-valve": 1
+    } as const;
+    expect(recommendCareItem(inventory, { energy: 80, engine: 70, chaos: 92, direction: 70 })).toBe(
+      "screaming-chicken"
+    );
+    expect(recommendCareItem(inventory, { energy: 12, engine: 70, chaos: 10, direction: 70 })).toBe(
+      "nap-mask"
+    );
+    expect(recommendCareItem({ "emotion-valve": 1 }, INITIAL_PET_VITALS)).toBeNull();
+    expect(recommendCareItem({}, INITIAL_PET_VITALS)).toBeNull();
   });
 });
 

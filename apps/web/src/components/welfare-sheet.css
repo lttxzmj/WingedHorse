@@ -1,0 +1,151 @@
+.welfare-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: end center;
+  padding: max(var(--space-3), env(safe-area-inset-bottom));
+  background: rgb(59 46 36 / 42%);
+}
+
+.welfare-sheet {
+  position: relative;
+  width: min(100%, 24rem);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border-radius: 1.25rem 1.25rem var(--radius-md) var(--radius-md);
+  background: var(--color-surface-0);
+  color: var(--color-ink-900);
+  box-shadow: var(--shadow-card);
+}
+
+.welfare-sheet__close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: grid;
+  min-width: 44px;
+  min-height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: var(--color-ink-900);
+  background: var(--color-brand-50);
+}
+
+.welfare-sheet__header {
+  padding-right: 2.5rem;
+}
+
+.welfare-sheet__header .eyebrow,
+.welfare-sheet__header h2 {
+  margin: 0;
+}
+
+.welfare-sheet__header h2 {
+  margin-top: 0.2rem;
+  font-size: 1.35rem;
+}
+
+.welfare-sheet__product {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--color-line-100);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-50);
+}
+
+.welfare-sheet__product-photo {
+  display: block;
+  width: 5.5rem;
+  height: 3.6rem;
+  object-fit: contain;
+  background: #fff;
+  border-radius: var(--radius-sm);
+}
+
+.welfare-sheet__product strong,
+.welfare-sheet__product span {
+  display: block;
+}
+
+.welfare-sheet__product span,
+.welfare-sheet__disclosure,
+.welfare-sheet figcaption,
+.welfare-sheet__qr-fallback {
+  color: var(--color-ink-700);
+  font-size: var(--font-small);
+}
+
+.welfare-sheet__product strong {
+  font-size: 0.95rem;
+}
+
+.welfare-sheet__disclosure {
+  margin: 0;
+  text-align: center;
+}
+
+.welfare-sheet .ui-button {
+  width: 100%;
+  min-width: 0;
+}
+
+.welfare-sheet__qr {
+  position: relative;
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-line-100);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.welfare-sheet__qr img {
+  width: min(64vw, 12.5rem);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.welfare-sheet__demo {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  color: var(--color-ink-900);
+  background: var(--color-brand-500);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.welfare-sheet__qr.is-failed {
+  min-height: 12rem;
+  place-content: center;
+  background: var(--color-brand-50);
+}
+
+.welfare-sheet__qr-fallback {
+  margin: 0;
+  font-weight: 750;
+  text-align: center;
+}
+
+.welfare-sheet figcaption {
+  margin: 0;
+  font-weight: 650;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welfare-sheet-backdrop {
+    background: rgb(59 46 36 / 52%);
+  }
+}

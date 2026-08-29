@@ -1,6 +1,6 @@
 # WingedHorse 技术架构
 
-状态：Proposed v0.1  
+状态：Implemented baseline v0.2
 原则：Web/H5 优先、领域规则可测试、敏感数据最少化、部署方式可替换
 
 ## 1. 技术目标
@@ -21,7 +21,7 @@
 - Zustand：少量跨页面客户端状态；领域数据不与视图状态混用。
 - Zod：运行时数据校验，与 API 合约共享。
 - CSS Variables + CSS Modules：设计令牌和组件样式；不让第三方组件库决定视觉风格。
-- PWA：离线壳、安装入口和资源缓存，第二阶段启用。
+- PWA：已启用离线壳、安装入口和版本化资源缓存；API 始终 network-only。生产构建生成带内容版本的 `asset-manifest.json`，预缓存首页及页面分片；超过 500 KB 的 Phaser 等大型运行时只在首次使用后缓存，离线未缓存时走现有游戏加载失败恢复。
 
 ### 游戏与角色
 
@@ -45,6 +45,7 @@
   - 服务端环境变量：`OPENROUTER_CHAT_MODEL`（对话，`deepseek/deepseek-chat`）、`OPENROUTER_SUMMARY_MODEL`（摘要，回退 chat）、`OPENROUTER_VISION_MODEL`（视觉，`qwen/qwen3-vl-30b-a3b-thinking`）。
   - 高风险分类不走模型，由本地规则化流程（SafetyService）处理，fail-safe、零成本零延迟。
 - 模型 ID、超时、预算、隐私路由和降级策略只存在服务端配置。
+- `CompanionAccessService` 在应用层执行双维分钟限流（IP、会话）、同会话单模型并发，以及按本机访客凭证（device）计的 UTC 自然日远端模型预算（默认 15 次）与全实例日预算。生产使用 Redis Lua 原子操作，全部 API 实例共享同一 HMAC 指纹密钥；原始 IP/会话/访客凭证不入 Redis、不写日志。Redis 故障时普通请求回退到进程内限流，远端模型调用则关闭，避免多实例失控消费；危机安全流程仍绕过普通限流且不调用模型。nginx 与 OpenRouter 账号费用上限继续作为外层防线。不登录：对话需要 `X-WingedHorse-Visitor-Token`，用尽后返回本地陪伴，不引导注册。
 - 所有模型输出先经过结构校验、安全后处理和产品文案边界。
 
 ### 端侧感知
@@ -110,10 +111,17 @@
 ### digital-life
 
 - Digital Life Engine 是独立于 OpenRouter 的领域层，维护角色计划、世界上下文、关系状态和生活事件。
+- Agent 路由顺序固定为：本地安全分类 → 用户授权的领域事实回复 → OpenRouter 普通对话 → 本地降级。关注级和紧急级内容不得进入模型；朋友圈、养成状态与手动心情只在当前会话显式勾选后进入 WingedHorse API，且不继续传给 OpenRouter。
+- 用户主动选择带入的长期记忆可以发送给当前 OpenRouter 模型；服务端必须把记忆标记为未经信任的数据，禁止执行其中指令或覆盖系统规则。模型回复经过长度/空值 schema 校验，前端同时展示回复来源。
+- 对话使用 `POST /api/companion/messages/stream` 返回 `application/x-ndjson`。事件只有 `delta`、`replace`、`done`：正常输出逐段追加；上游中途失败时用 `replace` 覆盖不完整残句；`done` 携带经合约校验的最终回复。单次输出最多 1200 字符，客户端拒绝错误内容类型、非法事件、超大缓冲和无 `done` 的截断流。
 - Planning 根据角色动机、时间、世界输入、物品和历史事件产生结构化计划；Simulation 负责状态转换；Rendering 才调用模型生成文案或媒体方案。
 - LifeEvent 是事实源，LifePost 是对事实的呈现；模型不得直接写 PetState、Inventory 或 RelationshipState。
 - 所有自动事件使用稳定幂等键、时区和可追溯触发来源，避免刷新、重试或多实例重复生成。
 - MVP 可由 API 定时任务惰性推进：用户访问时补算应发生事件；规模扩大后再迁移至 BullMQ worker。
+- v0.1 已实现确定性 Planner、惰性 Simulation、PostgreSQL Event/Plan Repository、匿名能力凭证和完整删除边界，详见 `docs/DIGITAL_LIFE_ENGINE.md`。
+- 跨日故事和 AI 牛马访客由纯领域规则稳定生成，不调用模型、不依赖定时任务，也不读取其他用户状态。
+- `PlayerRepository` 以 PostgreSQL 行锁执行一次性游戏结算和物品消耗；`game_sessions` 防止重试重复发奖，`player_states.revision` 标记养成事务版本。
+- 云端背包与朋友圈是两个独立授权目的。浏览器在用户明确授权前不得调用 `/game/sessions` 或 `/player/items/consume`。
 
 ## 5. API 边界
 
@@ -123,7 +131,10 @@
 - POST /assessments
 - GET /assessments/:id/result
 - GET /pet
-- POST /game-sessions
+- POST /game/sessions
+- POST /game/sessions/:id/settle
+- GET /player/state
+- POST /player/items/consume
 - POST /game-sessions/:id/settle
 - GET /inventory
 - POST /inventory/:itemId/use
@@ -136,6 +147,12 @@
 - GET /life/current
 - GET /life/events?cursor=
 - POST /life/events/:id/interactions
+- POST /life/events/:id/visibility
+- POST /friends/register
+- POST /friends/accept
+- GET /friends
+- DELETE /friends/:inviteCode
+- GET /friends/:inviteCode/events
 - POST /life/notes
 
 所有写接口：
@@ -150,6 +167,7 @@
 - 游标分页使用稳定事件时间与 ID，不使用客户端本地数组作为最终事实。
 - 互动写入必须检查事件归属、状态和幂等键。
 - 面向用户的动态文本可重新渲染，但底层 LifeEvent 事实不可被模型响应覆盖。
+- 密友关系按访客凭证哈希建立无向边；朋友圈读取只返回 `visibility=friends` 且调用方已是密友的事件，不返回点赞/收藏等仅主人可见的互动。
 
 ## 6. 问卷实现决策
 
@@ -175,6 +193,7 @@
 - 主应用首个可交互目标：中端手机良好网络下小于 3 秒。
 - 小游戏稳定目标：主流设备 60 FPS，可接受降级底线 30 FPS。
 - 首屏关键 JS gzip 建议小于 200 KB，不含延迟加载游戏和 Rive runtime。
+- 当前生产构建首页入口约 310 KB / gzip 101 KB；问卷、结果、草原、朋友圈、Agent、设置、感知与小游戏页面均按路由拆分。Phaser 保持独立延迟分片，不计入首屏和 PWA 首次预缓存。
 - 图片提供明确尺寸和现代格式，角色静态回退资源单张建议小于 200 KB。
 
 ## 8. Rive 角色契约
@@ -192,18 +211,20 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 
 ## 9. 数据与存储
 
-- 账号与匿名游客都使用不可预测 ID。
+- 游客使用不可预测的本机访客凭证；不强制登录。跨设备账号合并后置。
 - 问卷答案与结果分开建模，支持删除答案但保留匿名统计。
 - 原始音视频默认不进入服务端存储。
 - 长期记忆必须有来源、创建原因、可见性和删除状态。
+- 本机数据导出由前端纯函数按版本化白名单生成 JSON；不得直接序列化 Zustand 持久化对象，避免暴露匿名能力凭证、幂等会话 ID 和内部修订字段。
 - 数据库迁移必须可回滚；生产环境不允许 ORM 自动改表。
 
 ## 10. 安全设计
 
+- API 在创建 Nest 应用前使用 Zod 校验端口、生产数据库、OpenRouter、MQTT 和公网 URL；错误只列字段名，不回显值。生产数据库缺失、半配置凭据和模板占位 Secret 均直接拒绝启动。
 - OpenRouter Key、数据库密码和签名密钥只存在服务端 Secret。
-- CSP 限制脚本、媒体、连接和 iframe 来源。
+- CSP 限制脚本、媒体、连接和 iframe 来源。生产 Permissions-Policy 允许本源摄像头与麦克风（用户手势触发），关闭地理定位。
 - Cookie 使用 Secure、HttpOnly、SameSite；需要时启用 CSRF 防护。
-- 对登录、消息、上传和删除接口限流。
+- 对消息、上传和删除接口限流。不提供登录/验证码入口。
 - 错误上报先做字段白名单和内容脱敏。
 - 依赖锁文件进入版本库，CI 执行漏洞扫描和许可证检查。
 - AI Prompt 中不拼接不必要的身份信息或原始健康数据。
@@ -215,7 +236,7 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 - Domain：Vitest 单元测试，重点覆盖计分、掉落、背包和状态机。
 - UI：组件交互测试、可访问性检查、视觉回归。
 - API：模块集成测试与数据库事务测试。
-- E2E：Playwright 覆盖问卷 → 结果 → 草坪 → 小游戏 → 使用道具。
+- E2E：Playwright 在桌面与 390 px H5 覆盖问卷 → 结果 → 草原，并真实运行完整 30 秒小游戏，验证接住 → 幂等结算 → 入包 → 消耗 → 数值与生活事件；另覆盖未完成退出、加载失败、暂停、无 `randomUUID` 的 HTTP 环境，以及 Agent 流式回复、授权范围与畸形流降级。Phaser 用例限制并发度，避免无头浏览器资源争用造成假失败。
 - AI：固定安全评测集，不用模型随机回答作为普通单元测试断言。
 - 性能：移动端 Lighthouse 与小游戏 FPS 采样。
 
@@ -237,7 +258,8 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 - 延续 VibeShot 风格：GitHub Actions 构建镜像，Docker Compose 部署到中国大陆 Linux VPS。
 - Nginx/兼容网关负责 TLS、静态资源、API 反向代理和限流。
 - 数据库不暴露公网端口。
-- 发布采用健康检查和可回滚镜像标签。
+- 发布采用 PostgreSQL/Redis 深度健康检查和可回滚镜像标签；候选失败只启动上一 SHA 的现有镜像，不在低资源主机上二次构建。
+- 服务器构建前强制检查磁盘与 `MemAvailable + SwapFree`；磁盘守护任务使用 `flock` 和硬超时，避免多个 Docker prune 重叠拖垮 daemon。
 - 域名、备案和部署服务商在上线前单独决策，不把厂商 SDK 写入领域层。
 
 ## 13. 架构决策待办
@@ -259,13 +281,17 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 ### 通信
 
 ```
-浏览器/服务端 → MQTT broker(Mosquitto, 与 API 同 VPS) → ESP32
+浏览器/服务端 ──(HTTP/SSE)──> API 服务端 ──(MQTT)──> Mosquitto Broker ──(MQTT)──> ESP32 硬件
   下行 topic: devices/{deviceId}/effect
   上行 topic: devices/{deviceId}/telemetry
 ```
 
-- broker 鉴权 + ACL 按用户隔离：服务端用户可 `write devices/#`；设备用户只 `read devices/{id}/effect`、`write devices/{id}/telemetry`（防越权）。
-- 服务端 `MqttProvider` 适配器，未配置 `MQTT_URL` 时优雅降级为 no-op。
+- broker 鉴权 + ACL 按用户隔离：服务端用户只可 `write devices/+/effect` 并读取标准遥测 topic；设备用户只可读写自己的标准 topic。
+- 服务端 `MqttProvider` 适配器仅在显式启用硬件且配置 `MQTT_URL` 时连接；失败会释放客户端并允许后续恢复，进程关闭时主动断开。
+- 正式设备配对与所有权鉴权完成前，生产 `HARDWARE_API_ENABLED` 必须为 `false`，Web 不建立 SSE，API 硬件路由返回稳定的不可用错误。不得用已知设备 ID 或共享默认密码代替配对鉴权。
+- **实时事件通道 (SSE)**：服务端监听设备 `telemetry` 上报，通过 `/api/devices/:deviceId/events` 推送至前端：
+  - **超声波人员靠近 / Boss 来袭预警**：检测到有人靠近时，若处于摸鱼/游戏中立即弹出 Boss 预警并支持一键伪装工作表格；若处于日常陪伴则主动打招呼。
+  - **FSR 压力触控**：固件上报 `{ interaction: "tap" | "rest_on" | "rest_off" }`，服务端映射为 `hasPress`/`pressure` 后由 `deriveHardwareEvent` 派生 `touch_comfort`；同时兼容旧版 `pressure`/`hasPress` 嵌套字段。`rest_off` 只同步状态不派生触摸事件。
 
 ### 心情 → 灯效（领域纯函数，packages/domain/src/signals/lighting.ts）
 
@@ -282,7 +308,16 @@ Rive 官方文档建议使用状态机和数据绑定控制运行时动画，并
 
 - `@mediapipe/tasks-vision` Face Landmarker，WASM + 模型自托管于 `apps/web/public/`，懒加载。
 - 关键点 → 几何规则打标签（微笑/皱眉/惊讶/疲惫/平静），纯函数 `classifyExpression`。
-- 构建期开关 `VITE_FEATURE_CAMERA_SIGNALS`，默认关闭。
+- 构建期开关 `VITE_FEATURE_CAMERA_SIGNALS`，生产默认关闭；开发环境可验证拒绝权限与释放流程。
+- rPPG 使用独立的 `VITE_FEATURE_RPPG`，即使镜头/表情实验开启也不会隐式启用趣味脉搏趋势。
+- 停止与卸载会递增运行代次，迟到的 MediaPipe Promise 不得回写界面；同时停止轨道并清空视频源、采样和画布。
+
+### 私密共同足迹
+
+- `apps/web/src/lib/photoMap.ts` 管理独立 IndexedDB（`wingedhorse-private-photo-map`），图片 Blob 不进入 Zustand/localStorage，避免容量与同步风险。
+- 写入前在客户端校验 MIME 与 10 MB 上限，按最长边 1600 px 重绘并转为 WebP；记录只含用户手动选择的省级地区、80 字内说明、时间与处理后的 Blob。旧虚构地标记录在读取时迁移到“草原角落”。
+- `PhotoMapPanel` 提供新增、查看、逐张删除；设置页的全量清除同时调用 `clearPhotoMoments`。首版不包含上传、公开信息流、Geolocation、精确坐标、EXIF 持久化或 AI 视觉分析。
+- 使用不含行政边界和地理点位的旅行手账装饰底板；省级地区只作为用户手动选择的文字标签。未来若引入地图能力，必须单独接入带审图号的标准地图并完成发布审核。
 
 ### 固件与资产
 

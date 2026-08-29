@@ -1,13 +1,47 @@
-import { BadRequestException, Body, Controller, Inject, Param, Post } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  Post,
+  Sse,
+  MessageEvent
+} from "@nestjs/common";
 import { deviceEffectRequestSchema } from "@wingedhorse/contracts";
+import { map, Observable } from "rxjs";
 import { DevicesService } from "./devices.service.js";
 
 @Controller("devices")
 export class DevicesController {
   constructor(@Inject(DevicesService) private readonly devices: DevicesService) {}
 
+  private assertHardwareEnabled() {
+    if (process.env.HARDWARE_API_ENABLED !== "true" || process.env.NODE_ENV === "production") {
+      throw new NotFoundException({
+        code: "HARDWARE_NOT_AVAILABLE",
+        message: "硬件联动当前未开放"
+      });
+    }
+  }
+
+  @Get(":deviceId/status")
+  status(@Param("deviceId") deviceId: string) {
+    this.assertHardwareEnabled();
+    const id = deviceId.trim();
+    if (!id || id.length > 64)
+      throw new BadRequestException({
+        code: "INVALID_DEVICE_ID",
+        message: "设备 ID 格式不正确"
+      });
+    return this.devices.getStatus(id);
+  }
+
   @Post(":deviceId/effects")
   applyEffect(@Param("deviceId") deviceId: string, @Body() body: unknown) {
+    this.assertHardwareEnabled();
     const parsed = deviceEffectRequestSchema.safeParse({
       deviceId,
       ...(body as Record<string, unknown>)
@@ -19,5 +53,24 @@ export class DevicesController {
       });
     }
     return this.devices.applyMood(parsed.data.deviceId, parsed.data.mood);
+  }
+
+  /**
+   * SSE 实时事件通道：网页前端连接该端点，实时接收硬件的触碰与人员靠近/Boss预警
+   */
+  @Sse(":deviceId/events")
+  streamEvents(@Param("deviceId") deviceId: string): Observable<MessageEvent> {
+    this.assertHardwareEnabled();
+    const id = deviceId.trim();
+    if (!id || id.length > 64)
+      throw new BadRequestException({
+        code: "INVALID_DEVICE_ID",
+        message: "设备 ID 格式不正确"
+      });
+    return this.devices.getEventsStream(id).pipe(
+      map((item) => ({
+        data: item
+      }))
+    );
   }
 }

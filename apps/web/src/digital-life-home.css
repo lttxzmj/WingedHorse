@@ -1,0 +1,362 @@
+.digital-life-home .digital-life-header {
+  position: absolute;
+  z-index: 12;
+  top: max(0.65rem, env(safe-area-inset-top));
+  right: max(0.85rem, env(safe-area-inset-right));
+  left: max(0.85rem, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.digital-life-home .digital-life-header__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.digital-life-home .digital-life-header .home-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.digital-life-home .digital-life-header .digital-life-header__identity {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0.15rem 0 0 0;
+  text-align: left;
+}
+
+.digital-life-home .digital-life-header h1 {
+  margin: 0;
+  overflow: hidden;
+  min-width: 0;
+  font-size: clamp(1.22rem, 4.8vw, 1.55rem);
+  line-height: 1.15;
+  color: #241a10;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgb(255 255 255 / 60%);
+  text-align: left;
+}
+
+.digital-life-home .digital-life-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.18rem 0.55rem 0.18rem 0.45rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 75%);
+  border: 1px solid rgb(255 255 255 / 80%);
+  box-shadow: 0 2px 8px rgb(50 70 40 / 6%);
+  backdrop-filter: blur(8px);
+  color: #594b3c;
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.digital-life-home .digital-life-presence i {
+  width: 0.38rem;
+  height: 0.38rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #5ea842;
+  box-shadow: 0 0 0 0.18rem rgb(94 168 66 / 20%);
+}
+
+.digital-life-home .digital-life-header .home-tool-link {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid rgb(255 255 255 / 85%);
+  box-shadow:
+    0 4px 14px rgb(50 70 40 / 8%),
+    0 1px 2px rgb(0 0 0 / 4%);
+  backdrop-filter: blur(12px);
+  color: var(--color-ink-700);
+}
+
+.digital-life-home .digital-life-header .home-tool-link > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.digital-life-header .home-tool-link small {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  border: 2px solid #fbf8f1;
+  font-variant-numeric: tabular-nums;
+}
+
+.digital-life-stage {
+  min-height: min(61svh, 34rem);
+}
+
+.digital-life-stage .lawn-stage__bubble {
+  top: 3.25rem;
+  max-width: min(79%, 24rem);
+  padding: 0.65rem 0.78rem;
+}
+
+.digital-life-stage .character-hotspot {
+  bottom: 4.9rem;
+  left: 45%;
+  width: min(61%, 19rem);
+  cursor: pointer;
+}
+
+.digital-life-actions {
+  position: absolute;
+  z-index: 7;
+  right: 0.65rem;
+  bottom: 0.65rem;
+  left: 0.65rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.45rem;
+  padding: 0.52rem;
+  border: 1px solid rgb(255 255 255 / 78%);
+  border-radius: 1.15rem;
+  background: rgb(255 253 246 / 91%);
+  box-shadow: 0 10px 28px rgb(55 73 43 / 14%);
+  backdrop-filter: blur(16px);
+}
+
+.digital-life-actions a,
+.digital-life-actions button {
+  min-height: 3.35rem;
+  border: 0;
+  border-radius: 0.85rem;
+  text-decoration: none;
+}
+
+.digital-life-actions > a.digital-life-actions__game {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 0.85rem;
+  color: #41320e;
+  background: linear-gradient(135deg, #ffd158, #f4b829);
+  box-shadow: 0 3px 0 #cf971c;
+}
+
+.digital-life-actions__game span {
+  display: grid;
+  min-width: 0;
+}
+
+.digital-life-actions__game strong {
+  font-size: 0.85rem;
+}
+
+.digital-life-actions__game small {
+  margin-top: 0.05rem;
+  color: rgb(65 50 14 / 70%);
+  font-size: 0.6rem;
+}
+
+.digital-life-actions__care,
+.digital-life-actions__journal {
+  display: grid;
+  min-width: 3.75rem;
+  padding: 0 0.55rem;
+  place-items: center;
+  align-content: center;
+  gap: 0.15rem;
+  color: var(--color-ink-700);
+  background: rgb(255 255 255 / 84%);
+  font-size: 0.63rem;
+  font-weight: 700;
+}
+
+.digital-life-actions__care:hover,
+.digital-life-actions__journal:hover {
+  background: #fff;
+}
+
+.digital-life-actions a:focus,
+.digital-life-actions button:focus {
+  outline: none;
+}
+
+.digital-life-actions a:focus-visible,
+.digital-life-actions button:focus-visible {
+  outline: 3px solid var(--color-focus-600);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgb(255 208 87 / 28%);
+}
+
+.digital-life-continuity {
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border: 1px solid rgb(201 149 25 / 14%);
+  border-radius: 1.3rem;
+  background: rgb(255 253 247 / 91%);
+  box-shadow: 0 10px 26px rgb(70 51 35 / 6%);
+}
+
+.digital-life-continuity__growth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem 0.85rem;
+  padding: 0.85rem 0.95rem 0.75rem;
+  align-items: center;
+}
+
+.digital-life-continuity__growth .eyebrow,
+.digital-life-continuity__growth h2 {
+  margin: 0;
+}
+
+.digital-life-continuity__growth h2 {
+  margin-top: 0.08rem;
+  font-size: 0.96rem;
+}
+
+.digital-life-continuity__growth > a {
+  color: var(--color-ink-700);
+  font-size: 0.68rem;
+  font-weight: 720;
+}
+
+.digital-life-continuity__growth .companion-growth-card__meter,
+.digital-life-continuity__growth > small {
+  grid-column: 1 / -1;
+}
+
+.digital-life-continuity__growth > small {
+  color: var(--color-ink-500);
+  font-size: 0.65rem;
+  line-height: 1.4;
+}
+
+.digital-life-continuity__activity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.72rem 0.95rem;
+  border-top: 1px solid rgb(90 69 50 / 8%);
+  background: #fff9e9;
+}
+
+.digital-life-continuity__activity-icon {
+  display: grid;
+  width: 2.3rem;
+  height: 2.3rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  color: #775915;
+  background: #ffedb0;
+}
+
+.digital-life-continuity__activity p,
+.digital-life-continuity__activity strong {
+  margin: 0;
+}
+
+.digital-life-continuity__activity p {
+  color: var(--color-ink-500);
+  font-size: 0.62rem;
+}
+
+.digital-life-continuity__activity strong {
+  display: block;
+  margin-top: 0.08rem;
+  font-size: 0.78rem;
+}
+
+.digital-life-continuity__activity > a {
+  display: inline-flex;
+  min-height: 2.6rem;
+  padding: 0 0.35rem 0 0.75rem;
+  align-items: center;
+  color: var(--color-ink-700);
+  font-size: 0.68rem;
+  font-weight: 720;
+  text-decoration: none;
+}
+
+.interaction-options--care {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.interaction-sheet__journal {
+  display: inline-flex;
+  min-height: 2.75rem;
+  margin-top: 0.35rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  color: var(--color-ink-500);
+  font-size: 0.7rem;
+  font-weight: 680;
+  text-decoration: none;
+}
+
+@media (max-width: 430px) {
+  .digital-life-stage {
+    min-height: min(58svh, 31rem);
+  }
+
+  .digital-life-actions__game small {
+    display: none;
+  }
+}
+
+@media (min-width: 760px) {
+  .digital-life-stage {
+    min-height: min(66svh, 32rem);
+  }
+
+  .digital-life-stage .character-hotspot {
+    bottom: 4.2rem;
+    left: 43%;
+    width: min(48%, 18rem);
+  }
+
+  .digital-life-continuity {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  }
+
+  .digital-life-continuity__activity {
+    border-top: 0;
+    border-left: 1px solid rgb(90 69 50 / 8%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .digital-life-actions a,
+  .digital-life-actions button {
+    transition: none;
+  }
+}

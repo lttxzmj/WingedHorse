@@ -1,7 +1,7 @@
 {
-  "name": "WingedHorse · 牛马飞升",
-  "short_name": "牛马飞升",
-  "description": "娱乐问卷、飞马养成与 AI 陪伴。",
+  "name": "牛马飞升",
+  "short_name": "来来",
+  "description": "身在工位，心向草原。来来陪你上班，也陪你下班。",
   "lang": "zh-CN",
   "start_url": "/",
   "display": "standalone",
@@ -9,9 +9,15 @@
   "theme_color": "#FFD057",
   "icons": [
     {
-      "src": "/wingedhorse-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/wingedhorse-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wingedhorse-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

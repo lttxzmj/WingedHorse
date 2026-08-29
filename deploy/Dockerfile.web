@@ -1,6 +1,16 @@
 # syntax=docker/dockerfile:1
 
 FROM node:24-alpine AS build
+
+# 生产构建在 2C2G VPS 上执行；限制 Node 堆上限，内存不足时快速失败而不是把宿主拖进 OOM 抖动
+ENV NODE_OPTIONS=--max-old-space-size=1024
+
+ARG VITE_FEATURE_CAMERA_SIGNALS=false
+ARG VITE_FEATURE_RPPG=false
+ARG VITE_HARDWARE_API_ENABLED=false
+ENV VITE_FEATURE_CAMERA_SIGNALS=$VITE_FEATURE_CAMERA_SIGNALS
+ENV VITE_FEATURE_RPPG=$VITE_FEATURE_RPPG
+ENV VITE_HARDWARE_API_ENABLED=$VITE_HARDWARE_API_ENABLED
 RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
 WORKDIR /app
 COPY . .
@@ -14,4 +24,8 @@ RUN pnpm --filter @wingedhorse/domain build \
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
+# 预压缩文本资源供 gzip_static 直接下发，省掉 0.25 核容器的现场压缩开销
+USER root
+RUN find /usr/share/nginx/html -type f \( -name "*.js" -o -name "*.css" -o -name "*.svg" -o -name "*.json" -o -name "*.html" -o -name "*.webmanifest" \) -size +1k -exec gzip -k -9 {} +
+USER nginx
 EXPOSE 8080 8443

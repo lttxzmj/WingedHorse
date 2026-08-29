@@ -13,6 +13,7 @@ export function Button({
   className = "",
   disabled,
   type = "button",
+  onPointerDown,
   ...props
 }: ButtonProps) {
   return (
@@ -22,6 +23,11 @@ export function Button({
       aria-busy={loading}
       type={type}
       {...props}
+      onPointerDown={(event) => {
+        onPointerDown?.(event);
+        if (disabled || loading) return;
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(12);
+      }}
     >
       {loading ? <span className="ui-button__spinner" aria-hidden="true" /> : null}
       <span>{loading ? "请稍等…" : children}</span>

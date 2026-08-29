@@ -1,0 +1,152 @@
+.workday-comic-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: end center;
+  padding: max(var(--space-3), env(safe-area-inset-bottom));
+  background: rgb(59 46 36 / 42%);
+}
+
+.workday-comic {
+  position: relative;
+  width: min(100%, 24rem);
+  max-height: min(92dvh, 44rem);
+  overflow: auto;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 3px solid var(--color-ink-900);
+  border-radius: 1.2rem 1.2rem 0.9rem 0.9rem;
+  background: #fffaf0;
+  box-shadow: 0 18px 40px rgb(59 46 36 / 22%);
+}
+
+.workday-comic__close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 1;
+  display: grid;
+  min-width: 44px;
+  min-height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: var(--color-ink-900);
+  background: var(--color-brand-200);
+}
+
+.workday-comic__masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-right: 2.5rem;
+}
+
+.workday-comic__masthead .eyebrow,
+.workday-comic__masthead h2 {
+  margin: 0;
+}
+
+.workday-comic__masthead h2 {
+  margin-top: 0.15rem;
+  font-size: 1.35rem;
+}
+
+.workday-comic__strip {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 3px solid var(--color-ink-900);
+  border-radius: 0.35rem;
+  overflow: hidden;
+  background: #fffdf8;
+}
+
+.workday-comic__strip li {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  min-height: 4.6rem;
+  align-items: stretch;
+  border-bottom: 3px solid var(--color-ink-900);
+}
+
+.workday-comic__strip li:last-child {
+  border-bottom: 0;
+}
+
+.workday-comic__art {
+  display: grid;
+  place-items: center;
+  padding: 0.35rem;
+  border-right: 3px solid var(--color-ink-900);
+  background: var(--color-brand-50);
+}
+
+.workday-comic__art img {
+  width: 100%;
+  height: 3.8rem;
+  object-fit: contain;
+  object-position: center;
+}
+
+.workday-comic__art em {
+  font-style: normal;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.workday-comic__copy {
+  display: grid;
+  align-content: center;
+  gap: 0.15rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.workday-comic__copy strong {
+  color: var(--color-ink-500);
+  font-size: var(--font-micro);
+  letter-spacing: 0.14em;
+}
+
+.workday-comic__copy p {
+  margin: 0;
+  color: var(--color-ink-900);
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.workday-comic__slogan {
+  margin: 0;
+  color: var(--color-ink-700);
+  font-size: var(--font-small);
+  font-weight: 750;
+  text-align: center;
+}
+
+.workday-comic__actions {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-2);
+}
+
+.workday-comic__actions .ui-button {
+  min-width: 0;
+  width: 100%;
+}
+
+.workday-comic [role="status"] {
+  margin: 0;
+  color: var(--color-ink-700);
+  font-size: var(--font-small);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workday-comic {
+    box-shadow: none;
+  }
+}

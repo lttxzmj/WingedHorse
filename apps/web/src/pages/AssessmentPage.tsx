@@ -1,7 +1,24 @@
 import { currentQuestionSet, scoreAssessment } from "@wingedhorse/domain";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { AppIcon } from "../components/AppIcon";
+import { trackEvent } from "../lib/analytics";
 import { useAppStore } from "../store/useAppStore";
+
+const journeyChapters = [
+  { end: 0, label: "第一幕 · 晨间开机" },
+  { end: 1, label: "第二幕 · 通勤路上" },
+  { end: 4, label: "第三幕 · 工位日常" },
+  { end: 5, label: "第四幕 · 午间回血" },
+  { end: 12, label: "第五幕 · 下半场" },
+  { end: 15, label: "第六幕 · 周末与远方" },
+  { end: 16, label: "最终幕 · 异常坦白局" }
+] as const;
+
+function getJourneyChapter(questionIndex: number) {
+  return journeyChapters.find((chapter) => questionIndex <= chapter.end) ?? journeyChapters[0];
+}
 
 function stableHash(value: string) {
   let result = 2166136261;
@@ -12,9 +29,14 @@ function stableHash(value: string) {
   return result >>> 0;
 }
 
+function answerConfirmationDelay() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 80 : 360;
+}
+
 export function AssessmentPage() {
   const navigate = useNavigate();
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const hasPresentedQuestion = useRef(false);
   const answers = useAppStore((state) => state.answers);
   const index = useAppStore((state) => state.assessmentIndex);
   const setAnswer = useAppStore((state) => state.setAnswer);
@@ -29,9 +51,14 @@ export function AssessmentPage() {
   const undoTimer = useRef<number | null>(null);
   const safeIndex = Math.min(index, currentQuestionSet.questions.length - 1);
   const question = currentQuestionSet.questions[safeIndex];
+  const chapter = getJourneyChapter(safeIndex);
 
   useEffect(() => {
-    headingRef.current?.focus();
+    if (!hasPresentedQuestion.current) {
+      hasPresentedQuestion.current = true;
+      return;
+    }
+    headingRef.current?.focus({ preventScroll: true });
   }, [safeIndex]);
   useEffect(() => {
     ensureAssessmentVersion(currentQuestionSet.version);
@@ -72,7 +99,9 @@ export function AssessmentPage() {
     setAdvancing(true);
     advanceTimer.current = window.setTimeout(() => {
       if (isLast) {
-        setResult(scoreAssessment(currentQuestionSet, nextAnswers));
+        const scored = scoreAssessment(currentQuestionSet, nextAnswers);
+        setResult(scored);
+        trackEvent("assessment_complete", { typeId: scored.typeId });
         void navigate({ to: "/result" });
       } else {
         setIndex(safeIndex + 1);
@@ -80,7 +109,7 @@ export function AssessmentPage() {
         setUndoIndex(safeIndex);
         undoTimer.current = window.setTimeout(() => setUndoIndex(null), 4_000);
       }
-    }, 520);
+    }, answerConfirmationDelay());
   }
 
   function undoLastAnswer() {
@@ -94,11 +123,11 @@ export function AssessmentPage() {
     <main className="assessment-page">
       <header className="assessment-header">
         <button className="icon-button" onClick={goBack} aria-label="返回上一页">
-          ←
+          <AppIcon icon={ArrowLeft} size={22} />
         </button>
         <div className="progress-block">
           <div className="progress-label">
-            <span>{question.scene}</span>
+            <span>{chapter.label}</span>
             <span>
               第 {safeIndex + 1}/{currentQuestionSet.questions.length} 题
             </span>
@@ -115,12 +144,19 @@ export function AssessmentPage() {
           </div>
         </div>
       </header>
-      <section className="question-panel" aria-describedby={error ? "answer-error" : undefined}>
+      <section
+        key={question.id}
+        className={"question-panel" + (advancing ? " question-panel--advancing" : "")}
+        aria-describedby={error ? "answer-error" : undefined}
+        aria-busy={advancing}
+      >
         <p className="question-panel__scene">{question.scene}</p>
         <h1 ref={headingRef} tabIndex={-1}>
           {question.prompt}
         </h1>
-        <p className="question-panel__hint">选最常发生的你，不是最理想的你</p>
+        <p className="question-panel__hint">
+          {isLast ? "最后一题不计分，只想听听真实的你" : "选最常发生的你，不是最理想的你"}
+        </p>
         <div className="question-options" role="radiogroup" aria-label={question.prompt}>
           {options.map((option, optionIndex) => {
             const active = selected === option.id;
@@ -132,6 +168,7 @@ export function AssessmentPage() {
                 aria-checked={active}
                 disabled={advancing}
                 onClick={() => chooseOption(option.id)}
+                style={{ "--option-order": optionIndex } as CSSProperties}
               >
                 <span className="question-option__key" aria-hidden="true">
                   {String.fromCharCode(65 + optionIndex)}
