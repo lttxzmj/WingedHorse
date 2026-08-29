@@ -40,6 +40,10 @@ export function FriendsPage() {
   const acceptInvite = useAppStore((state) => state.acceptInvite);
   const removeFriend = useAppStore((state) => state.removeFriend);
   const mergeFriends = useAppStore((state) => state.mergeFriends);
+  const friendDisplayName = useAppStore((state) => state.friendDisplayName);
+  const setFriendDisplayName = useAppStore((state) => state.setFriendDisplayName);
+  const [nameDraft, setNameDraft] = useState(friendDisplayName);
+  const [savingName, setSavingName] = useState(false);
   const [status, setStatus] = useState("");
   const [sharing, setSharing] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
@@ -49,7 +53,8 @@ export function FriendsPage() {
   useEffect(() => {
     const code = ensureInviteCode();
     const localFriends = useAppStore.getState().friends;
-    void registerFriendProfile(code)
+    const ownName = useAppStore.getState().friendDisplayName;
+    void registerFriendProfile(code, ownName || undefined)
       .then(() =>
         Promise.all(
           localFriends.map((friend) => acceptFriendInvite(friend.id).catch(() => undefined))
@@ -130,6 +135,21 @@ export function FriendsPage() {
     void removeRemoteFriend(id).catch(() => undefined);
   };
 
+  const saveDisplayName = () => {
+    const name = nameDraft.trim().slice(0, 24);
+    if (!name || name === friendDisplayName) return;
+    setSavingName(true);
+    void registerFriendProfile(ensureInviteCode(), name)
+      .then(() => {
+        setFriendDisplayName(name);
+        setStatus("圈内昵称已更新，密友那边会显示这个名字。");
+      })
+      .catch((error: unknown) => {
+        setStatus(`昵称暂时没保存上。${friendApiMessage(error)}`);
+      })
+      .finally(() => setSavingName(false));
+  };
+
   return (
     <main className="friends-page">
       <header className="subpage-header">
@@ -142,6 +162,47 @@ export function FriendsPage() {
         </div>
         <span aria-hidden="true" />
       </header>
+
+      <section className="friends-page__me" aria-label="我的圈内昵称">
+        <label className="friends-page__link">
+          <span>我的圈内昵称 · 密友看到的名字</span>
+          <input
+            value={nameDraft}
+            maxLength={24}
+            placeholder="比如：阿马"
+            onChange={(event) => setNameDraft(event.currentTarget.value)}
+            aria-label="我的圈内昵称"
+          />
+        </label>
+        <Button
+          variant="tertiary"
+          loading={savingName}
+          disabled={!nameDraft.trim() || nameDraft.trim() === friendDisplayName}
+          onClick={saveDisplayName}
+        >
+          保存
+        </Button>
+      </section>
+
+      <section className="friends-page__me" aria-label="我的圈内昵称">
+        <label>
+          <span>我的圈内昵称</span>
+          <input
+            value={nameDraft}
+            onChange={(event) => setNameDraft(event.currentTarget.value)}
+            maxLength={24}
+            placeholder="密友看到的名字"
+          />
+        </label>
+        <Button
+          variant="tertiary"
+          loading={savingName}
+          disabled={!nameDraft.trim() || nameDraft.trim() === friendDisplayName}
+          onClick={saveDisplayName}
+        >
+          保存
+        </Button>
+      </section>
 
       {pendingJoin ? (
         <section className="friends-page__invite" aria-label="待处理邀请">

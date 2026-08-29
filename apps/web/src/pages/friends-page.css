@@ -202,6 +202,14 @@
   gap: 0.4rem;
 }
 
+.friends-page__me {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+  align-items: end;
+  margin-bottom: var(--space-4);
+}
+
 .friends-page__link {
   display: grid;
   gap: 0.35rem;

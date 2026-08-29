@@ -61,6 +61,7 @@ interface AppState {
   deviceId: string;
   friends: Array<{ id: string; nickname: string }>;
   inviteCode: string;
+  friendDisplayName: string;
   receivedSponsoredItemIds: ItemId[];
   workShift: { dateKey: string; status: "off" | "on"; startedAt: string | null };
   todayCaughtCount: number;
@@ -84,6 +85,7 @@ interface AppState {
   setLifeSyncEnabled: (enabled: boolean) => void;
   setManualMood: (mood: AppState["manualMood"]) => void;
   setHardwareLink: (enabled: boolean) => void;
+  setFriendDisplayName: (name: string) => void;
   setDeviceId: (deviceId: string) => void;
   ensureInviteCode: () => string;
   acceptInvite: (code: string, nickname?: string) => AcceptInviteResult;
@@ -192,6 +194,7 @@ export const useAppStore = create<AppState>()(
       deviceId: "",
       friends: [],
       inviteCode: createInviteCode(),
+      friendDisplayName: "",
       receivedSponsoredItemIds: [],
       workShift: { dateKey: "", status: "off", startedAt: null },
       todayCaughtCount: 0,
@@ -395,6 +398,7 @@ export const useAppStore = create<AppState>()(
       setLifeSyncEnabled: (lifeSyncEnabled) => set({ lifeSyncEnabled }),
       setManualMood: (manualMood) => set({ manualMood }),
       setHardwareLink: (hardwareLink) => set({ hardwareLink }),
+      setFriendDisplayName: (name) => set({ friendDisplayName: name.trim().slice(0, 24) }),
       setDeviceId: (deviceId) => set({ deviceId: deviceId.slice(0, 64) }),
       ensureInviteCode: () => {
         const existing = parseInviteCode(get().inviteCode);
@@ -473,6 +477,7 @@ export const useAppStore = create<AppState>()(
           deviceId: "",
           friends: [],
           inviteCode: createInviteCode(),
+          friendDisplayName: "",
           receivedSponsoredItemIds: [],
           workShift: { dateKey: "", status: "off", startedAt: null },
           todayCaughtCount: 0
@@ -547,6 +552,7 @@ export const useAppStore = create<AppState>()(
         deviceId: state.deviceId,
         friends: state.friends,
         inviteCode: state.inviteCode,
+        friendDisplayName: state.friendDisplayName,
         workShift: state.workShift,
         todayCaughtCount: state.todayCaughtCount
       }),
