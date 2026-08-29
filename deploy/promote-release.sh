@@ -68,3 +68,19 @@ ln -sfn "$release_dir" /opt/wingedhorse/current.next
 mv -Tf /opt/wingedhorse/current.next /opt/wingedhorse/current
 trap - ERR
 echo "Release promoted: ${release_dir##*/}"
+
+# 根本治理：自动回收构建缓存、废弃镜像与历史版本，杜绝磁盘打满
+echo "Running post-deploy disk hygiene..."
+docker builder prune --keep-storage 1GB --force || true
+docker image prune --force || true
+
+# 保留最近 3 个发布版本目录，清理历史无用 SHA 文件夹
+if [[ -d /opt/wingedhorse/releases ]]; then
+  current_target="$(readlink -f /opt/wingedhorse/current 2>/dev/null || true)"
+  find /opt/wingedhorse/releases -mindepth 1 -maxdepth 1 -type d | sort -r | tail -n +4 | while read -r old_release; do
+    if [[ "$old_release" != "$current_target" ]]; then
+      echo "Pruning old release directory: $old_release"
+      rm -rf "$old_release" || true
+    fi
+  done
+fi
