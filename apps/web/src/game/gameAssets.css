@@ -648,7 +648,7 @@
   font-weight: 900;
   line-height: 1;
   text-shadow: 0 1.5px 0 rgb(255 255 255 / 65%);
-  animation: game-count-beat 0.72s cubic-bezier(0.2, 0.85, 0.35, 1.15) both;
+  animation: game-count-beat 0.56s cubic-bezier(0.2, 0.85, 0.35, 1.15) both;
 }
 
 .game-countdown__guide {

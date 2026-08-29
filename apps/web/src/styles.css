@@ -37,6 +37,14 @@ select {
   font: inherit;
 }
 
+input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not(
+    [type="radio"]
+  ):not([type="range"]):not([type="file"]):not([type="hidden"]),
+textarea,
+select {
+  font-size: max(16px, 1rem);
+}
+
 /*
   Kill cold browser tap/focus chrome on pointer click.
   Keep a warm brand ring only for :focus-visible (keyboard).
@@ -61,17 +69,15 @@ summary:focus:not(:focus-visible),
 
 /*
   Route/question headings are focused programmatically for screen readers
-  (tabIndex=-1). Suppress the default system-blue outline on that focus;
-  keyboard users still get the warm brand ring via :focus-visible.
+  (tabIndex=-1). They are never tab-reachable, so a visible ring has no
+  keyboard affordance — but mobile Chrome's focus-visible heuristic still
+  drew a box around page titles after route changes. Suppress it entirely;
+  screen readers keep the announcement via focus + the route announcer.
 */
 main h1[tabindex="-1"]:focus,
+main h1[tabindex="-1"]:focus-visible,
 [tabindex="-1"]:focus:not(:focus-visible) {
   outline: none;
-}
-
-main h1[tabindex="-1"]:focus-visible {
-  outline: 3px solid var(--color-focus-600);
-  outline-offset: 3px;
 }
 .quiz-landing {
   min-height: 100vh;
@@ -2037,9 +2043,12 @@ h1 {
 .settings-page,
 .legal-page {
   width: min(100%, 52rem);
-  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-4) var(--space-12);
+  padding: max(var(--space-5), env(safe-area-inset-top))
+    max(var(--space-4), env(safe-area-inset-right))
+    max(var(--space-12), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
 }
 
 .settings-page {
@@ -2135,6 +2144,7 @@ h1 {
   border: 1px solid var(--color-line-100);
   border-radius: var(--radius-sm);
   font: inherit;
+  font-size: 1rem;
 }
 
 .settings-input input:focus-visible {

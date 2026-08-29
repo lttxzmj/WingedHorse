@@ -93,10 +93,11 @@ export function GamePage() {
       const launchTimer = window.setTimeout(() => {
         setCountdownLeaving(true);
         setPhase("playing");
-      }, 860);
+      }, 640);
       return () => window.clearTimeout(launchTimer);
     }
-    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 860);
+    // 资源已在开场预热，倒计时只剩节拍价值；640ms/拍既保留 3-2-1 可读性又不拖手
+    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 640);
     return () => window.clearTimeout(timer);
   }, [countdown, phase]);
 
