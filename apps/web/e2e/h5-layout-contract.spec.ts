@@ -47,7 +47,7 @@ test("home and assessment result obey the H5 layout contract", async ({ page }, 
   for (const viewport of H5_VIEWPORTS) {
     await page.setViewportSize(viewport);
     await page.goto("/home");
-    await expect(page.getByLabel("飞马生活草原")).toBeVisible();
+    await expect(page.getByLabel("来来生活草原")).toBeVisible();
     await expect(page.getByText("你的数字生命")).toHaveCount(0);
     await expect(page.getByText("数字生命", { exact: true })).toHaveCount(0);
     const homeMetrics = await page.evaluate(() => ({
@@ -68,7 +68,7 @@ test("home and assessment result obey the H5 layout contract", async ({ page }, 
       });
 
     await page.goto("/result");
-    await expect(page.getByRole("heading", { name: "天选牛马" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "来来" })).toBeVisible();
     await expect(page.getByRole("button", { name: "开始摸鱼：去接补给" })).toBeVisible();
     await expect(page.locator(".result-moyu-cta__label")).toHaveText("开始摸鱼");
     const resultMetrics = await page.evaluate(() => {

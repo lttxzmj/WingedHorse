@@ -1,5 +1,6 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import {
+  CHARACTER_NAME,
   ITEM_CATALOG,
   ITEM_IDS,
   deriveCompanionGrowth,
@@ -10,11 +11,13 @@ import {
 } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
-import { PackageOpen, Sparkles, X } from "lucide-react";
+import { BatteryCharging, Compass, Flame, PackageOpen, Sparkles, Waves, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
 import { ItemIcon } from "../components/ItemIcon";
+import { WelfareSheet } from "../components/WelfareSheet";
+import { trackEvent } from "../lib/analytics";
 import { useAppStore } from "../store/useAppStore";
 import "../cultivation.css";
 
@@ -78,6 +81,7 @@ export function InventoryPage() {
   const [useFeedback, setUseFeedback] = useState<ItemUseFeedback | null>(null);
   const [filter, setFilter] = useState<InventoryFilter>("all");
   const [selectedItem, setSelectedItem] = useState<ItemId | null>(null);
+  const [welfareItem, setWelfareItem] = useState<ItemId | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const owned = ITEM_IDS.filter((id) => (inventory[id] ?? 0) > 0);
   const visibleItems = owned.filter((id) => itemMatchesFilter(id, filter));
@@ -131,7 +135,7 @@ export function InventoryPage() {
       <header className="subpage-header">
         <BackLink to="/home" label="回到草原" />
         <div>
-          <p className="eyebrow">飞马背包</p>
+          <p className="eyebrow">{CHARACTER_NAME}的背包</p>
           <h1>今天接住的东西</h1>
         </div>
         <span>{owned.reduce((sum, id) => sum + (inventory[id] ?? 0), 0)} 件</span>
@@ -149,27 +153,40 @@ export function InventoryPage() {
             <p>{growth.description}</p>
           </div>
         </section>
-        <section className="vitals-card vitals-card--human" aria-label="飞马今天的状态">
+        <section className="vitals-card vitals-card--human" aria-label="来来今天的状态">
           {[
-            { key: "energy", label: "喘息余量", value: vitals.energy },
-            { key: "engine", label: "行动手感", value: vitals.engine },
-            { key: "chaos", label: "心里噪音", value: vitals.chaos },
-            { key: "direction", label: "方向感", value: vitals.direction }
-          ].map((meter) => (
-            <div key={meter.key}>
-              <span>
-                {meter.label}
-                <small>{vitalState(meter.key as keyof typeof EFFECT_LABELS, meter.value)}</small>
-              </span>
-              <div className="mini-meter">
-                <i
-                  className={meter.key === "chaos" ? "is-inverse" : ""}
-                  style={{ width: `${meter.value}%` }}
-                />
+            { key: "energy", label: "喘息余量", icon: BatteryCharging },
+            { key: "engine", label: "行动手感", icon: Flame },
+            { key: "chaos", label: "心里噪音", icon: Waves },
+            { key: "direction", label: "方向感", icon: Compass }
+          ].map((item) => {
+            const value = vitals[item.key as keyof typeof vitals] ?? 0;
+            const stateLabel = vitalState(item.key as keyof typeof EFFECT_LABELS, value);
+            return (
+              <div className="vitals-tile" key={item.key} data-vital={item.key}>
+                <div className="vitals-tile__header">
+                  <span className="vitals-tile__label">
+                    <AppIcon icon={item.icon} size={14} />
+                    <span>{item.label}</span>
+                  </span>
+                  <b className="vitals-tile__value">{value}</b>
+                </div>
+                <div
+                  className="mini-meter"
+                  role="progressbar"
+                  aria-valuenow={value}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <i
+                    className={item.key === "chaos" ? "is-inverse" : ""}
+                    style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
+                  />
+                </div>
+                <span className="vitals-tile__status">{stateLabel}</span>
               </div>
-              <b>{meter.value}</b>
-            </div>
-          ))}
+            );
+          })}
         </section>
       </div>
       {notice && !useFeedback ? (
@@ -339,7 +356,7 @@ export function InventoryPage() {
                     <div>
                       <p className="eyebrow">
                         {item.sponsored
-                          ? "品牌合作物品"
+                          ? "品牌合作"
                           : recommendedItem === selectedItem
                             ? "现在最适合它"
                             : item.rarity === "rare"
@@ -356,18 +373,34 @@ export function InventoryPage() {
                     <strong>{describeEffect(item.effect)}</strong>
                   </div>
                   {item.sponsored ? (
-                    <small className="sponsor-label">品牌合作 · 虚拟体验与购买相互独立</small>
+                    <small className="sponsor-label">品牌合作 · 与购买无关</small>
                   ) : null}
-                  <div className="inventory-item-sheet__actions">
+                  <div
+                    className={`inventory-item-sheet__actions${
+                      item.sponsored ? " inventory-item-sheet__actions--stack" : ""
+                    }`}
+                  >
+                    {item.sponsored ? (
+                      <Button
+                        onClick={() => {
+                          trackEvent("welfare_opened", { itemId: selectedItem });
+                          setWelfareItem(selectedItem);
+                          setSelectedItem(null);
+                        }}
+                      >
+                        领牛毛
+                      </Button>
+                    ) : null}
                     <Button
+                      variant={item.sponsored ? "secondary" : "primary"}
                       disabled={!item.consumable}
                       onClick={() => {
                         if (useAndRespond(selectedItem)) setSelectedItem(null);
                       }}
                     >
-                      {item.consumable ? "给飞马使用" : "收藏品，无需使用"}
+                      {item.consumable ? `给${CHARACTER_NAME}使用` : "收藏品，无需使用"}
                     </Button>
-                    <Button variant="secondary" onClick={() => setSelectedItem(null)}>
+                    <Button variant="tertiary" onClick={() => setSelectedItem(null)}>
                       先留着
                     </Button>
                   </div>
@@ -376,6 +409,7 @@ export function InventoryPage() {
             );
           })()
         : null}
+      {welfareItem ? <WelfareSheet itemId={welfareItem} onClose={() => setWelfareItem(null)} /> : null}
     </main>
   );
 }

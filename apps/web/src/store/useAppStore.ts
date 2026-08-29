@@ -2,11 +2,18 @@ import {
   addItem,
   appendLifeEvent,
   consumeItem,
+  createInviteCode,
   createLifeEvent,
   createPetVitalsFromAssessment,
+  decideAcceptInvite,
+  DEFAULT_FRIEND_LIMITS,
   grantItems,
   INITIAL_PET_VITALS,
+  ITEM_CATALOG,
+  isPlaceholderFriendNickname,
+  parseInviteCode,
   advanceDigitalLife,
+  type AcceptInviteResult,
   type AssessmentAnswers,
   type AssessmentResult,
   type DailyPlan,
@@ -49,6 +56,11 @@ interface AppState {
   resultFeedback: "accurate" | "inaccurate" | null;
   hardwareLink: boolean;
   deviceId: string;
+  friends: Array<{ id: string; nickname: string }>;
+  inviteCode: string;
+  receivedSponsoredItemIds: ItemId[];
+  workShift: { dateKey: string; status: "off" | "on"; startedAt: string | null };
+  todayCaughtCount: number;
   setAnswer: (questionId: string, optionId: string) => void;
   setAssessmentIndex: (index: number) => void;
   setResult: (result: AssessmentResult) => void;
@@ -69,6 +81,11 @@ interface AppState {
   setManualMood: (mood: AppState["manualMood"]) => void;
   setHardwareLink: (enabled: boolean) => void;
   setDeviceId: (deviceId: string) => void;
+  ensureInviteCode: () => string;
+  acceptInvite: (code: string, nickname?: string) => AcceptInviteResult;
+  removeFriend: (id: string) => void;
+  clockIn: () => void;
+  clockOut: () => void;
   resetAll: () => void;
   addMemory: (content: string) => void;
   updateMemory: (id: string, content: string) => void;
@@ -76,6 +93,30 @@ interface AppState {
   setResultFeedback: (feedback: AppState["resultFeedback"]) => void;
   ensureAssessmentVersion: (version: string) => void;
   getAnswers: () => AssessmentAnswers;
+}
+
+function mergeReceivedSponsoredItemIds(
+  current: readonly ItemId[],
+  rewards: Partial<Record<ItemId, number>>
+): ItemId[] {
+  const next = new Set(current);
+  for (const [itemId, count] of Object.entries(rewards) as Array<[ItemId, number | undefined]>) {
+    if ((count ?? 0) > 0 && ITEM_CATALOG[itemId]?.sponsored) next.add(itemId);
+  }
+  return [...next];
+}
+
+function migrateReceivedSponsoredItemIds(state: Record<string, unknown>): ItemId[] {
+  const fromState = Array.isArray(state.receivedSponsoredItemIds)
+    ? (state.receivedSponsoredItemIds as unknown[]).filter(
+        (id): id is ItemId => typeof id === "string" && Boolean(ITEM_CATALOG[id as ItemId]?.sponsored)
+      )
+    : [];
+  const inventory =
+    state.inventory && typeof state.inventory === "object"
+      ? (state.inventory as Partial<Record<ItemId, number>>)
+      : {};
+  return mergeReceivedSponsoredItemIds(fromState, inventory);
 }
 
 export function migratePersistedAppState(persistedState: unknown): Partial<AppState> {
@@ -93,7 +134,25 @@ export function migratePersistedAppState(persistedState: unknown): Partial<AppSt
     lifeSyncEnabled: state.lifeSyncEnabled === true,
     cloudPlayerRevision:
       typeof state.cloudPlayerRevision === "number" ? state.cloudPlayerRevision : 0,
-    settledGameIds: Array.isArray(state.settledGameIds) ? (state.settledGameIds as string[]) : []
+    settledGameIds: Array.isArray(state.settledGameIds) ? (state.settledGameIds as string[]) : [],
+    friends: Array.isArray(state.friends)
+      ? (state.friends as AppState["friends"])
+          .filter(
+            (friend) =>
+              friend &&
+              typeof friend.id === "string" &&
+              typeof friend.nickname === "string" &&
+              !isPlaceholderFriendNickname(friend.nickname)
+          )
+          .slice(0, DEFAULT_FRIEND_LIMITS.maxFriends)
+      : [],
+    inviteCode: parseInviteCode(typeof state.inviteCode === "string" ? state.inviteCode : "") ?? "",
+    receivedSponsoredItemIds: migrateReceivedSponsoredItemIds(state),
+    workShift:
+      state.workShift && typeof state.workShift === "object"
+        ? (state.workShift as AppState["workShift"])
+        : { dateKey: "", status: "off", startedAt: null },
+    todayCaughtCount: typeof state.todayCaughtCount === "number" ? state.todayCaughtCount : 0
   } as Partial<AppState>;
 }
 
@@ -120,6 +179,11 @@ export const useAppStore = create<AppState>()(
       resultFeedback: null,
       hardwareLink: false,
       deviceId: "",
+      friends: [],
+      inviteCode: createInviteCode(),
+      receivedSponsoredItemIds: [],
+      workShift: { dateKey: "", status: "off", startedAt: null },
+      todayCaughtCount: 0,
       setAnswer: (questionId, optionId) =>
         set((state) => ({ answers: { ...state.answers, [questionId]: optionId } })),
       setAssessmentIndex: (assessmentIndex) => set({ assessmentIndex }),
@@ -182,8 +246,15 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           inventory: grantItems(state.inventory, rewards),
           gamesPlayed: state.gamesPlayed + 1,
+          todayCaughtCount:
+            state.todayCaughtCount +
+            Object.values(rewards).reduce((sum, count) => sum + (count ?? 0), 0),
           relationshipXp: Math.min(999, state.relationshipXp + (state.gamesPlayed === 0 ? 8 : 2)),
           settledGameIds: [...state.settledGameIds.slice(-19), normalizedId],
+          receivedSponsoredItemIds: mergeReceivedSponsoredItemIds(
+            state.receivedSponsoredItemIds,
+            rewards
+          ),
           lifeEvents: state.result
             ? appendLifeEvent(
                 state.lifeEvents,
@@ -310,6 +381,44 @@ export const useAppStore = create<AppState>()(
       setManualMood: (manualMood) => set({ manualMood }),
       setHardwareLink: (hardwareLink) => set({ hardwareLink }),
       setDeviceId: (deviceId) => set({ deviceId: deviceId.slice(0, 64) }),
+      ensureInviteCode: () => {
+        const existing = parseInviteCode(get().inviteCode);
+        if (existing) return existing;
+        const next = createInviteCode();
+        set({ inviteCode: next });
+        return next;
+      },
+      acceptInvite: (code, nickname = "新朋友") => {
+        const state = get();
+        const ownCode = parseInviteCode(state.inviteCode) ?? get().ensureInviteCode();
+        const decision = decideAcceptInvite({
+          ownCode,
+          incomingCode: code,
+          existingIds: state.friends.map((friend) => friend.id),
+          currentCount: state.friends.length
+        });
+        if (decision !== "ok") return decision;
+        const normalized = parseInviteCode(code);
+        if (!normalized) return "invalid";
+        const label = nickname.trim().slice(0, 16) || "新朋友";
+        set({
+          friends: [...state.friends, { id: normalized, nickname: label }]
+        });
+        return "ok";
+      },
+      removeFriend: (id) =>
+        set((state) => ({ friends: state.friends.filter((friend) => friend.id !== id) })),
+      clockIn: () => {
+        const dateKey = new Date().toISOString().slice(0, 10);
+        set((state) => ({
+          workShift: { dateKey, status: "on", startedAt: new Date().toISOString() },
+          todayCaughtCount: state.workShift.dateKey === dateKey ? state.todayCaughtCount : 0
+        }));
+      },
+      clockOut: () => {
+        const dateKey = new Date().toISOString().slice(0, 10);
+        set({ workShift: { dateKey, status: "off", startedAt: null } });
+      },
       resetAll: () =>
         set({
           answers: {},
@@ -331,7 +440,12 @@ export const useAppStore = create<AppState>()(
           memories: [],
           resultFeedback: null,
           hardwareLink: false,
-          deviceId: ""
+          deviceId: "",
+          friends: [],
+          inviteCode: createInviteCode(),
+          receivedSponsoredItemIds: [],
+          workShift: { dateKey: "", status: "off", startedAt: null },
+          todayCaughtCount: 0
         }),
       addMemory: (content) =>
         set((state) => {
@@ -377,7 +491,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: CURRENT_APP_STATE_KEY,
-      version: 5,
+      version: 8,
       migrate: migratePersistedAppState,
       partialize: (state) => ({
         answers: state.answers,
@@ -395,11 +509,16 @@ export const useAppStore = create<AppState>()(
         lifeSyncEnabled: state.lifeSyncEnabled,
         cloudPlayerRevision: state.cloudPlayerRevision,
         settledGameIds: state.settledGameIds,
+        receivedSponsoredItemIds: state.receivedSponsoredItemIds,
         manualMood: state.manualMood,
         memories: state.memories,
         resultFeedback: state.resultFeedback,
         hardwareLink: state.hardwareLink,
-        deviceId: state.deviceId
+        deviceId: state.deviceId,
+        friends: state.friends,
+        inviteCode: state.inviteCode,
+        workShift: state.workShift,
+        todayCaughtCount: state.todayCaughtCount
       }),
       merge: (persisted, current) => ({ ...current, ...(persisted as Partial<AppState>) })
     }

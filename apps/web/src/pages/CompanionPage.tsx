@@ -1,6 +1,6 @@
 import type { CompanionMessageRequest, CompanionMessageResponse } from "@wingedhorse/contracts";
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { getResultProfile, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
+import { CHARACTER_NAME, getResultProfile, ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { BookOpen, ChevronDown, Heart, Info, Send, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -57,7 +57,7 @@ export function CompanionPage() {
   const addMemory = useAppStore((state) => state.addMemory);
   const deviceId = useAppStore((state) => state.deviceId);
   const profile = result ? getResultProfile(result.typeId) : null;
-  const companionName = profile?.name ?? "飞马";
+  const companionName = CHARACTER_NAME;
   const lifeContextAvailable = Boolean(result && dailyPlan && worldContext);
 
   // 监听硬件实体触摸并注入对话流
@@ -196,7 +196,7 @@ export function CompanionPage() {
             <img className="companion-header__mascot" src="/wingedhorse-icon.svg" alt="" />
           )}
           <div>
-            <p className="eyebrow">天选牛马 · 在草原</p>
+            <p className="eyebrow">{profile ? `${profile.name}状态` : "在草原"} · {CHARACTER_NAME}</p>
             <h1>{companionName}</h1>
             <p className="companion-presence">
               <span aria-hidden="true" /> 想和你说说话

@@ -34,6 +34,13 @@ export function SettingsPage() {
       </header>
       <Card className="settings-card">
         <div>
+          <h2>密友</h2>
+          <p>最多 6 人，只彼此可见。</p>
+        </div>
+        <Link to="/friends">去邀请</Link>
+      </Card>
+      <Card className="settings-card">
+        <div>
           <h2>私密生活簿备份</h2>
           <p>
             默认只保存在当前浏览器。开启后，结构化生活事件会用随机访客凭证备份到 WingedHorse

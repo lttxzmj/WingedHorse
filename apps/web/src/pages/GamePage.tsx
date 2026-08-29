@@ -1,4 +1,10 @@
-import { ITEM_CATALOG, type ItemId } from "@wingedhorse/domain";
+import {
+  CHARACTER_NAME,
+  DEFAULT_SPONSORED_CAMPAIGN,
+  ITEM_CATALOG,
+  sponsoredDisplayName,
+  type ItemId
+} from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import {
@@ -16,7 +22,9 @@ import { AppIcon } from "../components/AppIcon";
 import { BackLink } from "../components/BackLink";
 import { ItemIcon } from "../components/ItemIcon";
 import { subscribeDeviceEvents } from "../lib/devices";
+import { WelfareSheet } from "../components/WelfareSheet";
 import { DropGameCanvas, type GameStats, type GameSummary } from "../game/DropGameCanvas";
+import { trackEvent } from "../lib/analytics";
 import { ASCENDED_HORSE_ASSET, GAME_CHARACTER_ASSETS } from "../game/gameCharacterAssets";
 import "../game/gameAssets.css";
 import { createClientId } from "../lib/clientId";
@@ -39,9 +47,15 @@ export function GamePage() {
   const [controlDirection, setControlDirection] = useState<-1 | 0 | 1>(0);
   const [catchNotice, setCatchNotice] = useState("");
   const [showGuide, setShowGuide] = useState(true);
+  const [welfareItem, setWelfareItem] = useState<ItemId | null>(null);
   const autoStartHandled = useRef(false);
   const settleGame = useAppStore((state) => state.settleGame);
+  const gamesPlayed = useAppStore((state) => state.gamesPlayed);
+  const receivedSponsoredItemIds = useAppStore((state) => state.receivedSponsoredItemIds);
   const result = useAppStore((state) => state.result);
+  const hasReceivedSponsored = receivedSponsoredItemIds.includes(
+    DEFAULT_SPONSORED_CAMPAIGN.boxItemId
+  );
   const deviceId = useAppStore((state) => state.deviceId);
   const playing = phase === "playing";
 
@@ -57,6 +71,9 @@ export function GamePage() {
     return unsubscribe;
   }, [deviceId, phase]);
   const inLiveScene = phase === "countdown" || phase === "playing";
+  const sponsoredCaughtId = summary
+    ? (Object.keys(summary.caught) as ItemId[]).find((itemId) => ITEM_CATALOG[itemId].sponsored)
+    : undefined;
   const [countdownLeaving, setCountdownLeaving] = useState(false);
 
   useEffect(() => {
@@ -93,7 +110,9 @@ export function GamePage() {
     setControlDirection(0);
     setCatchNotice("");
     setShowGuide(true);
+    setWelfareItem(null);
     setGameLoadState("loading");
+    trackEvent("game_start", { round: gamesPlayed + 1 });
     setCountdownLeaving(false);
     setCountdown(3);
     setPhase("countdown");
@@ -107,6 +126,11 @@ export function GamePage() {
 
   const finish = (nextSummary: GameSummary) => {
     settleGame(nextSummary.sessionId, nextSummary.caught);
+    const sponsoredId = (Object.keys(nextSummary.caught) as ItemId[]).find(
+      (itemId) => ITEM_CATALOG[itemId].sponsored
+    );
+    if (sponsoredId) trackEvent("sponsored_caught", { itemId: sponsoredId });
+    trackEvent("game_finish", { score: nextSummary.score, caught: nextSummary.caughtCount });
     setSummary(nextSummary);
     setStats(nextSummary);
     setPaused(false);
@@ -153,6 +177,8 @@ export function GamePage() {
               <DropGameCanvas
                 sessionId={sessionId}
                 characterType={result?.typeId ?? "chosen"}
+                gamesPlayed={gamesPlayed}
+                hasReceivedSponsored={hasReceivedSponsored}
                 paused={!playing || paused}
                 controlDirection={playing ? controlDirection : 0}
                 onStatsChange={setStats}
@@ -165,9 +191,13 @@ export function GamePage() {
                 onCatch={(itemId, points) => {
                   setShowGuide(false);
                   if ("vibrate" in navigator) navigator.vibrate(18);
-                  setCatchNotice(`${ITEM_CATALOG[itemId].name} +${points}`);
+                  const item = ITEM_CATALOG[itemId];
+                  setCatchNotice(
+                    item.sponsored ? `+${points} · 合作补给` : `${item.name} +${points}`
+                  );
                   window.setTimeout(() => setCatchNotice(""), 900);
                 }}
+                onSponsoredShown={(itemId) => trackEvent("sponsored_shown", { itemId })}
                 onFinish={finish}
               />
             )}
@@ -188,7 +218,7 @@ export function GamePage() {
                 <div className="game-countdown__veil" />
                 <div className="game-countdown__content" key={countdown}>
                   <p className="game-countdown__pill">
-                    <span>{countdown > 1 ? "稳住，准备接补给" : "左右拖动飞马"}</span>
+                    <span>{countdown > 1 ? "稳住，准备接补给" : `左右拖动${CHARACTER_NAME}`}</span>
                   </p>
                   <div className="game-countdown__core">
                     <span className="game-countdown__halo" aria-hidden="true" />
@@ -235,7 +265,7 @@ export function GamePage() {
                   </div>
                 ) : null}
                 {gameLoadState === "ready" ? (
-                  <div className="game-controls" aria-label="移动飞马">
+                  <div className="game-controls" aria-label={`移动${CHARACTER_NAME}`}>
                     <button
                       type="button"
                       aria-label="向左移动"
@@ -264,12 +294,15 @@ export function GamePage() {
                 ) : null}
                 {gameLoadState === "ready" && showGuide && !countdownLeaving ? (
                   <p className="game-play-guide" role="status">
-                    手指贴着飞马左右拖动，接住第一份补给
+                    {`手指贴着${CHARACTER_NAME}左右拖动，接住第一份补给`}
                   </p>
                 ) : null}
                 {catchNotice ? (
-                  <p className="game-catch-notice sr-only" role="status">
-                    接住了 · {catchNotice}
+                  <p
+                    className={`game-catch-notice${catchNotice.includes("合作补给") ? "" : " sr-only"}`}
+                    role="status"
+                  >
+                    {catchNotice.includes("合作补给") ? catchNotice : `接住了 · ${catchNotice}`}
                   </p>
                 ) : null}
                 {paused ? (
@@ -305,18 +338,41 @@ export function GamePage() {
                   <h3 id="game-loot-title">本局获得</h3>
                   <div className="loot-row" aria-label="本局获得物品">
                     {Object.entries(summary.caught).length ? (
-                      Object.entries(summary.caught).map(([id, count]) => (
-                        <span key={id}>
-                          <ItemIcon itemId={id as ItemId} size={19} />
-                          <span>{ITEM_CATALOG[id as ItemId].name}</span>
-                          <strong>×{count}</strong>
-                        </span>
-                      ))
+                      Object.entries(summary.caught).map(([id, count]) => {
+                        const itemId = id as ItemId;
+                        const item = ITEM_CATALOG[itemId];
+                        return (
+                          <span key={id} className={item.sponsored ? "is-sponsored" : undefined}>
+                            <ItemIcon itemId={itemId} size={19} />
+                            <span>{item.sponsored ? sponsoredDisplayName() : item.name}</span>
+                            <strong>×{count}</strong>
+                          </span>
+                        );
+                      })
                     ) : (
-                      <p>这次没有接住也没关系，不扣分，也不会影响飞马。</p>
+                      <p>这次没接住也没关系，不扣分。</p>
                     )}
                   </div>
                 </section>
+                {sponsoredCaughtId ? (
+                  <section className="game-summary__welfare" aria-labelledby="game-welfare-title">
+                    <ItemIcon itemId={sponsoredCaughtId} size={44} />
+                    <div>
+                      <strong id="game-welfare-title">合作补给</strong>
+                      <p>
+                        {DEFAULT_SPONSORED_CAMPAIGN.partnerName} · {DEFAULT_SPONSORED_CAMPAIGN.welfare.name}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        trackEvent("welfare_opened", { itemId: sponsoredCaughtId });
+                        setWelfareItem(sponsoredCaughtId);
+                      }}
+                    >
+                      领牛毛
+                    </Button>
+                  </section>
+                ) : null}
                 <figure className="game-summary__ascension">
                   <img
                     src={ASCENDED_HORSE_ASSET}
@@ -351,7 +407,7 @@ export function GamePage() {
                     今日补给雨
                   </span>
                   <h2>30 秒，把补给接回草原</h2>
-                  <p>拖动飞马接住物品；漏接不扣分。</p>
+                  <p>拖动{CHARACTER_NAME}接住物品；漏接不扣分。</p>
                 </div>
                 <div className="game-intro__actions">
                   <Button onClick={start}>开始接补给</Button>
@@ -364,6 +420,7 @@ export function GamePage() {
           </div>
         )}
       </section>
+      {welfareItem ? <WelfareSheet itemId={welfareItem} onClose={() => setWelfareItem(null)} /> : null}
     </main>
   );
 }

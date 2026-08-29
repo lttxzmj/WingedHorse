@@ -9,4 +9,15 @@ describe("AppController", () => {
     expect(result.service).toBe("wingedhorse-api");
     expect(Number.isNaN(Date.parse(result.timestamp))).toBe(false);
   });
+
+  it("accepts a whitelisted analytics event and rejects unknown names", () => {
+    const controller = new AppController();
+    expect(
+      controller.ingestEvent({
+        name: "landing_view",
+        occurredAt: "2026-08-29T00:00:00.000Z"
+      })
+    ).toEqual({ accepted: true });
+    expect(() => controller.ingestEvent({ name: "hack", occurredAt: "2026-08-29T00:00:00.000Z" })).toThrow();
+  });
 });

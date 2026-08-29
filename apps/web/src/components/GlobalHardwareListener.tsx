@@ -1,38 +1,37 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "@tanstack/react-router";
+import { standFaceFromVitals, type StandFaceMood } from "@wingedhorse/domain";
 import { subscribeDeviceEvents } from "../lib/devices";
+import { trackEvent } from "../lib/analytics";
 import { useAppStore } from "../store/useAppStore";
-import { WorkInspirationPoster } from "./WorkInspirationPoster";
+import { LailaiStandFace } from "./LailaiStandFace";
 
-/**
- * 全局硬件事件监听器
- * 1. 摸鱼/游戏页面（/game）：超声波检测到身后有人靠近 -> 🚨 零操作自动极速切换全屏专注励志壁纸，保护摸鱼隐私！
- * 2. 危险解除后或用户点击屏幕 -> 一键退出壁纸，恢复游戏。
- * 3. 其他日常页面全部静默，已深度融合至飞马角色对话气泡中。
- */
 export function GlobalHardwareListener() {
   const deviceId = useAppStore((state) => state.deviceId);
+  const energy = useAppStore((state) => state.petVitals.energy);
+  const clockIn = useAppStore((state) => state.clockIn);
   const location = useLocation();
-  const [stealthMode, setStealthMode] = useState(false);
+  const [faceMood, setFaceMood] = useState<StandFaceMood | null>(null);
 
   useEffect(() => {
     const targetDeviceId = deviceId || "lamp-001";
-
     const unsubscribe = subscribeDeviceEvents(targetDeviceId, (event, telemetry) => {
       const isGaming = location.pathname.includes("/game");
-
-      // 只要在摸鱼游戏页面，一旦超声波检测到身后有人靠近，直接自动秒切全屏壁纸，无需多余弹窗与手动点击！
+      if (event.type === "worker_presence") {
+        clockIn();
+        setFaceMood(standFaceFromVitals(energy, false));
+        trackEvent("stand_face_show", { mood: "on-duty" });
+        trackEvent("clock_in", { source: "hardware" });
+        return;
+      }
       if (isGaming && telemetry.obstacle) {
-        setStealthMode(true);
+        setFaceMood("stealth");
+        trackEvent("stand_face_show", { mood: "stealth" });
       }
     });
-
     return unsubscribe;
-  }, [deviceId, location.pathname]);
+  }, [clockIn, deviceId, energy, location.pathname]);
 
-  if (stealthMode) {
-    return <WorkInspirationPoster onClose={() => setStealthMode(false)} />;
-  }
-
-  return null;
+  if (!faceMood) return null;
+  return <LailaiStandFace mood={faceMood} onClose={() => setFaceMood(null)} />;
 }

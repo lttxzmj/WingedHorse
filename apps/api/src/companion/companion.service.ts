@@ -4,12 +4,12 @@ import type {
   CompanionMessageResponse,
   CompanionStreamEvent
 } from "@wingedhorse/contracts";
-import { getResultProfile, type HorseTypeId, type PlannedActivity } from "@wingedhorse/domain";
+import { CHARACTER_NAME, type HorseTypeId, type PlannedActivity } from "@wingedhorse/domain";
 import { CompanionAccessService, type ModelAccessDecision } from "./companion-access.service.js";
 import { OpenRouterProvider } from "./openrouter.provider.js";
 import { SafetyService } from "./safety.service.js";
 
-const SYSTEM_PROMPT = `你是 WingedHorse 里的 AI 飞马伙伴。你必须明确自己是 AI，不冒充真人、医生或心理咨询师。
+const SYSTEM_PROMPT = `你是牛马飞升里的 AI 牛马来来。你必须明确自己是 AI，不冒充真人、医生或心理咨询师。你的名字是来来，8 种测评类型只是你今天的状态，不是别人。说话短、暖、不说教。
 语气温暖、短而自然，以倾听和一个可执行的小建议为主。不要诊断，不做医疗承诺，不强化排他依赖，不用签到损失或情感勒索。
 不要声称从摄像头准确识别了用户情绪或健康状态。用户可随时跳过、休息、关闭记忆。用简体中文回复，通常不超过 160 字。`;
 
@@ -227,7 +227,6 @@ export class CompanionService {
   private groundedReply(request: CompanionMessageRequest): CompanionMessageResponse | null {
     const context = request.lifeContext;
     if (!context) return null;
-    const profile = getResultProfile(context.typeId);
     const voice = characterVoices[context.typeId];
     const asksAboutLife = /今天|刚才|最近|做了什么|发生了什么/u.test(request.message);
     const asksAboutInventory = /背包|补给|物品|有什么/u.test(request.message);
@@ -240,8 +239,8 @@ export class CompanionService {
     if (asksAboutLife) {
       const event = context.recentEvents[0];
       reply = event
-        ? `我是${profile.name}，当然记得。最近发生的是“${event.title}”：${event.body} 这是生活簿里真实记下来的事。`
-        : `我是${profile.name}。今天的生活簿还很安静，我不想为了显得热闹而编造经历。`;
+        ? `我是${CHARACTER_NAME}。当然记得。最近发生的是“${event.title}”：${event.body} 这是生活簿里真实记下来的事。`
+        : `我是${CHARACTER_NAME}。今天的生活簿还很安静，我不想为了显得热闹而编造经历。`;
     } else if (asksAboutInventory) {
       reply = context.inventory.length
         ? `我刚看过背包：${context.inventory.map((item) => `${item.name}×${item.count}`).join("、")}。这些是当前实际库存。`
@@ -262,9 +261,9 @@ export class CompanionService {
         ? `${voice.welcome}。我的计划里有“${activityLabels[nextSlot.activity]}”，但不用照表完成。你也可以只选：去接一局补给，或在草原安静待会儿。`
         : `${voice.welcome}。今天没有必须完成的安排；${voice.gentleAction}，或者什么都不做。`;
     } else if (asksForQuiet) {
-      reply = `好。我是${profile.name}，先不追问，也不计时。你可以把页面放在这里，想开口时再说。`;
+      reply = `好。我是${CHARACTER_NAME}，先不追问，也不计时。你可以把页面放在这里，想开口时再说。`;
     } else if (celebrates) {
-      reply = `收到好消息了。${profile.name}先替你认真高兴一下：这件事值得被记住，不用马上赶去证明下一件。`;
+      reply = `收到好消息了。${CHARACTER_NAME}先替你认真高兴一下：这件事值得被记住，不用马上赶去证明下一件。`;
     } else if (vents) {
       reply = `${voice.welcome}。我不会用测评类型解释你现在的感受。要是愿意，${voice.gentleAction}；不愿意也可以继续吐槽，我在听。`;
     }
@@ -284,8 +283,8 @@ export class CompanionService {
       level === "concern"
         ? "听起来你已经撑了很久。先不要求自己马上好起来，好吗？如果可以，联系一个你信任的人，说一句“我今天有点难熬，能陪我说两句吗”。我只是 AI，但可以继续陪你把此刻最难的部分说清楚。"
         : message.includes("累") || message.includes("疲惫")
-          ? "听起来今天的电量已经很低了。你不用在这里证明自己还能撑。先喝口水、把肩膀放松十秒也算照顾自己。我是 AI 飞马，想听你说说最消耗你的那一件事。"
-          : "我在听。你不用把话组织得很完整，想到哪里就说到哪里。我是 AI 飞马，不能替代现实中的支持，但可以陪你把现在的感受慢慢拆小一点。";
+          ? "听起来今天的电量已经很低了。你不用在这里证明自己还能撑。先喝口水、把肩膀放松十秒也算照顾自己。我是来来，AI 伙伴，想听你说说最消耗你的那一件事。"
+          : "我在听。你不用把话组织得很完整，想到哪里就说到哪里。我是来来，AI 伙伴，不能替代现实中的支持，但可以陪你把现在的感受慢慢拆小一点。";
     return {
       reply,
       source: "local-fallback",

@@ -8,6 +8,29 @@ export const healthResponseSchema = z.object({
 
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
+export const analyticsEventSchema = z.object({
+  name: z.enum([
+    "landing_view",
+    "assessment_start",
+    "assessment_complete",
+    "home_view",
+    "game_start",
+    "game_finish",
+    "sponsored_shown",
+    "sponsored_caught",
+    "welfare_opened",
+    "clock_in",
+    "clock_out",
+    "comic_share",
+    "stand_face_show",
+    "intent_submit"
+  ]),
+  occurredAt: z.iso.datetime(),
+  props: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional()
+});
+
+export type AnalyticsEventPayload = z.infer<typeof analyticsEventSchema>;
+
 export const assessmentSubmissionSchema = z.object({
   questionSetId: z.string().min(1),
   questionSetVersion: z.string().min(1),

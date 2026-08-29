@@ -1,4 +1,12 @@
-import { ITEM_CATALOG, createSeededRandom, selectDrop, type ItemId } from "@wingedhorse/domain";
+import {
+  DEFAULT_SPONSORED_CAMPAIGN,
+  ITEM_CATALOG,
+  createSeededRandom,
+  selectDrop,
+  shouldSpawnSponsoredDrop,
+  sponsoredDropDefinition,
+  type ItemId
+} from "@wingedhorse/domain";
 import type { WingedHorseType } from "@wingedhorse/character-runtime";
 import { useEffect, useRef } from "react";
 import type PhaserType from "phaser";
@@ -22,6 +30,8 @@ export interface GameSummary extends GameStats {
 interface DropGameCanvasProps {
   sessionId: string;
   characterType: WingedHorseType;
+  gamesPlayed?: number;
+  hasReceivedSponsored?: boolean;
   durationSeconds?: number;
   paused: boolean;
   controlDirection: -1 | 0 | 1;
@@ -29,6 +39,7 @@ interface DropGameCanvasProps {
   onReady: () => void;
   onError: (message: string) => void;
   onCatch: (itemId: ItemId, points: number) => void;
+  onSponsoredShown?: (itemId: ItemId) => void;
   onFinish: (summary: GameSummary) => void;
 }
 
@@ -40,11 +51,22 @@ interface FallingItem {
   drift: number;
   phase: number;
   rotationSpeed: number;
+  sponsored: boolean;
+  /** Age since spawn; used for sponsored slow-then-fast fall curve. */
+  fallAgeMs: number;
+  /** Soft hover/showcase window before acceleration. */
+  introMs: number;
+  /** One-shot dive cue after the sponsored intro ends. */
+  diveStarted: boolean;
+  /** Resting visual scale after the entry pop (used by dive nudge). */
+  restScale: number;
 }
 
 export function DropGameCanvas({
   sessionId,
   characterType,
+  gamesPlayed = 0,
+  hasReceivedSponsored = false,
   durationSeconds = 30,
   paused,
   controlDirection,
@@ -52,6 +74,7 @@ export function DropGameCanvas({
   onReady,
   onError,
   onCatch,
+  onSponsoredShown,
   onFinish
 }: DropGameCanvasProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -63,6 +86,7 @@ export function DropGameCanvas({
   const readyRef = useRef(onReady);
   const errorRef = useRef(onError);
   const catchRef = useRef(onCatch);
+  const sponsoredShownRef = useRef(onSponsoredShown);
   finishRef.current = onFinish;
   statsRef.current = onStatsChange;
   pausedRef.current = paused;
@@ -70,6 +94,7 @@ export function DropGameCanvas({
   readyRef.current = onReady;
   errorRef.current = onError;
   catchRef.current = onCatch;
+  sponsoredShownRef.current = onSponsoredShown;
 
   useEffect(() => {
     const game = gameRef.current;
@@ -123,6 +148,7 @@ export function DropGameCanvas({
           private elapsedMs = 0;
           private nextDropInMs = 920;
           private spawnedCount = 0;
+          private sponsoredSpawned = 0;
           private finished = false;
           private cursors: PhaserType.Types.Input.Keyboard.CursorKeys | undefined;
           private leftKey: PhaserType.Input.Keyboard.Key | undefined;
@@ -228,14 +254,40 @@ export function DropGameCanvas({
           }
 
           private spawnDrop(elapsed: number) {
-            const drop = selectDrop(this.random);
+            const forceSponsored = shouldSpawnSponsoredDrop({
+              gamesPlayed,
+              spawnedCount: this.spawnedCount,
+              sponsoredSpawned: this.sponsoredSpawned,
+              random: this.random,
+              hasReceivedSponsored
+            });
+            const drop = forceSponsored ? sponsoredDropDefinition() : selectDrop(this.random);
             const isFirstDrop = this.spawnedCount === 0;
             const x = isFirstDrop ? this.catcher.x : 72 + this.random() * (390 - 144);
             this.spawnedCount += 1;
             const item = ITEM_CATALOG[drop.itemId];
-            const isSponsored = item.sponsored && Boolean(ITEM_BRAND_IMAGE_ASSETS[drop.itemId]);
-            const label = this.add.container(x, 128);
-            const shadow = this.add.ellipse(2, 5, isSponsored ? 64 : 58, isSponsored ? 66 : 58, 0x3b2e24, 0.14);
+            const isSponsored = Boolean(item.sponsored);
+            const brandTexture = `item-brand-${drop.itemId}`;
+            const iconTexture =
+              isSponsored && this.textures.exists(brandTexture)
+                ? brandTexture
+                : `item-icon-${drop.itemId}`;
+            if (isSponsored) {
+              this.sponsoredSpawned += 1;
+              sponsoredShownRef.current?.(drop.itemId);
+            }
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            // Sponsored box starts higher so the slow showcase beat has runway.
+            const spawnY = isSponsored ? 72 : 128;
+            const label = this.add.container(x, spawnY);
+            const shadow = this.add.ellipse(
+              2,
+              5,
+              isSponsored ? 92 : 58,
+              isSponsored ? 94 : 58,
+              0x3b2e24,
+              0.14
+            );
             const card = this.add.graphics();
             const rare = item.rarity === "rare";
             const kindPalette = {
@@ -246,54 +298,75 @@ export function DropGameCanvas({
               decoration: { surface: 0xeee7ff, icon: 0x7863a7 },
               "sponsored-supply": { surface: 0xe5f2ff, icon: 0x1768b3 }
             }[item.kind];
+            const box = isSponsored ? { w: 118, h: 128, r: 30 } : { w: 64, h: 68, r: 19 };
+            if (isSponsored) {
+              // Soft static halo only — no pulsing (UI_STYLE_GUIDE brand rules).
+              const glow = this.add.circle(0, 0, 82, 0x3b83c9, reduceMotion ? 0.08 : 0.14);
+              label.add(glow);
+            }
             card.fillStyle(isSponsored ? 0xf5faff : rare ? 0xfff7dc : 0xfffdf5, 0.98);
-            card.fillRoundedRect(-32, -34, 64, 68, 19);
-            card.lineStyle(isSponsored ? 3 : rare ? 2.5 : 2, isSponsored ? 0x3b83c9 : rare ? 0xe2a91f : 0xffffff, 0.98);
-            card.strokeRoundedRect(-32, -34, 64, 68, 19);
-            const iconPlate = this.add.circle(0, -5, 20, kindPalette.surface, 1);
+            card.fillRoundedRect(-box.w / 2, -box.h / 2, box.w, box.h, box.r);
+            card.lineStyle(isSponsored ? 5 : rare ? 2.5 : 2, isSponsored ? 0x3b83c9 : rare ? 0xe2a91f : 0xffffff, 0.98);
+            card.strokeRoundedRect(-box.w / 2, -box.h / 2, box.w, box.h, box.r);
+            const iconPlate = this.add.circle(0, -8, isSponsored ? 30 : 20, kindPalette.surface, 1);
             const glyph = this.add
-              .image(0, -5, isSponsored ? `item-brand-${drop.itemId}` : `item-icon-${drop.itemId}`)
-              .setTint(isSponsored ? 0xffffff : kindPalette.icon)
-              .setDisplaySize(isSponsored ? 44 : 31, isSponsored ? 32 : 31);
+              .image(0, -8, iconTexture)
+              .setTint(isSponsored && iconTexture === brandTexture ? 0xffffff : kindPalette.icon)
+              .setDisplaySize(isSponsored ? 82 : 31, isSponsored ? 60 : 31);
             const partnerTag = isSponsored
               ? this.add
-                  .text(0, -28, "品牌合作", {
+                  .text(0, -46, "品牌合作", {
                     color: "#1768b3",
                     fontFamily: "PingFang SC, system-ui",
-                    fontSize: "7px",
+                    fontSize: "10px",
                     fontStyle: "bold"
                   })
                   .setOrigin(0.5)
               : null;
             const name = this.add
-              .text(0, 24, isSponsored ? "蓝盒子" : item.name.replace("补给", ""), {
-                align: "center",
-                color: isSponsored ? "#175b99" : "#59483b",
-                fontFamily: "PingFang SC, system-ui",
-                fontSize: "9px",
-                fontStyle: "bold",
-                wordWrap: { width: 60, useAdvancedWrap: true }
-              })
+              .text(
+                0,
+                isSponsored ? 38 : 24,
+                isSponsored ? DEFAULT_SPONSORED_CAMPAIGN.partnerName : item.name.replace("补给", ""),
+                {
+                  align: "center",
+                  color: isSponsored ? "#175b99" : "#59483b",
+                  fontFamily: "PingFang SC, system-ui",
+                  fontSize: isSponsored ? "12px" : "9px",
+                  fontStyle: "bold",
+                  wordWrap: { width: isSponsored ? 96 : 60, useAdvancedWrap: true }
+                }
+              )
               .setOrigin(0.5);
             label.add([shadow, card, iconPlate, glyph, ...(partnerTag ? [partnerTag] : []), name]);
             this.world.add(label);
-            label.setScale(0.72).setAlpha(0);
+            // Sponsored: pop bigger on entry, then slow-hover before a dive accelerate.
+            const restScale = isSponsored ? (reduceMotion ? 1.48 : 1.78) : 1;
+            label.setScale(isSponsored ? 0.58 : 0.72).setAlpha(0);
             this.tweens.add({
               targets: label,
-              scale: 1,
+              scale: restScale,
               alpha: 1,
-              duration: 180,
+              duration: isSponsored ? (reduceMotion ? 160 : 380) : 180,
               ease: "Back.Out"
             });
             const difficulty = isFirstDrop ? 0.82 : Math.min(1.65, 1 + elapsed / 42_000);
+            const sponsoredBaseSpeed = drop.speed * (isFirstDrop ? 0.62 : 0.78);
             this.drops.push({
               itemId: drop.itemId,
               label,
               points: drop.points,
-              speed: drop.speed * difficulty,
-              drift: 8 + this.random() * 13,
+              speed: isSponsored ? sponsoredBaseSpeed : drop.speed * difficulty,
+              drift: isSponsored ? 10 + this.random() * 10 : 8 + this.random() * 13,
               phase: this.random() * Math.PI * 2,
-              rotationSpeed: (this.random() - 0.5) * 0.0016
+              rotationSpeed: isSponsored
+                ? (this.random() - 0.5) * 0.0011
+                : (this.random() - 0.5) * 0.0016,
+              sponsored: isSponsored,
+              fallAgeMs: 0,
+              introMs: isSponsored ? (reduceMotion ? 0 : 900) : 0,
+              diveStarted: false,
+              restScale
             });
           }
 
@@ -309,10 +382,10 @@ export function DropGameCanvas({
             panel.lineStyle(2, 0xffd057, 0.9);
             panel.strokeRoundedRect(-66, -18, 132, 36, 18);
             const label = this.add
-              .text(0, 0, `${item.name}  +${earnedPoints}`, {
+              .text(0, 0, item.sponsored ? `+${earnedPoints}` : `${item.name}  +${earnedPoints}`, {
                 color: "#4b3b2e",
                 fontFamily: "PingFang SC, system-ui",
-                fontSize: "13px",
+                fontSize: item.sponsored ? "18px" : "13px",
                 fontStyle: "bold"
               })
               .setOrigin(0.5);
@@ -445,13 +518,44 @@ export function DropGameCanvas({
             const catcherTop = this.catcher.y - 76;
             const verticalScale = gameHeight / 560;
             this.drops = this.drops.filter((drop) => {
-              drop.label.y += delta * 0.13 * drop.speed * verticalScale;
-              drop.label.x += Math.sin(this.motionClock * 0.0024 + drop.phase) * drop.drift * (delta / 1000);
+              drop.fallAgeMs += delta;
+              let fallFactor = 1;
+              let swayBoost = 1;
+              if (drop.sponsored && drop.introMs > 0) {
+                if (drop.fallAgeMs < drop.introMs) {
+                  // Showcase: slow float + wider sway while the enlarged box is readable.
+                  const t = drop.fallAgeMs / drop.introMs;
+                  fallFactor = 0.16 + t * 0.22;
+                  swayBoost = 1.75;
+                } else {
+                  // Dive: one-shot tip + speed climb so the catch window stays exciting.
+                  if (!drop.diveStarted) {
+                    drop.diveStarted = true;
+                    drop.rotationSpeed *= 2.4;
+                    drop.label.rotation += (this.random() > 0.5 ? 1 : -1) * 0.14;
+                    this.tweens.add({
+                      targets: drop.label,
+                      scale: drop.restScale * 0.9,
+                      duration: 160,
+                      yoyo: true,
+                      ease: "Cubic.InOut"
+                    });
+                  }
+                  const after = drop.fallAgeMs - drop.introMs;
+                  fallFactor = Math.min(3.15, 1.2 + after / 560);
+                  swayBoost = 0.55;
+                }
+              }
+              drop.label.y += delta * 0.13 * drop.speed * verticalScale * fallFactor;
+              drop.label.x +=
+                Math.sin(this.motionClock * 0.0024 + drop.phase) * drop.drift * swayBoost * (delta / 1000);
               drop.label.rotation += drop.rotationSpeed * delta;
+              const catchHalfWidth = drop.sponsored ? 104 : 62;
+              const catchDepth = drop.sponsored ? 108 : 74;
               const isCaught =
                 drop.label.y >= catcherTop &&
-                drop.label.y <= catcherTop + 74 &&
-                Math.abs(drop.label.x - this.catcher.x) < 62;
+                drop.label.y <= catcherTop + catchDepth &&
+                Math.abs(drop.label.x - this.catcher.x) < catchHalfWidth;
               if (isCaught) {
                 this.combo += 1;
                 this.maxCombo = Math.max(this.maxCombo, this.combo);
@@ -541,7 +645,7 @@ export function DropGameCanvas({
       game?.destroy(true);
       gameRef.current = undefined;
     };
-  }, [characterType, durationSeconds, sessionId]);
+  }, [characterType, durationSeconds, gamesPlayed, hasReceivedSponsored, sessionId]);
 
   return (
     <div

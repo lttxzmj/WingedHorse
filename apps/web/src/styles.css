@@ -1445,7 +1445,10 @@ h1 {
   margin: var(--space-5) 0;
 }
 
-.loot-row span {
+.loot-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: var(--space-2) var(--space-3);
   border: 2px solid var(--color-line-100);
   border-radius: 999px;
@@ -1459,7 +1462,7 @@ h1 {
   font-weight: 700;
 }
 
-.vitals-card {
+.vitals-card:not(.vitals-card--human) {
   display: grid;
   gap: var(--space-3);
   margin-bottom: var(--space-5);
@@ -1469,7 +1472,7 @@ h1 {
   background: var(--color-surface-0);
 }
 
-.vitals-card > div {
+.vitals-card:not(.vitals-card--human) > div {
   display: grid;
   grid-template-columns: 3rem 1fr 2rem;
   align-items: center;

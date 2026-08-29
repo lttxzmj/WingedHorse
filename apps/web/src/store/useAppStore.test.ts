@@ -86,4 +86,21 @@ describe("game settlement and cultivation state", () => {
     expect(useAppStore.getState().settleGame("xp-cap", {})).toBe(true);
     expect(useAppStore.getState().relationshipXp).toBe(999);
   });
+
+  it("accepts invite codes without inventing placeholder friends", () => {
+    const code = useAppStore.getState().ensureInviteCode();
+    expect(code).toHaveLength(8);
+    expect(useAppStore.getState().acceptInvite(code)).toBe("self");
+    expect(useAppStore.getState().acceptInvite("friend99")).toBe("ok");
+    expect(useAppStore.getState().friends).toEqual([{ id: "friend99", nickname: "新朋友" }]);
+    const migrated = migratePersistedAppState({
+      friends: [
+        { id: "a", nickname: "密友 1" },
+        { id: "b", nickname: "小红" }
+      ],
+      inviteCode: "legacy!!"
+    });
+    expect(migrated.friends).toEqual([{ id: "b", nickname: "小红" }]);
+    expect(migrated.inviteCode).toBe("");
+  });
 });

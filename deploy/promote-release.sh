@@ -45,8 +45,8 @@ for migration in migrations/*.sql; do
     psql -v ON_ERROR_STOP=1 -U "$postgres_user" -d "$postgres_database" < "$migration"
 done
 
-docker compose --env-file "$env_file" -f "$compose_file" up -d --build
-docker compose --env-file "$env_file" -f "$compose_file" ps
+docker compose --env-file "$env_file" -f "$compose_file" --profile hardware up -d --build
+docker compose --env-file "$env_file" -f "$compose_file" --profile hardware ps
 curl --fail --retry 12 --retry-delay 5 http://127.0.0.1:8080/api/health
 ln -sfn "$release_dir" /opt/wingedhorse/current.next
 mv -Tf /opt/wingedhorse/current.next /opt/wingedhorse/current

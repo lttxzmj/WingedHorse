@@ -291,7 +291,7 @@ test("the bag recommends a real need and keeps items in a selectable grid", asyn
   await page.goto("/inventory");
   await expect(page.locator(".inventory-slot")).toHaveCount(6);
   await expect(page.locator(".inventory-slot__count").first()).toContainText("持有");
-  await expect(page.getByRole("button", { name: "给飞马使用" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "给来来使用" })).toHaveCount(0);
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-inventory-compact-${testInfo.project.name}.png`,
@@ -301,7 +301,7 @@ test("the bag recommends a real need and keeps items in a selectable grid", asyn
   await page.getByRole("button", { name: /主线任务便签，1 件/ }).click();
   await expect(page.getByRole("dialog", { name: "主线任务便签" })).toBeVisible();
   await expect(page.getByText("行动手感 +6 · 方向感 +4")).toBeVisible();
-  await expect(page.getByRole("button", { name: "给飞马使用" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "给来来使用" })).toBeVisible();
   if (process.env.VISUAL_QA)
     await page.screenshot({
       path: `/private/tmp/wingedhorse-inventory-sheet-${testInfo.project.name}.png`,
@@ -309,7 +309,7 @@ test("the bag recommends a real need and keeps items in a selectable grid", asyn
     });
   expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforeOpen);
   await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
-  await page.getByRole("button", { name: "给飞马使用" }).click();
+  await page.getByRole("button", { name: "给来来使用" }).click();
   await expect(page.getByRole("dialog", { name: "主线任务便签" })).toHaveCount(0);
   await expect(page.getByRole("status")).toContainText("它收下了主线任务便签");
   await expect(page.getByText("背包还剩 0 件")).toBeVisible();
@@ -567,7 +567,7 @@ test("a real game finishes, settles once, enters the bag and changes the life st
     });
   await page.locator(".inventory-slot").first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("button", { name: "给飞马使用" }).click();
+  await page.getByRole("button", { name: "给来来使用" }).click();
   await expect(page.getByRole("status")).toContainText("收下了");
 
   await page.goto("/life");
@@ -725,7 +725,7 @@ test("companion sends life facts and manual mood only after session consent", as
     });
   });
   await page.goto("/companion");
-  await expect(page.getByText("天选牛马 · 在草原")).toBeVisible();
+  await expect(page.getByText("天选牛马状态 · 来来")).toBeVisible();
   await page.getByText("本次发送范围").click();
   const lifeConsent = page.getByLabel(/生活簿、养成状态与手动心情 → 仅 WingedHorse 服务端/u);
   await expect(lifeConsent).toBeEnabled();

@@ -1,7 +1,9 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
 import {
+  CHARACTER_NAME,
   ITEM_CATALOG,
   ITEM_IDS,
+  createWorkdayComic,
   deriveCompanionGrowth,
   getResultProfile,
   recommendCareItem,
@@ -11,12 +13,12 @@ import { Button } from "@wingedhorse/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   BatteryCharging,
+  BookImage,
   ChevronRight,
   Fish,
   Hand,
   Heart,
   ImagePlus,
-  Mic,
   Package,
   Send,
   Settings,
@@ -26,7 +28,11 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { AppIcon } from "../components/AppIcon";
 import { ItemIcon } from "../components/ItemIcon";
+import { LailaiStandFace } from "../components/LailaiStandFace";
+import { WorkdayComicSheet } from "../components/WorkdayComicSheet";
 import { subscribeDeviceEvents, sendMoodToDevice } from "../lib/devices";
+import { trackEvent } from "../lib/analytics";
+import { createWorkdayComicCard } from "../lib/workdayComicCard";
 import { useDigitalLife } from "../hooks/useDigitalLife";
 import { useAppStore } from "../store/useAppStore";
 import "../cultivation.css";
@@ -74,12 +80,21 @@ export function DigitalLifeExperiencePage() {
   const collectItem = useAppStore((state) => state.collectItem);
   const comfortPet = useAppStore((state) => state.comfortPet);
   const deviceId = useAppStore((state) => state.deviceId);
+  const workShift = useAppStore((state) => state.workShift);
+  const clockIn = useAppStore((state) => state.clockIn);
+  const clockOut = useAppStore((state) => state.clockOut);
+  const gamesPlayed = useAppStore((state) => state.gamesPlayed);
+  const todayCaughtCount = useAppStore((state) => state.todayCaughtCount);
+  const [comicOpen, setComicOpen] = useState(false);
+  const [standFaceOpen, setStandFaceOpen] = useState(false);
+  const [comicMessage, setComicMessage] = useState("");
+  const [comicSharing, setComicSharing] = useState(false);
   useDigitalLife();
 
   // 监听硬件实体交互，深度融入家园气泡与互动
   useEffect(() => {
     const targetDeviceId = deviceId || "lamp-001";
-    const unsubscribe = subscribeDeviceEvents(targetDeviceId, (event, telemetry) => {
+    const unsubscribe = subscribeDeviceEvents(targetDeviceId, (event) => {
       // 1. 实体触摸/按压 -> 触发角色抚摸与气泡对话
       if (event.type === "touch_comfort") {
         comfortPet();
@@ -123,11 +138,15 @@ export function DigitalLifeExperiencePage() {
     return () => window.clearTimeout(timeout);
   }, [reaction]);
 
+  useEffect(() => {
+    if (result) trackEvent("home_view");
+  }, [result]);
+
   if (!result) {
     return (
       <main className="centered-page">
         <section className="empty-state">
-          <h1>先认识你的飞马</h1>
+          <h1>先认识来来</h1>
           <p>做完测评，它才知道该用什么方式接住你。</p>
           <Button onClick={() => void navigate({ to: "/assessment" })}>开始测评</Button>
         </section>
@@ -160,6 +179,15 @@ export function DigitalLifeExperiencePage() {
   }
   const sceneDrops = sceneDropsRef.current.items;
   const moodLabel = getMoodLabel(petVitals.energy, petVitals.chaos, profile.mood);
+  const onDuty = workShift.status === "on";
+  const comic = createWorkdayComic({
+    dateLabel: `${new Date().getMonth() + 1}月${new Date().getDate()}日`,
+    clockedIn: onDuty || workShift.dateKey === todayDate,
+    gamesPlayed,
+    caughtCount: todayCaughtCount,
+    momentLine: currentMoment?.body ?? null,
+    typeId: result.typeId
+  });
   const openInteraction = (trigger: HTMLElement) => {
     interactionTriggerRef.current = trigger;
     setInteractionOpen(true);
@@ -186,11 +214,56 @@ export function DigitalLifeExperiencePage() {
     }, 450);
   };
 
+  const handleClockIn = () => {
+    clockIn();
+    setStandFaceOpen(true);
+    trackEvent("clock_in", { source: "home" });
+    trackEvent("stand_face_show", { mood: "on-duty" });
+    showReaction("来了。手机给我，你去忙。");
+  };
+
+  const handleClockOut = () => {
+    clockOut();
+    setComicOpen(true);
+    trackEvent("clock_out");
+    showReaction("收工。草原见。");
+  };
+
+  const shareComic = async () => {
+    setComicSharing(true);
+    setComicMessage("生成中…");
+    try {
+      const blob = await createWorkdayComicCard(comic);
+      const file = new File([blob], `${CHARACTER_NAME}的一天.png`, { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: `${CHARACTER_NAME}的一天`,
+          text: comic.slogan,
+          files: [file]
+        });
+        setComicMessage("已分享。");
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = file.name;
+        link.click();
+        URL.revokeObjectURL(url);
+        setComicMessage("已保存。");
+      }
+      trackEvent("comic_share");
+    } catch {
+      setComicMessage("没画出来，稍后再试。");
+    } finally {
+      setComicSharing(false);
+    }
+  };
+
   return (
     <main className="home-page home-page--immersive">
       <header className="home-header home-header--quiet digital-life-header">
-        <nav className="digital-life-header__toolbar" aria-label="飞马当前状态与常用入口">
-          <div className="home-status-pill" aria-label="飞马当前状态">
+        <nav className="digital-life-header__toolbar" aria-label="来来当前状态与常用入口">
+          <div className="home-status-pill" aria-label="来来当前状态">
             <span className="home-status-pill__item home-status-pill__item--mood" aria-label={`心情 ${moodLabel}`}>
               <AppIcon icon={Heart} size={15} />
               <em>{moodLabel}</em>
@@ -219,17 +292,19 @@ export function DigitalLifeExperiencePage() {
         </nav>
 
         <div className="home-header__identity digital-life-header__identity">
-          <h1>{profile.name}</h1>
+          <h1>{CHARACTER_NAME}</h1>
           <p className="digital-life-presence">
             <i aria-hidden="true" />
-            <span>{growth.relationshipLabel} · 它正在草原生活</span>
+            <span>
+              {profile.name}状态 · {growth.relationshipLabel}
+            </span>
           </p>
         </div>
       </header>
 
       <section
         className="lawn-stage lawn-stage--alive digital-life-stage"
-        aria-label="飞马生活草原"
+        aria-label="来来生活草原"
       >
         <div className="digital-life-stage__drops" aria-label="草原正在掉落的补给">
           {sceneDrops.map((itemId, index) => {
@@ -268,20 +343,20 @@ export function DigitalLifeExperiencePage() {
             <span>
               {reaction?.message ||
                 currentMoment?.body ||
-                "我不会催你。想说点什么，还是先在草原坐一会儿？"}
+    "我不会催你。想说点什么，还是先在草原坐一会儿？"}
             </span>
           </p>
           <button
             ref={characterButtonRef}
             className={`character-hotspot ${reaction ? "is-cared-for" : ""}`.trim()}
             onClick={(event) => openInteraction(event.currentTarget)}
-            aria-label={`和${profile.name}互动`}
+            aria-label={`和${CHARACTER_NAME}互动`}
           >
             <WingedHorseCharacter
               key={reaction?.id ?? "rest"}
               mood={profile.mood}
               typeId={result.typeId}
-              alt={profile.name}
+              alt={CHARACTER_NAME}
             />
           </button>
         </div>
@@ -293,7 +368,7 @@ export function DigitalLifeExperiencePage() {
           alt=""
           aria-hidden="true"
         />
-        <div className="digital-life-actions" aria-label="和飞马互动">
+        <div className="digital-life-actions" aria-label="和来来互动">
           <form
             className="digital-life-actions__composer"
             onSubmit={(event) => {
@@ -301,16 +376,14 @@ export function DigitalLifeExperiencePage() {
               openConversation();
             }}
           >
-            <ImagePlus aria-hidden="true" size={17} />
-            <Mic aria-hidden="true" size={17} />
             <input
               value={quickDraft}
               onChange={(event) => setQuickDraft(event.target.value)}
               maxLength={1200}
-              aria-label="和飞马聊一聊"
-              placeholder="和它聊一聊…"
+              aria-label="和来来聊一聊"
+              placeholder="和来来聊一聊…"
             />
-            <button type="submit" aria-label="进入飞马对话">
+            <button type="submit" aria-label="进入来来对话">
               <AppIcon icon={Send} size={18} />
             </button>
           </form>
@@ -324,6 +397,17 @@ export function DigitalLifeExperiencePage() {
               <AppIcon icon={Hand} size={21} />
               <AppIcon icon={Fish} size={13} />
             </span>
+          </button>
+          <button
+            type="button"
+            className="digital-life-actions__icon digital-life-actions__shift"
+            aria-label={onDuty ? "下班，收来来的一天" : "上工，把手机交给来来"}
+            onClick={() => {
+              if (onDuty) handleClockOut();
+              else handleClockIn();
+            }}
+          >
+            <AppIcon icon={BookImage} size={22} />
           </button>
           <Link
             className="digital-life-actions__icon digital-life-actions__moments"
@@ -354,8 +438,8 @@ export function DigitalLifeExperiencePage() {
             </button>
             <p className="eyebrow">{growth.relationshipLabel} · 照顾</p>
             <h2 id="interaction-title">家园养成</h2>
-            <p>接到的补给会进入背包；使用和陪伴都会改变它此刻的状态。</p>
-            <div className="cultivation-vitals" aria-label="飞马当前状态">
+            <p>补给在背包里，用一用就有反应。</p>
+            <div className="cultivation-vitals" aria-label="来来当前状态">
               {careMeters.map(({ id, label, value, icon }) => (
                 <div className="cultivation-vitals__item" key={id}>
                   <span><AppIcon icon={icon} size={17} />{label}</span>
@@ -412,6 +496,21 @@ export function DigitalLifeExperiencePage() {
             </Link>
           </section>
         </div>
+      ) : null}
+      {standFaceOpen ? (
+        <LailaiStandFace
+          mood={petVitals.energy < 35 ? "tired" : "on-duty"}
+          onClose={() => setStandFaceOpen(false)}
+        />
+      ) : null}
+      {comicOpen ? (
+        <WorkdayComicSheet
+          comic={comic}
+          sharing={comicSharing}
+          message={comicMessage}
+          onShare={() => void shareComic()}
+          onClose={() => setComicOpen(false)}
+        />
       ) : null}
     </main>
   );

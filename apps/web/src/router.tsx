@@ -40,6 +40,12 @@ const ResultPage = lazy(() =>
 const LifePage = lazy(() =>
   import("./pages/LifePage").then((module) => ({ default: module.LifePage }))
 );
+const FriendsPage = lazy(() =>
+  import("./pages/FriendsPage").then((module) => ({ default: module.FriendsPage }))
+);
+const IntentPage = lazy(() =>
+  import("./pages/IntentPage").then((module) => ({ default: module.IntentPage }))
+);
 
 class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   override state = { failed: false };
@@ -180,6 +186,20 @@ const lifeRoute = createRoute({
   path: "/life",
   component: LifePage
 });
+const friendsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/friends",
+  validateSearch: (search: Record<string, unknown>): { from?: string } => {
+    const from = typeof search.from === "string" ? search.from : undefined;
+    return from ? { from } : {};
+  },
+  component: FriendsPage
+});
+const intentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/intent",
+  component: IntentPage
+});
 const routeTree = rootRoute.addChildren([
   indexRoute,
   assessmentRoute,
@@ -194,7 +214,9 @@ const routeTree = rootRoute.addChildren([
   termsRoute,
   aiNoticeRoute,
   memoriesRoute,
-  lifeRoute
+  lifeRoute,
+  friendsRoute,
+  intentRoute
 ]);
 
 export const router = createRouter({ routeTree, defaultPreload: "intent" });

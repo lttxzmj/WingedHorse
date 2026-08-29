@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AppIcon } from "../components/AppIcon";
+import { trackEvent } from "../lib/analytics";
 import { useAppStore } from "../store/useAppStore";
 
 const journeyChapters = [
@@ -98,7 +99,9 @@ export function AssessmentPage() {
     setAdvancing(true);
     advanceTimer.current = window.setTimeout(() => {
       if (isLast) {
-        setResult(scoreAssessment(currentQuestionSet, nextAnswers));
+        const scored = scoreAssessment(currentQuestionSet, nextAnswers);
+        setResult(scored);
+        trackEvent("assessment_complete", { typeId: scored.typeId });
         void navigate({ to: "/result" });
       } else {
         setIndex(safeIndex + 1);

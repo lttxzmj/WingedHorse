@@ -37,14 +37,14 @@ test.beforeEach(async ({ page }) => {
 test("digital life home keeps companionship primary and care functional", async ({
   page
 }, testInfo) => {
-  await expect(page.getByRole("heading", { name: "天选牛马" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "来来" })).toBeVisible();
   await expect(page.getByRole("link", { name: "打开朋友圈动态" })).toBeVisible();
   await expect(page.getByRole("button", { name: "摸摸鱼：去接补给" })).toBeVisible();
   await expect(page.getByLabel(/^心情 /)).toBeVisible();
   await expect(page.getByLabel("元气 40")).toBeVisible();
   await expect(page.getByLabel("草原正在掉落的补给").getByRole("button")).toHaveCount(3);
   await expect(page.getByRole("heading", { name: "熟悉阶段" })).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: "和飞马聊一聊" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "和来来聊一聊" })).toBeVisible();
 
   await page.screenshot({
     path: `/private/tmp/wingedhorse-digital-life-home-${testInfo.project.name}.png`,
@@ -62,8 +62,8 @@ test("digital life home keeps companionship primary and care functional", async 
   await expect(page.getByText(/它收下了冰美式补给/)).toBeVisible();
   await expect(page.locator(".character-hotspot")).toBeFocused();
 
-  await page.getByRole("textbox", { name: "和飞马聊一聊" }).fill("今天有点累");
-  await page.getByRole("button", { name: "进入飞马对话" }).click();
+  await page.getByRole("textbox", { name: "和来来聊一聊" }).fill("今天有点累");
+  await page.getByRole("button", { name: "进入来来对话" }).click();
   await expect(page.locator("#chat-message")).toHaveValue("今天有点累");
 
   const inventoryCount = await page.evaluate(() => {

@@ -1,5 +1,5 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
+import { CHARACTER_NAME, deriveJourneyGoal, getResultProfile } from "@wingedhorse/domain";
 import { Button } from "@wingedhorse/ui";
 import { Link } from "@tanstack/react-router";
 import {
@@ -113,7 +113,7 @@ export function LifePage() {
       <header className="subpage-header life-header">
         <BackLink to="/home" label="回到草原" />
         <div>
-          <p className="eyebrow">{profile.name} · 只给你看</p>
+          <p className="eyebrow">{CHARACTER_NAME} · 只给你看</p>
           <h1>{view === "feed" ? "它的朋友圈" : "一起走过的地方"}</h1>
         </div>
       </header>

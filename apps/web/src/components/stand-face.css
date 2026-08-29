@@ -1,0 +1,71 @@
+.stand-face {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1.1rem;
+  padding: max(1.5rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
+    max(1.5rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+  background: radial-gradient(circle at 50% 28%, #fff8de 0%, #ffe3a2 42%, #ffd057 100%);
+  color: var(--color-ink-900);
+  cursor: pointer;
+  user-select: none;
+}
+
+.stand-face--tired {
+  background: radial-gradient(circle at 50% 30%, #fffdf5 0%, #ede3d3 55%, #c9b8a6 100%);
+}
+
+.stand-face--stealth {
+  background: radial-gradient(circle at 50% 30%, #f4fbff 0%, #d7e8f6 58%, #9bb8d4 100%);
+}
+
+.stand-face--rare {
+  background: radial-gradient(circle at 50% 28%, #fff8de 0%, #ffe08a 50%, #f0c14a 100%);
+}
+
+.stand-face--off-work {
+  background: radial-gradient(circle at 50% 30%, #fffdf5 0%, #e7f5e8 55%, #b7d7b4 100%);
+}
+
+.stand-face__kaomoji {
+  margin: 0;
+  font-size: clamp(3.2rem, 14vw, 6.5rem);
+  line-height: 1;
+  animation: stand-face-blink 4.8s ease-in-out infinite;
+}
+
+.stand-face__line {
+  margin: 0;
+  font-size: clamp(1.25rem, 4.4vw, 1.75rem);
+  font-weight: 800;
+  text-align: center;
+}
+
+.stand-face__hint {
+  margin: 0;
+  color: var(--color-ink-700);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+@keyframes stand-face-blink {
+  0%,
+  82%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  88% {
+    transform: scale(1.04, 0.92);
+    opacity: 0.92;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stand-face__kaomoji {
+    animation: none;
+  }
+}

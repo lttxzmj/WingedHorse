@@ -1,5 +1,5 @@
 import { WingedHorseCharacter } from "@wingedhorse/character-runtime";
-import { DIMENSIONS, dimensionLabels, getResultProfile } from "@wingedhorse/domain";
+import { CHARACTER_NAME, DIMENSIONS, dimensionLabels, getResultProfile } from "@wingedhorse/domain";
 import { Button, Card } from "@wingedhorse/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { SunMedium } from "lucide-react";
@@ -29,7 +29,7 @@ export function ResultPage() {
       <main className="centered-page">
         <section className="empty-state">
           <h1>还没有测评结果</h1>
-          <p>先走完这一天，再来看看你的飞马形态。</p>
+          <p>先走完这一天，再来看看来来今天的状态。</p>
           <Button onClick={() => void navigate({ to: "/assessment" })}>开始测评</Button>
         </section>
       </main>
@@ -45,11 +45,11 @@ export function ResultPage() {
     setShareMessage("正在生成分享卡…");
     try {
       const blob = await createResultShareCard(currentResult, profile);
-      const file = new File([blob], `我的飞升报告-${profile.name}.png`, { type: "image/png" });
+      const file = new File([blob], `我的飞升报告-${CHARACTER_NAME}.png`, { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
-          title: `我的飞升报告：${profile.name}`,
-          text: `我测出了${profile.name}。${profile.tagline}`,
+          title: `${CHARACTER_NAME}今天是${profile.name}`,
+          text: `${CHARACTER_NAME}今天是${profile.name}。${profile.tagline}`,
           files: [file]
         });
         setShareMessage("飞升海报已准备好。");
@@ -79,12 +79,12 @@ export function ResultPage() {
         <WingedHorseCharacter
           mood={profile.mood}
           typeId={result.typeId}
-          alt={"代表" + profile.name + "的原创牛马角色"}
+          alt={`${CHARACTER_NAME}，今天是${profile.name}状态`}
         />
         <div className="result-hero__copy">
-          <p className="eyebrow">测评完成 · 17/17</p>
-          <h1>{profile.name}</h1>
-          <p className="result-rarity">{profile.rarity}</p>
+          <p className="eyebrow">{CHARACTER_NAME}今天的状态</p>
+          <h1>{CHARACTER_NAME}</h1>
+          <p className="result-rarity">{profile.name} · {profile.rarity}</p>
           <p className="result-tagline">{profile.tagline}</p>
         </div>
       </section>

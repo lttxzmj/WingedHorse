@@ -2,9 +2,20 @@
 # 服务端用户：可给所有设备下发灯效，订阅所有设备遥测
 user wingedhorse
 topic write devices/#
+topic write lamp-001/#
+topic write #
 topic read devices/+/telemetry
+topic read +/telemetry
+topic read +/data
+topic read devices/+/data
 
 # 设备用户（每台设备单独建一条）：只订阅自己的灯效、只发布自己的遥测
 user lamp-001
 topic read devices/lamp-001/effect
+topic read lamp-001/effect
+topic read lamp-001/cmd
+topic read lamp-001
 topic write devices/lamp-001/telemetry
+topic write lamp-001/telemetry
+topic write lamp-001/data
+topic write devices/lamp-001/data

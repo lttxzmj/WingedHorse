@@ -131,12 +131,12 @@ export async function createResultShareCard(
   context.fillStyle = "#75685C";
   context.textAlign = "left";
   context.font = '750 27px -apple-system, "PingFang SC", sans-serif';
-  context.fillText("我的牛马飞升报告", 74, 139);
+  context.fillText("来来的飞升报告", 74, 139);
 
   context.textAlign = "left";
   context.fillStyle = "#3B2E24";
   context.font = '800 82px -apple-system, "PingFang SC", sans-serif';
-  context.fillText(profile.name, 74, 266);
+  context.fillText("来来", 74, 266);
   context.fillStyle = profile.accent;
   roundedRect(context, 74, 294, 322, 58, 29);
   context.fillStyle = "#5C470F";

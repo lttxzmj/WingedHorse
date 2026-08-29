@@ -210,7 +210,7 @@ export const ITEM_CATALOG: Record<ItemId, ItemDefinition> = {
   "sponsored-coffee-coupon": item(
     "sponsored-coffee-coupon",
     "蓝盒子睡眠护理枕",
-    "品牌合作虚拟体验物品，给飞马一段舒服的休息时间。",
+    "品牌合作补给。给来来休息用。",
     "券",
     "sponsored-supply",
     "uncommon",
